@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/static/basic.css" />
+  </head>
+  <body>
+    <div class="normal">
+      <table>
+        <tr>
+          <td colspan="2">
+            <div class="normal" id="response"></div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <div
+              id="scale-profile"
+              style="
+                overflow-y: auto;
+                overflow-x: hidden;
+                height: 300px;
+                width: 1200px;
+              "
+            ></div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <table>
+              <tr>
+                <td>
+                  <div
+                    style="
+                      overflow-y: auto;
+                      overflow-x: hidden;
+                      vertical-align: top;
+                      height: 420px;
+                      width: 200px;
+                    "
+                  >
+                    <table class="data" id="table-scales">Scales</table>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    style="
+                      overflow-y: auto;
+                      overflow-x: hidden;
+                      vertical-align: top;
+                      height: 420px;
+                      width: 200px;
+                    "
+                  >
+                    <table class="data" id="table-ji-tunings">JI tunings</table>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    style="
+                      overflow-y: auto;
+                      overflow-x: hidden;
+                      vertical-align: top;
+                      height: 420px;
+                      width: 200px;
+                    "
+                  >
+                    <table class="data" id="table-ed-tunings">edo tunings</table>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td>
+            <div
+              id="sw-code"
+              style="
+                overflow-y: auto;
+                overflow-x: hidden;
+                vertical-align: top;
+                height: 420px;
+                width: 600px;
+              "
+            >
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <div
+              id="lattice-vis"
+              style="overflow-y: auto; overflow-x: auto"
+              style="
+                overflow-y: auto;
+                overflow-x: hidden;
+                vertical-align: top;
+                height: 420px;
+                width: 600px;
+              "
+            ></div>
+          </td>
+        </tr>
+      </table>
+      <a href="/static/index.html">Back</a>
+    </div>
+  </body>
+  <script src="/static/results.js" type="module"></script>
+</html>
