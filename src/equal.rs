@@ -91,7 +91,6 @@ pub fn ed_tunings_for_ternary(
     aber_upper: f64,
 ) -> Vec<Vec<i32>> {
     (3..ed_bound)
-        .into_iter()
         .flat_map(|l| (2..l).flat_map(move |m| (1..m).map(move |s| vec![l, m, s])))
         .filter(|v| {
             let ed: i32 =
@@ -109,7 +108,7 @@ pub fn ed_tunings_for_ternary(
 pub fn relative_error(monzo: Monzo, edo: f64) -> f64 {
     let val = gpval(edo);
     let steps = val.evaluate(monzo);
-    return (steps_as_cents(steps, edo, RawJiRatio::OCTAVE) - monzo.cents()) * edo / 1200.0;
+    (steps_as_cents(steps, edo, RawJiRatio::OCTAVE) - monzo.cents()) * edo / 1200.0
 }
 
 /// L^1 error on a specified odd limit.
@@ -140,7 +139,7 @@ macro_rules! val {
         $crate::equal::Val::ZERO
     );
     ($elem:expr; $n:expr) => (
-        $crate::equal::Val(nalgebra::RowSVector::<i32, {crate::primes::SMALL_PRIMES_COUNT}>::from_row_slice(&[$elem; crate::primes::SMALL_PRIMES_COUNT]))
+        $crate::equal::Val(nalgebra::RowSVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_row_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
     ($($x:expr),+ $(,)?) => (
         $crate::equal::Val::from_slice(&[$($x),+])

@@ -1,6 +1,6 @@
 #![deny(warnings)]
 
-const STEP_LETTERS: [&'static str; 12] = [
+const STEP_LETTERS: [&str; 12] = [
     "",                                                     // 0
     "X",                                                    // 1
     "Ls",                                                   // 2
@@ -118,64 +118,71 @@ async fn main() -> Result<(), std::io::Error> {
 }
 
 fn guide_structure_to_json(structure: &GuideFrame, arity: usize) -> GuideResult {
-    match structure {
-        GuideFrame {
-            gs,
-            polyoffset,
-            multiplicity,
-        } => {
-            if *multiplicity == 1 {
-                GuideResult {
-                    gs: gs
-                        .into_iter()
-                        .map(|cv| {
-                            CountVector::from_iter(cv.into_inner().into_iter().map(|(k, v)| {
-                                (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
-                            }))
-                        })
-                        .collect(),
-                    aggregate: gs
-                        .into_iter()
-                        .map(|cv| {
-                            CountVector::from_iter(cv.into_inner().into_iter().map(|(k, v)| {
-                                (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
-                            }))
-                        })
-                        .fold(CountVector::<char>::ZERO, |acc, v| acc.add(&v)),
-                    polyoffset: polyoffset
-                        .into_iter()
-                        .map(|cv| {
-                            CountVector::from_iter(cv.into_inner().into_iter().map(|(k, v)| {
-                                (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
-                            }))
-                        })
-                        .collect(),
-                    multiplicity: 1,
-                    complexity: structure.complexity(),
-                }
-            } else {
-                GuideResult {
-                    gs: gs
-                        .into_iter()
-                        .map(|cv| {
-                            CountVector::from_iter(cv.into_inner().into_iter().map(|(k, v)| {
-                                (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
-                            }))
-                        })
-                        .collect(),
-                    aggregate: gs
-                        .into_iter()
-                        .map(|cv| {
-                            CountVector::from_iter(cv.into_inner().into_iter().map(|(k, v)| {
-                                (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
-                            }))
-                        })
-                        .fold(CountVector::<char>::ZERO, |acc, v| acc.add(&v)),
-                    polyoffset: vec![CountVector::<char>::ZERO],
-                    multiplicity: *multiplicity,
-                    complexity: structure.complexity(),
-                }
-            }
+    let GuideFrame {
+        gs,
+        polyoffset,
+        multiplicity,
+    } = structure;
+    if *multiplicity == 1 {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    CountVector::from_tuples(
+                        cv.into_inner().into_iter().map(|(k, v)| {
+                            (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
+                        }),
+                    )
+                })
+                .collect(),
+            aggregate: gs
+                .iter()
+                .map(|cv| {
+                    CountVector::from_tuples(
+                        cv.into_inner().into_iter().map(|(k, v)| {
+                            (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
+                        }),
+                    )
+                })
+                .fold(CountVector::<char>::ZERO, |acc, v| acc.add(&v)),
+            polyoffset: polyoffset
+                .iter()
+                .map(|cv| {
+                    CountVector::from_tuples(
+                        cv.into_inner().into_iter().map(|(k, v)| {
+                            (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
+                        }),
+                    )
+                })
+                .collect(),
+            multiplicity: 1,
+            complexity: structure.complexity(),
+        }
+    } else {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    CountVector::from_tuples(
+                        cv.into_inner().into_iter().map(|(k, v)| {
+                            (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
+                        }),
+                    )
+                })
+                .collect(),
+            aggregate: gs
+                .iter()
+                .map(|cv| {
+                    CountVector::from_tuples(
+                        cv.into_inner().into_iter().map(|(k, v)| {
+                            (STEP_LETTERS[min(arity, 12)].chars().nth(k).unwrap(), v)
+                        }),
+                    )
+                })
+                .fold(CountVector::<char>::ZERO, |acc, v| acc.add(&v)),
+            polyoffset: vec![CountVector::<char>::ZERO],
+            multiplicity: *multiplicity,
+            complexity: structure.complexity(),
         }
     }
 }
@@ -262,42 +269,40 @@ async fn word_result(req: Query<GuideMosRequest>) -> HttpResponse {
                     "ji_tunings": ji_tunings,
                 }))
             }
+        } else if step_sig.len() == 3 {
+            let ed_tunings = crate::equal::ed_tunings_for_ternary(
+                &step_sig,
+                crate::ji_ratio::RawJiRatio::OCTAVE,
+                53,
+                20.0,
+                60.0,
+            );
+            yield_now().await;
+            let profile = json!({
+                "structure": None::<GuideFrame>,
+                "lm": monotone_lm(&word),
+                "ms": monotone_ms(&word),
+                "s0": monotone_s0(&word),
+                "mv": maximum_variety(&word),
+            });
+            yield_now().await;
+            HttpResponse::Ok().json(json!({
+                "profile": profile,
+                "brightest": brightest,
+                "ji_tunings": ji_tunings,
+                "ed_tunings": ed_tunings,
+            }))
         } else {
-            if step_sig.len() == 3 {
-                let ed_tunings = crate::equal::ed_tunings_for_ternary(
-                    &step_sig,
-                    crate::ji_ratio::RawJiRatio::OCTAVE,
-                    53,
-                    20.0,
-                    60.0,
-                );
-                yield_now().await;
-                let profile = json!({
-                    "structure": None::<GuideFrame>,
-                    "lm": monotone_lm(&word),
-                    "ms": monotone_ms(&word),
-                    "s0": monotone_s0(&word),
-                    "mv": maximum_variety(&word),
-                });
-                yield_now().await;
-                HttpResponse::Ok().json(json!({
-                    "profile": profile,
-                    "brightest": brightest,
-                    "ji_tunings": ji_tunings,
-                    "ed_tunings": ed_tunings,
-                }))
-            } else {
-                let profile = json!({
-                    "structure": None::<GuideFrame>,
-                    "mv": maximum_variety(&word),
-                });
-                yield_now().await;
-                HttpResponse::Ok().json(json!({
-                    "brightest": brightest,
-                    "profile": profile,
-                    "ji_tunings": ji_tunings,
-                }))
-            }
+            let profile = json!({
+                "structure": None::<GuideFrame>,
+                "mv": maximum_variety(&word),
+            });
+            yield_now().await;
+            HttpResponse::Ok().json(json!({
+                "brightest": brightest,
+                "profile": profile,
+                "ji_tunings": ji_tunings,
+            }))
         }
     };
     timeout(TIMEOUT_DURATION, task).await.unwrap_or({

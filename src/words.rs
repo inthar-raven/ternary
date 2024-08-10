@@ -1,10 +1,8 @@
+use itertools::Itertools;
+use serde::Serialize;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
-use std::usize;
-
-use itertools::Itertools;
-use serde::Serialize;
 
 use crate::utils::{gcd, modinv, ScaleError};
 
@@ -32,8 +30,8 @@ impl Subtendable for CountVector<Letter> {
     type Interval = CountVector<Letter>;
     fn interval_from_slice(slice: &[Self]) -> Self::Interval {
         slice
-            .into_iter()
-            .fold(CountVector::ZERO, |a, b| CountVector::add(&a, &b))
+            .iter()
+            .fold(CountVector::ZERO, |a, b| CountVector::add(&a, b))
     }
 }
 
@@ -60,12 +58,17 @@ impl<T> CountVector<T> {
     /// Creates a zero count vector.
     pub const ZERO: Self = CountVector(BTreeMap::<T, i32>::new());
 
+    /// Whether the `CountVector` is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// The sum of the absolute values of the components.
     pub fn len(&self) -> usize {
-        self.0.values().map(|v| v.abs() as usize).sum()
+        self.0.values().map(|v| v.unsigned_abs() as usize).sum()
     }
     /// The sum of two count vectors. Each component gets added.
-    pub fn add(self: &Self, w: &Self) -> Self
+    pub fn add(&self, w: &Self) -> Self
     where
         T: Ord + Clone,
     {
@@ -83,7 +86,7 @@ impl<T> CountVector<T> {
         Self(result)
     }
     /// Additive inverse of a `CountVector`.
-    pub fn neg(self: &Self) -> Self
+    pub fn neg(&self) -> Self
     where
         T: Ord + Clone + Send + Sync,
     {
@@ -91,7 +94,7 @@ impl<T> CountVector<T> {
     }
 
     /// Multiply a CountVector by a scalar.
-    pub fn scalar_mul(self: &Self, lambda: i32) -> Self
+    pub fn scalar_mul(&self, lambda: i32) -> Self
     where
         T: Ord + Clone + Send + Sync,
     {
@@ -130,7 +133,7 @@ impl<T> CountVector<T> {
         )
     }
     /// Convert a `BTreeSet` to a `CountVector` (with every nonzero component equal to 1).
-    pub fn from_iter(iter: impl Iterator<Item = (T, i32)>) -> CountVector<T>
+    pub fn from_tuples(iter: impl Iterator<Item = (T, i32)>) -> CountVector<T>
     where
         T: Ord + Send,
     {
@@ -237,7 +240,7 @@ where
     } else {
         let length = scale1.len();
         for i in 0..length {
-            if rotate(&scale2, i) == scale1.to_vec() {
+            if rotate(scale2, i) == scale1.to_vec() {
                 // scale2 has been rotated i steps to the left.
                 return Some(i);
             }
@@ -258,7 +261,7 @@ where
         let len = vec1.len();
         for i in 0..len {
             let vec2_rotated = rotate(vec2, i); // vec2 has been rotated i steps to the left.
-            if &vec2_rotated == vec1 {
+            if vec2_rotated == vec1 {
                 return Some(i);
             }
         }
@@ -307,7 +310,7 @@ where
     } else {
         let mut max = 0;
         let floor_half: usize = scale.len() / 2;
-        let distinct_letters = scale.into_iter().cloned().collect::<BTreeSet<T>>();
+        let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
         for subword_length in 1..=floor_half {
             for letter in distinct_letters.iter() {
                 let counts = CountVector::distinct_spectrum(scale, subword_length)
@@ -426,7 +429,7 @@ pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Result<Vec<Letter>, Sc
     } else {
         let (mos, dark_gen) = darkest_mos_mode_and_gen_bresenham(a, b);
         let dark_gen_step_count: usize = dark_gen.len();
-        Ok(rotate(&mos, (brightness * dark_gen_step_count) as usize))
+        Ok(rotate(&mos, brightness * dark_gen_step_count))
     }
 }
 
@@ -444,7 +447,7 @@ pub fn are_conjugate<T>(s1: &[T], s2: &[T]) -> bool
 where
     T: Clone + Eq,
 {
-    (s1.len() == s2.len()) && { (0..s1.len()).any(|i| rotate(&s1, i) == s2.to_vec()) }
+    (s1.len() == s2.len()) && { (0..s1.len()).any(|i| rotate(s1, i) == s2.to_vec()) }
 }
 
 /// [Letterwise substitution](https://en.xen.wiki/w/MOS_substitution) for scale words.
@@ -457,7 +460,7 @@ where
 {
     let mut ret = vec![];
     let mut i: usize = 0;
-    if filler.len() > 0 {
+    if !filler.is_empty() {
         for letter in template {
             if *letter == *x {
                 ret.push(filler[i % filler.len()].clone());
@@ -485,7 +488,6 @@ fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();
     let gener_size = gener.len();
     (0..(n1 + n2))
-        .into_iter()
         .map(|i| {
             subst::<usize>(
                 &template,
@@ -494,12 +496,6 @@ fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<
             )
         })
         .collect()
-}
-
-pub fn least_mode_naive(scale: &[Letter]) -> Vec<Letter> {
-    let sorted_modes = rotations(scale).into_iter().sorted().collect::<Vec<_>>();
-    let result = sorted_modes[0].to_owned();
-    result
 }
 
 /// The lexicographically brightest mode of a word (where the letters are in their usual order).
@@ -517,7 +513,7 @@ pub fn booth(scale: &[Letter]) -> usize {
     let mut k: usize = 0;
     for j in 1..2 * n {
         let mut i = f[j - k - 1];
-        while i != usize::MAX && s[(j % n) as usize] != s[k.wrapping_add(i).wrapping_add(1) % n] {
+        while i != usize::MAX && s[j % n] != s[k.wrapping_add(i).wrapping_add(1) % n] {
             if s[j % n] < s[k.wrapping_add(i).wrapping_add(1) % n] {
                 k = j.wrapping_sub(i).wrapping_sub(1);
             }
@@ -629,7 +625,7 @@ pub fn replace(scale: &[Letter], from: Letter, to: Letter) -> Vec<Letter> {
 
 /// Delete all instances of one letter.
 pub fn delete(scale: &[Letter], letter: Letter) -> Vec<Letter> {
-    scale.iter().filter(|x| **x != letter).map(|x| *x).collect()
+    scale.iter().filter(|x| **x != letter).copied().collect()
 }
 
 /// If `scale` is ternary, return whether identifying L = m, m = s, and s = 0 results in a MOS.
@@ -720,7 +716,7 @@ where
 
 /// The chirality of a scale word.
 pub fn chirality(word: &[Letter]) -> Chirality {
-    let mut modes = rotations(&word);
+    let mut modes = rotations(word);
     modes.sort_unstable();
 
     let word_rev: Vec<usize> = word.iter().cloned().rev().collect();

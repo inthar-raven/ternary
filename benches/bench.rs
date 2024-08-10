@@ -187,10 +187,14 @@ pub fn bench_guide(c: &mut Criterion) {
 }
 
 pub fn bench_lyndon(c: &mut Criterion) {
+    pub fn least_mode_naive(scale: &[Letter]) -> Vec<Letter> {
+        let sorted_modes = rotations(scale).into_iter().sorted().collect::<Vec<_>>();
+        sorted_modes[0].to_owned()
+    }
     c.bench_function("naive", |b| {
         b.iter(|| {
             for scale in black_box(ternary::words::mos_substitution_scales(&[5, 2, 10])) {
-                ternary::words::least_mode_naive(&scale);
+                least_mode_naive(&scale);
             }
         });
     });

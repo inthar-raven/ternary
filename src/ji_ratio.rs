@@ -253,8 +253,8 @@ impl RawJiRatio {
         RawJiRatio::OCTAVE,
     ];
 
-    pub fn checked_product<I: Iterator<Item = RawJiRatio>>(iter: I) -> Option<Self> {
-        iter.fold(Some(RawJiRatio::UNISON), |x, y| x?.checked_mul(&y))
+    pub fn checked_product<I: Iterator<Item = RawJiRatio>>(iter: &mut I) -> Option<Self> {
+        iter.try_fold(RawJiRatio::UNISON, |x, y| x.checked_mul(&y))
     }
 
     pub fn checked_pow(&self, n: i32) -> Option<Self> {
@@ -262,18 +262,14 @@ impl RawJiRatio {
             let mut result = Some(Self::UNISON);
             for _ in 0..n {
                 result = result?.checked_mul(self);
-                if result == None {
-                    return None;
-                }
+                result?;
             }
             result
         } else {
             let mut result = Some(Self::UNISON);
             for _ in 0..-n {
                 result = result?.checked_div(self);
-                if result == None {
-                    return None;
-                }
+                result?;
             }
             result
         }

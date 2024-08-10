@@ -15,7 +15,6 @@ fn partitions_exact_part_count_rec(n: usize, m: usize, parts: usize) -> Vec<Vec<
         (n, 0, _) if n > 0 => vec![],
         (n, _, 0) if n > 0 => vec![],
         _ => (0..=m)
-            .into_iter()
             .flat_map(|l| {
                 partitions_exact_part_count_rec(n - m, l, parts - 1)
                     .into_iter()
@@ -27,18 +26,14 @@ fn partitions_exact_part_count_rec(n: usize, m: usize, parts: usize) -> Vec<Vec<
 
 /// Return the collection of all partitions of `n` with exactly `k` parts.
 pub fn partitions_exact_part_count(n: usize, parts: usize) -> Vec<Vec<usize>> {
-    (1usize..=(n + 1).checked_sub(parts).unwrap_or(0))
-        .into_iter()
+    (1usize..=(n + 1).saturating_sub(parts))
         .flat_map(|m| partitions_exact_part_count_rec(n, m, parts))
         .collect()
 }
 
 /// A partition of n >= 0 is a (possibly empty) sorted list of positive summands to n.
 pub fn partitions(n: usize) -> Vec<Vec<usize>> {
-    (1usize..=n)
-        .into_iter()
-        .flat_map(|m| partitions_rec(n, m))
-        .collect()
+    (1usize..=n).flat_map(|m| partitions_rec(n, m)).collect()
 }
 
 fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
@@ -56,7 +51,6 @@ fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
             vec![]
         }
         _ => (0..=m)
-            .into_iter()
             .flat_map(|k| {
                 partitions_rec(n - m, k)
                     .into_iter()
@@ -253,11 +247,14 @@ impl VecPerm {
             Err(PermutationError::IndexOutOfBounds(self.len(), index))
         }
     }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     /// Tries to create a new `VecPerm`.
     pub fn try_new(slice: &[usize]) -> Result<VecPerm, PermutationError> {
         let domain = (0..slice.len()).collect::<BTreeSet<_>>();
-        let image = slice.into_iter().cloned().collect::<BTreeSet<_>>();
-        if slice.len() == 0 {
+        let image = slice.iter().cloned().collect::<BTreeSet<_>>();
+        if slice.is_empty() {
             // return the empty perm
             Ok(VecPerm { pi: vec![] })
         } else if image != domain {
@@ -314,6 +311,7 @@ impl VecPerm {
         }
     }
     /// The inverse of a permutation.
+    #[allow(clippy::needless_range_loop)]
     pub fn inv(&self) -> Self {
         let mut pi = vec![usize::MAX; self.len()];
         for i in 0..self.len() {
@@ -332,15 +330,15 @@ impl VecPerm {
     /// For example, if `g` acts on `0, 1, 2` by cycling through them,
     /// `g.conj(&h)` acts on `h(0)`, `h(1)`, and `h(2)` in the same way.
     pub fn conj(&self, other: &Self) -> Result<Self, PermutationError> {
-        Ok(other.o(&self)?.o(&other.inv())?)
+        other.o(self)?.o(&other.inv())
     }
 
     /// Replaces elements of `self` starting from `index` with `other` if possible.
     fn nest_replacing(v: &[usize], other: &[usize], index: usize) -> Result<Vec<usize>, String> {
-        if other.len() == 0 {
+        if other.is_empty() {
             Ok(v.to_owned())
         } else if index + other.len() - 1 < v.len() {
-            let mut result = [&v[0..index], &other].concat().to_vec();
+            let mut result = [&v[0..index], other].concat().to_vec();
             if index + other.len() < v.len() {
                 result.extend_from_slice(&v[index + other.len()..]);
             }

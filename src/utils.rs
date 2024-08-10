@@ -50,8 +50,8 @@ where
     T: Clone,
     U: Clone,
 {
-    v1.into_iter()
-        .flat_map(|t| v2.into_iter().cloned().map(move |u| (t.clone(), u)))
+    v1.iter()
+        .flat_map(|t| v2.iter().cloned().map(move |u| (t.clone(), u)))
         .collect()
 }
 
@@ -72,9 +72,9 @@ where
 }
 
 /// Check if given subset is a maximal set in the collection.
-pub fn is_maximal_in<T: std::cmp::Eq + std::cmp::Ord>(set: Vec<T>, sets: &Vec<Vec<T>>) -> bool
+pub fn is_maximal_in<T>(set: Vec<T>, sets: &Vec<Vec<T>>) -> bool
 where
-    T: Clone + Ord,
+    T: Clone + Eq + Ord,
 {
     for set2 in sets {
         if (set.clone().into_iter().collect::<BTreeSet<T>>())
@@ -248,7 +248,7 @@ pub fn lcm(m: u64, n: u64) -> u64 {
 /// `x_0, x_1, ..., x_n`
 /// to `coeffs[0] x_0 + coeffs[1] x_1 + ... + coeffs[n] x_n = gcd(coeffs)`.
 pub fn bezout(coeffs: &[i32]) -> (i32, Vec<i32>) {
-    assert!(coeffs.len() > 0, "`coeffs` should not be empty");
+    debug_assert!(!coeffs.is_empty(), "`coeffs` should not be empty");
     if coeffs.len() == 1 {
         (coeffs[0], vec![1])
     } else if coeffs.len() == 2 {

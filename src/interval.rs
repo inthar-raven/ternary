@@ -47,7 +47,7 @@ pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
                     ret
                 }
                 _ => {
-                    while !(ret.cmp_dyad(&modulo) == Ordering::Less) {
+                    while ret.cmp_dyad(&modulo) != Ordering::Less {
                         ret = ret.unstack(modulo);
                     }
                     ret

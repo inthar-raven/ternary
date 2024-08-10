@@ -16,9 +16,9 @@ use crate::words::{rotate, CountVector};
 /// not including the unison.
 pub fn specified_odd_limit(odds: &[u64]) -> Vec<RawJiRatio> {
     let odds: Vec<u64> = odds
-        .into_iter()
+        .iter()
         .filter(|x| **x > 0 && **x % 2 == 1)
-        .map(|x| *x)
+        .copied()
         .collect(); // filter out invalid input
     pairs(&odds, &odds.clone())
         .into_iter()
@@ -149,7 +149,6 @@ pub fn step_form(cumul_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
     [
         &[cumul_form[0]],
         (0..cumul_form.len() - 1)
-            .into_iter()
             .map(|i| cumul_form[i + 1] / cumul_form[i])
             .collect::<Vec<_>>()
             .as_slice(),
@@ -160,7 +159,7 @@ pub fn step_form(cumul_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
 /// Convert a step form into a cumulative form.
 pub fn cumulative_form(step_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
     step_form
-        .into_iter()
+        .iter()
         .scan(RawJiRatio::UNISON, |acc, &step| {
             *acc *= step;
             Some(*acc)
@@ -170,10 +169,7 @@ pub fn cumulative_form(step_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
 
 /// Modes of a JI scale written in cumulative form.
 pub fn ji_scale_modes(scale: &[RawJiRatio]) -> Vec<Vec<RawJiRatio>> {
-    (0..scale.len())
-        .into_iter()
-        .map(|degree| mode(&scale, degree))
-        .collect()
+    (0..scale.len()).map(|degree| mode(scale, degree)).collect()
 }
 
 /// Returns the JI chord `mode_num`:...:`2*mode_num`.
@@ -182,7 +178,6 @@ pub fn harmonic_mode(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
         Err(ScaleError::CannotMakeScale)
     } else {
         Ok((mode_num + 1..=(2 * mode_num))
-            .into_iter()
             .map(|x| RawJiRatio::try_new(x, mode_num).expect("`numer` should be > `denom` here"))
             .collect())
     }
@@ -194,7 +189,6 @@ pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError
         Err(ScaleError::CannotMakeScale)
     } else {
         Ok((mode_num + 1..=(2 * mode_num - 1))
-            .into_iter()
             .map(|x| RawJiRatio::try_new(x, mode_num).expect("`numer` should be > `denom`"))
             .collect())
     }
@@ -202,7 +196,7 @@ pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError
 
 /// Compute if `offset` is valid for an interleaved scale with strand `strand`.
 pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
-    (1..=(strand.len() - 1)).into_iter().try_for_each(|i| {
+    (1..=(strand.len() - 1)).try_for_each(|i| {
         let i_steps = spectrum(strand, i);
         let min_i_step = *i_steps
             .into_inner()
@@ -326,9 +320,8 @@ pub fn is_cs_ji_scale(arr: &[RawJiRatio]) -> bool {
         // This loop makes at most (n-1)(n-2)/2 comparisons between sets.
         let unique_i_plus_1_steps: BTreeSet<RawJiRatio> =
             interval_classes[i].iter().cloned().collect();
-        for j in (i + 1)..(n - 1) {
-            let unique_j_plus_1_steps: BTreeSet<RawJiRatio> =
-                interval_classes[j].iter().cloned().collect();
+        for class in interval_classes.iter().take(n - 1).skip(i + 1) {
+            let unique_j_plus_1_steps: BTreeSet<RawJiRatio> = class.iter().cloned().collect();
             if !unique_i_plus_1_steps.is_disjoint(&unique_j_plus_1_steps) {
                 // If two different classes have a non-empty intersection, return false.
                 return false;
@@ -346,14 +339,14 @@ pub fn gs_scale(
     n: usize,
     equave: RawJiRatio,
 ) -> Result<Vec<RawJiRatio>, Box<dyn std::error::Error>> {
-    if gs.len() == 0 || n == 0 || equave == RawJiRatio::UNISON {
+    if gs.is_empty() || n == 0 || equave == RawJiRatio::UNISON {
         Err(Box::new(ScaleError::CannotMakeScale))
     } else if equave == RawJiRatio::UNISON {
         Err(Box::new(BadJiArith::LogDivByUnison))
     } else {
         let equave = equave.magnitude(); // Take the equave's magnitude
         let mut result = vec![];
-        let mut gs_cycle = gs.into_iter().cycle();
+        let mut gs_cycle = gs.iter().cycle();
         let mut accumulator = RawJiRatio::UNISON;
         for _ in 0..n - 1 {
             accumulator = (accumulator * *gs_cycle.next().expect("`gs.len() > 0` in this branch, thus `gs.into_iter().cycle()` is infinite and can never run out") ).rd(equave);
@@ -373,7 +366,6 @@ pub fn well_formed_necklace_in_ji_scale(
 ) -> Result<Vec<RawJiRatio>, ScaleError> {
     if gcd(scale.len() as i64, gen_class as i64) == 1 {
         Ok((0..(scale.len()))
-            .into_iter()
             .map(|k| {
                 (scale[(gen_class * (k + 1)) % scale.len()] / scale[(gen_class * k) % scale.len()])
                     .rd(RawJiRatio::OCTAVE)

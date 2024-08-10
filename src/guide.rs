@@ -16,7 +16,7 @@ where
     T: core::fmt::Debug + PartialEq + Clone + Eq + Send,
 {
     let len = chain.len();
-    rotations(&chain)
+    rotations(chain)
         .into_iter()
         .filter(|list| !(list[..len - 1].contains(&list[len - 1])))
         .map(|chain| weak_period(&chain[..len - 1]))
@@ -38,7 +38,6 @@ where
     T: Subtendable + std::fmt::Debug,
 {
     (0..neck.len())
-        .into_iter()
         .map(|i| word_on_degree(neck, k * i, k))
         .map(|subword| <T as Subtendable>::interval_from_slice(&subword))
         .collect()
@@ -49,7 +48,6 @@ where
 pub fn wfgs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let len = neck.len();
     (2..=len - 2) // Don't include 1-step GSes
-        .into_iter()
         .filter(|&k| gcd(k as u64, len as u64) == 1)
         .flat_map(|k| k_step_wfgs_list(k, neck))
         .collect()
@@ -59,7 +57,6 @@ pub fn wfgs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
 pub fn wfgs_list_of_len(l: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let neck_len = neck.len();
     (2..=neck_len / 2) // Don't include 1-step GSes
-        .into_iter()
         .filter(|&k| gcd(k as u64, neck_len as u64) == 1)
         .flat_map(|k| k_step_wfgs_list(k, neck))
         .filter(|vs| l == vs.len())
@@ -73,7 +70,6 @@ fn wfgs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<CountVecto
     } else {
         let len = subscale.len();
         (2..=len / 2) // Don't include 1-step GSes
-            .into_iter()
             .filter(|&k| gcd(k as u64, len as u64) == 1)
             .flat_map(|k| k_step_wfgs_list_for_subscale(k, subscale))
             .collect()
@@ -129,12 +125,12 @@ impl GuideFrame {
     }
     // Try to get simple or interleaved guide frames with k-step generators.
     pub fn try_simple_or_interleaved(scale: &[usize], k: usize) -> Vec<Self> {
-        if scale.len() == 0 {
+        if scale.is_empty() {
             vec![]
         } else {
             let d = gcd(scale.len() as u64, k as u64) as usize;
             let subscales = (0..d)
-                .map(|degree| rotate(&scale, degree))
+                .map(|degree| rotate(scale, degree))
                 .map(|rotation| {
                     stacked_k_steps(d, &rotation[..scale.len()])[..scale.len() / d].to_vec()
                 })
@@ -154,13 +150,9 @@ impl GuideFrame {
                 .into_iter()
                 .enumerate()
                 .map(|(i, subscale)| {
-                    offset_vec(&subscale_on_root, &subscale).and_then(|offset| {
+                    offset_vec(subscale_on_root, &subscale).map(|offset| {
                         // `.and_then()` returns `None` if the previous result is `None`.
-                        Some(CountVector::from_slice(&word_on_degree(
-                            scale,
-                            0,
-                            offset * d + i,
-                        )))
+                        CountVector::from_slice(&word_on_degree(scale, 0, offset * d + i))
                     })
                 })
                 // None if there is any `None` returned by `map`.
@@ -172,7 +164,7 @@ impl GuideFrame {
                 let offsets: Vec<CountVector<usize>> =
                     offsets.into_iter().sorted_by_key(|v| v.len()).collect();
                 if offsets == [CountVector::ZERO] {
-                    wfgs_list(&scale)
+                    wfgs_list(scale)
                         .into_iter()
                         .map(|gs| Self {
                             gs,
@@ -183,8 +175,7 @@ impl GuideFrame {
                         .dedup()
                         .collect::<Vec<_>>()
                 } else {
-                    ("{:?}", wfgs_list_for_subscale(&subscale_on_root));
-                    wfgs_list_for_subscale(&subscale_on_root)
+                    wfgs_list_for_subscale(subscale_on_root)
                         .into_iter()
                         .map(|gs| Self {
                             gs,
@@ -202,7 +193,7 @@ impl GuideFrame {
     }
     pub fn try_multiple(scale: &[usize], multiplicity: usize, k: usize) -> Vec<Self> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
-        if is_prime(scale.len() as u64) || scale.len() == 0 || scale.len() % multiplicity != 0 {
+        if is_prime(scale.len() as u64) || scale.is_empty() || scale.len() % multiplicity != 0 {
             vec![]
         } else {
             let d = gcd(k as u64, scale.len() as u64) as usize;
@@ -216,7 +207,6 @@ impl GuideFrame {
                         // Stack k-steps and split the result into `multiplicity` vecs of equal length
                         let s = stacked_k_steps(k, &rotate(scale, degree));
                         (0..multiplicity)
-                            .into_iter()
                             .map(|i| {
                                 s[scale.len() / multiplicity * i
                                     ..scale.len() / multiplicity * (i + 1)]
@@ -227,7 +217,7 @@ impl GuideFrame {
                     .filter(|gses| {
                         // To qualify as a valid GS, the last element cannot be in the GS.
                         !gses[0][0..scale.len() / multiplicity - 1]
-                            .into_iter()
+                            .iter()
                             .contains(&gses[0][scale.len() / multiplicity - 1])
                         // Ignoring the last element, all of the vecs have to be equal.
                         && gses.iter()
@@ -267,15 +257,14 @@ impl GuideFrame {
             .map(|p| p as usize)
             .collect();
         let simple_guide_moses: Vec<GuideFrame> = Self::try_simple_or_interleaved(scale, k);
-        let multiple_guide_moses: Vec<GuideFrame> =
-            if BTreeSet::from_iter(scale.into_iter()).len() > 1 {
-                prime_factors
-                    .into_iter()
-                    .flat_map(|p| Self::try_multiple(scale, p, k))
-                    .collect()
-            } else {
-                vec![]
-            };
+        let multiple_guide_moses: Vec<GuideFrame> = if BTreeSet::from_iter(scale.iter()).len() > 1 {
+            prime_factors
+                .into_iter()
+                .flat_map(|p| Self::try_multiple(scale, p, k))
+                .collect()
+        } else {
+            vec![]
+        };
         [simple_guide_moses, multiple_guide_moses].concat()
     }
 }

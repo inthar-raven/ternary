@@ -101,7 +101,7 @@ pub fn eratosthenes(n: u64) -> Vec<u64> {
     known_composites.dedup();
     primes_so_far.extend(
         (i..=n)
-            .filter(|j| !known_composites.contains(&j))
+            .filter(|j| !known_composites.contains(j))
             .collect::<Vec<_>>(),
     );
     primes_so_far
@@ -156,7 +156,7 @@ pub fn atkin(n: u64) -> Vec<u64> {
                 }
             }
             for i in 7..=n {
-                if status[i as usize] == true {
+                if status[i as usize] {
                     primes.push(i);
                     for j in (0..n / (i * i))
                         .map(|k| (2 * k + 1) * i * i)

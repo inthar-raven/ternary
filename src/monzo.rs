@@ -43,7 +43,7 @@ macro_rules! monzo {
         $crate::monzo::Monzo::UNISON
     );
     ($elem:expr; $n:expr) => (
-        $crate::monzo::Monzo(nalgebra::SVector::<i32, {crate::primes::SMALL_PRIMES_COUNT}>::from_column_slice(&[$elem; crate::primes::SMALL_PRIMES_COUNT]))
+        $crate::monzo::Monzo(nalgebra::SVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_column_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
     ($($x:expr),+ $(,)?) => (
         $crate::monzo::Monzo::from_slice(&[$($x),+])
@@ -138,7 +138,7 @@ impl Monzo {
         )
     }
     /// Whether the monzo is an interval with positive logarithmic size.
-    pub fn is_positive(self: Self) -> bool {
+    pub fn is_positive(self) -> bool {
         self.cents() > 0.0
     }
     /// Tries to convert the JI ratio `numer`/`denom` into monzo form.
@@ -149,7 +149,7 @@ impl Monzo {
         if denom == 0 {
             return Err(CantMakeMonzo::DenomCantBeZero);
         }
-        let numer_factors = factorize(numer.into());
+        let numer_factors = factorize(numer);
         let numer_primes_too_big: Vec<u64> = numer_factors
             .iter()
             .copied()
@@ -158,7 +158,7 @@ impl Monzo {
         if !numer_primes_too_big.is_empty() {
             Err(CantMakeMonzo::NumerExceededPrimeLimit(numer_primes_too_big))
         } else {
-            let denom_factors = factorize(denom.into());
+            let denom_factors = factorize(denom);
             let denom_primes_too_big: Vec<u64> = denom_factors
                 .iter()
                 .copied()
@@ -1558,26 +1558,14 @@ impl Index<usize> for Monzo {
 impl std::ops::Mul<i32> for Monzo {
     type Output = Monzo;
     fn mul(self, coeff: i32) -> Self {
-        Monzo::from_slice(
-            &self
-                .0
-                .into_iter()
-                .map(|ex| ex * (coeff as i32))
-                .collect::<Vec<_>>(),
-        )
+        Monzo::from_slice(&self.0.into_iter().map(|ex| ex * coeff).collect::<Vec<_>>())
     }
 }
 
 impl std::ops::Div<i32> for Monzo {
     type Output = Monzo;
     fn div(self, coeff: i32) -> Self {
-        Monzo::from_slice(
-            &self
-                .0
-                .into_iter()
-                .map(|ex| ex / (coeff as i32))
-                .collect::<Vec<_>>(),
-        )
+        Monzo::from_slice(&self.0.into_iter().map(|ex| ex / coeff).collect::<Vec<_>>())
     }
 }
 
@@ -1702,10 +1690,9 @@ pub fn l2_norm(v: Monzo) -> f64 {
 
 /// The unweighted L^\infty norm of a monzo.
 pub fn linf_norm(v: Monzo) -> f64 {
-    v.0.into_iter()
+    v.0.iter()
         .map(|x| (*x as f64))
         .map(|x| x.abs())
-        .into_iter()
         .reduce(f64::max)
         .unwrap_or(0.0)
 }
@@ -1723,7 +1710,6 @@ pub fn weighted_l2_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
 /// The weighted $L^\infty$ norm of a monzo.
 pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
     weighting(v)
-        .into_iter()
         .map(|x| x.abs())
         .into_iter()
         .reduce(f64::max)
@@ -1731,9 +1717,8 @@ pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
 }
 
 #[allow(unused)]
-fn tenney_weighting<T>(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
+fn tenney_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     let vec = (0..SMALL_PRIMES_COUNT)
-        .into_iter()
         .map(|i| log_primes()[i] * (v[i] as f64))
         .collect();
     SVector::from_vec(vec)
@@ -1746,7 +1731,7 @@ fn unweighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
 }
 
 #[allow(unused)]
-fn weil_weighting<T>(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
+fn weil_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     let diagonal: &[f64] = &log_primes()[0..SMALL_PRIMES_COUNT];
     let m: SMatrix<f64, { SMALL_PRIMES_COUNT }, { SMALL_PRIMES_COUNT }> =
         SMatrix::from_fn(|r, c| {
@@ -1847,7 +1832,7 @@ fn solve_linear_diophantine_rec(coeffs: &[i32], constant: i32, bound: i32) -> Ve
                 .into_iter()
                 .map(|x| x * (constant / d))
                 .collect::<Vec<_>>();
-            let result = homogeneous_solns
+            homogeneous_solns
                 .into_iter()
                 .map(|soln| {
                     // Add `particular_soln` to each `soln`
@@ -1856,8 +1841,7 @@ fn solve_linear_diophantine_rec(coeffs: &[i32], constant: i32, bound: i32) -> Ve
                         .map(|(i, expon)| expon + particular_soln[i])
                         .collect::<Vec<_>>()
                 })
-                .collect::<Vec<_>>();
-            result
+                .collect::<Vec<_>>()
         } else {
             vec![]
         }
@@ -1879,7 +1863,7 @@ fn solve_linear_diophantine_homogeneous(coeffs: &[i32], bound: i32) -> Vec<Vec<i
         let (head, tail) = coeffs
             .split_first()
             .expect("should be sound because coeffs.len() >= 3");
-        let result = (-bound..=bound)
+        (-bound..=bound)
             .flat_map(|k| {
                 let mut solns = solve_linear_diophantine_rec(tail, -k * head, bound);
                 for vec in solns.iter_mut() {
@@ -1887,8 +1871,7 @@ fn solve_linear_diophantine_homogeneous(coeffs: &[i32], bound: i32) -> Vec<Vec<i
                 }
                 solns
             })
-            .collect::<Vec<_>>();
-        result
+            .collect::<Vec<_>>()
     }
 }
 
@@ -1912,7 +1895,7 @@ pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) ->
     // assuming a particular solution exists.
     // It might happen that no solution exists,
     // since for example `gcd(a_1, ..., a_n)` might not divide a constant term.
-    let step_sig = step_sig.into_iter().map(|i| *i as i32).collect::<Vec<_>>();
+    let step_sig = step_sig.iter().map(|i| *i as i32).collect::<Vec<_>>();
     let iter_of_iters = equave
         .0
         .into_iter()
@@ -1929,7 +1912,7 @@ pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) ->
         .collect();
     let result: Vec<Vec<Monzo>> = result
         .into_iter()
-        .map(|vs| vs.iter().map(|v| Monzo::from_slice(&v)).collect::<Vec<_>>())
+        .map(|vs| vs.iter().map(|v| Monzo::from_slice(v)).collect::<Vec<_>>())
         .filter(|soln| soln.iter().all(|&step| step.is_positive()))
         .collect();
     result
