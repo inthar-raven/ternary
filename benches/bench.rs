@@ -5,7 +5,7 @@ use itertools::Itertools;
 use ternary::guide::{stacked_k_steps, GuideFrame};
 use ternary::primes::is_prime;
 use ternary::words::{rotate, rotations, weak_period, CountVector, Letter};
-use ternary::{comb::necklaces_fixed_content, interval::Dyad, ji::odd_limit, ji_ratio::RawJiRatio};
+use ternary::{interval::Dyad, ji::odd_limit, ji_ratio::RawJiRatio};
 
 use ternary::utils::gcd as my_gcd;
 
@@ -126,7 +126,7 @@ pub fn cs_checking(c: &mut Criterion) {
 pub fn bench_guide(c: &mut Criterion) {
     fn try_multiple_1(scale: &[usize], multiplicity: usize, k: usize) -> Vec<GuideFrame> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
-        if is_prime(scale.len() as u64) || scale.len() == 0 || scale.len() % multiplicity != 0 {
+        if is_prime(scale.len() as u64) || scale.is_empty() || scale.len() % multiplicity != 0 {
             vec![]
         } else {
             let d = my_gcd(k as u64, scale.len() as u64) as usize;
@@ -140,7 +140,6 @@ pub fn bench_guide(c: &mut Criterion) {
                         // Stack k-steps and split the result into `multiplicity` vecs of equal length
                         let s = stacked_k_steps(k, &rotate(scale, degree));
                         (0..multiplicity)
-                            .into_iter()
                             .map(|i| {
                                 s[scale.len() / multiplicity * i
                                     ..scale.len() / multiplicity * (i + 1)]
@@ -157,7 +156,7 @@ pub fn bench_guide(c: &mut Criterion) {
                             .all_equal()
                             // To qualify as a valid GS, the last element cannot be in the GS.
                         && iter.all(|gs| !gs[0..scale.len() / multiplicity - 1]
-                                .into_iter()
+                                .iter()
                                 .contains(&gs[scale.len() / multiplicity - 1]))
                     })
                     // Get the first generator chain, which should exist and be equal to all the other GSes in the list.
