@@ -1,5 +1,3 @@
-
-
 use itertools::Itertools;
 use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;

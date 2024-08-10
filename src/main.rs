@@ -35,8 +35,9 @@ use guide::GuideFrame;
 use interval::JiRatio;
 use serde::Serialize;
 use serde_json::json;
-use ternary::words::{maximum_variety, monotone_lm, monotone_ms, rotation_to_least_mode_booth};
-use words::{monotone_s0, CountVector, Letter};
+use ternary::words::{
+    booth, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector, Letter,
+};
 
 pub mod comb;
 #[macro_use]
@@ -193,7 +194,7 @@ async fn word_result(req: Query<GuideMosRequest>) -> HttpResponse {
                 return HttpResponse::InternalServerError().into();
             }
         }
-        let k = rotation_to_least_mode_booth(&word);
+        let k = booth(&word);
         let brightest = [&string[k..], &string[0..k]].concat(); // canonicalize
         println!("{:?}", word);
         let step_sig = {

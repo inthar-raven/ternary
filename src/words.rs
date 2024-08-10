@@ -1,4 +1,3 @@
-
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
@@ -505,34 +504,13 @@ pub fn least_mode_naive(scale: &[Letter]) -> Vec<Letter> {
 
 /// The lexicographically brightest mode of a word (where the letters are in their usual order).
 /// (Booth's algorithm)
-pub fn least_mode_booth(scale: &[Letter]) -> Vec<Letter> {
-    let s = scale;
-    let n = scale.len();
-    let mut f = vec![usize::MAX; 2 * n];
-    let mut k: usize = 0;
-    for j in 1..2 * n {
-        let mut i = f[j - k - 1];
-        while i != usize::MAX && s[(j % n) as usize] != s[k.wrapping_add(i).wrapping_add(1) % n] {
-            if s[j % n] < s[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j.wrapping_sub(i).wrapping_sub(1);
-            }
-            i = f[i];
-        }
-        if i == usize::MAX && s[j % n] != s[k.wrapping_add(i).wrapping_add(1) % n] {
-            if s[j % n] < s[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j;
-            }
-            f[j - k] = usize::MAX;
-        } else {
-            f[j - k] = i.wrapping_add(1);
-        }
-    }
-    return rotate(&s, k);
+pub fn least_mode(scale: &[Letter]) -> Vec<Letter> {
+    rotate(scale, booth(scale))
 }
 
 /// The lexicographically brightest mode of a word (where the letters are in their usual order).
 /// (Booth's algorithm)
-pub fn rotation_to_least_mode_booth(scale: &[Letter]) -> usize {
+pub fn booth(scale: &[Letter]) -> usize {
     let s = scale;
     let n = scale.len();
     let mut f = vec![usize::MAX; 2 * n];
@@ -554,7 +532,7 @@ pub fn rotation_to_least_mode_booth(scale: &[Letter]) -> usize {
             f[j - k] = i.wrapping_add(1);
         }
     }
-    return k;
+    k
 }
 
 /// The set of all [MOS substitution](https://en.xen.wiki/w/User:Inthar/MOS_substitution) ternary scales.
@@ -633,7 +611,7 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
 
     redundant_list
         .into_iter()
-        .map(|scale| least_mode_booth(&scale))
+        .map(|scale| least_mode(&scale))
         .sorted()
         .dedup()
         .collect()
@@ -766,10 +744,7 @@ mod tests {
     #[test]
     fn test_booth() {
         let blackdye = [2, 0, 1, 0, 2, 0, 1, 0, 2, 0];
-        assert_eq!(
-            least_mode_booth(&blackdye),
-            vec![0, 1, 0, 2, 0, 1, 0, 2, 0, 2]
-        );
+        assert_eq!(least_mode(&blackdye), vec![0, 1, 0, 2, 0, 1, 0, 2, 0, 2]);
     }
     #[test]
     fn test_word_on_degree() {
