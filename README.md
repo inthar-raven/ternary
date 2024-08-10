@@ -1,7 +1,7 @@
 This is a microtonal scale research app chiefly dedicated to ternary scales (scales with three distinct step sizes). It focuses on [aberrismic theory](https://en.xen.wiki/w/Aberrismic_theory), developed by groundfault, inthar, and others.
 
 # How to build and run:
-On Linux, install the Rust toolchain and run `cargo run --release` in this directory. You should see a link. Ctrl-click on it to go to the main page.
+On Linux, install the Rust toolchain and run `cargo run --release` in the project directory. You should see a link. Ctrl-click on it to go to the main page.
 
 Windows is not supported at this time.
 
