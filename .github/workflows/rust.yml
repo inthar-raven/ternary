@@ -17,15 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: List
-        run: find ./
-      - name: Run tests
-        run: cargo test --verbose
-      - name: Run Clippy
-        run: cargo clippy --all-targets --all-features
-      - name: Run format check
-        run: cargo fmt --check
-
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all -- --check
+      - if: always()
+        run: cargo clippy --workspace --all-targets -- -D warnings
   build:
     strategy:
       fail-fast: false
