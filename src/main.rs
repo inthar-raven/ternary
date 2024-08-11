@@ -52,6 +52,11 @@ pub mod primes;
 pub mod utils;
 pub mod words;
 
+// for the edo search
+pub const EDO_BOUND: i32 = 53;
+pub const S_LOWER_BOUND: f64 = 20.0;
+pub const S_UPPER_BOUND: f64 = 200.0;
+
 #[derive(Debug, Serialize)]
 pub struct GuideResult {
     /// Either WFGS or multiple interleaved WFGSes
@@ -238,9 +243,9 @@ async fn word_result(req: Query<GuideMosRequest>) -> HttpResponse {
                 let ed_tunings = crate::equal::ed_tunings_for_ternary(
                     &step_sig,
                     crate::ji_ratio::RawJiRatio::OCTAVE,
-                    53,
-                    20.0,
-                    60.0,
+                    EDO_BOUND,
+                    S_LOWER_BOUND,
+                    S_UPPER_BOUND,
                 );
                 yield_now().await;
                 let profile: serde_json::Value = json!({
@@ -273,9 +278,9 @@ async fn word_result(req: Query<GuideMosRequest>) -> HttpResponse {
             let ed_tunings = crate::equal::ed_tunings_for_ternary(
                 &step_sig,
                 crate::ji_ratio::RawJiRatio::OCTAVE,
-                53,
-                20.0,
-                60.0,
+                EDO_BOUND,
+                S_LOWER_BOUND,
+                S_UPPER_BOUND,
             );
             yield_now().await;
             let profile = json!({
@@ -424,9 +429,9 @@ async fn step_sig_result(req: Query<StepSigRequest>) -> HttpResponse {
             let ed_tunings = crate::equal::ed_tunings_for_ternary(
                 &step_sig,
                 crate::ji_ratio::RawJiRatio::OCTAVE,
-                53,
-                20.0,
-                60.0,
+                EDO_BOUND,
+                S_LOWER_BOUND,
+                S_UPPER_BOUND,
             );
             HttpResponse::Ok().json(json!({
                 "scales": scales_data,
