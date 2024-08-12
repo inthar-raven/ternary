@@ -3,7 +3,7 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 ![Front page screenshot](https://raw.githubusercontent.com/inthar-raven/ternary/main/static/images/front.png)
 
 # How to build and run:
-On Linux, install the Rust toolchain and run `cargo run --release` in the project directory. You should see a link `http://127.0 0.1:8080/static/index.html`. Ctrl-click on it to go to the main page.
+On Linux, install the Rust toolchain and run `cargo run --release` in the project directory. You should see a link `http://127.0.0.1:8080/static/index.html`. Ctrl-click on it to go to the main page.
 
 This program may not work in Windows systems at this time.
 
