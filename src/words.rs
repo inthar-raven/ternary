@@ -646,12 +646,7 @@ where
         + (1..slice.len())
             .map(|i| slice.iter().take(i).cycle())
             .take_while(|iter| {
-                slice.to_vec()
-                    != iter
-                        .clone()
-                        .take(slice.len())
-                        .cloned()
-                        .collect::<Vec<T>>()
+                slice.to_vec() != iter.clone().take(slice.len()).cloned().collect::<Vec<T>>()
             })
             .collect::<Vec<_>>()
             .len();
@@ -668,14 +663,12 @@ where
 
 /// The chirality of a scale word.
 pub fn chirality(word: &[Letter]) -> Chirality {
-    let mut modes = rotations(word);
-    modes.sort_unstable();
+    let least_mode_word = least_mode(word);
 
     let word_rev: Vec<usize> = word.iter().cloned().rev().collect();
-    let mut modes_rev = rotations(&word_rev);
-    modes_rev.sort_unstable();
+    let least_mode_word_rev = least_mode(&word_rev);
 
-    match modes[0].cmp(&modes_rev[0]) {
+    match least_mode_word.cmp(&least_mode_word_rev) {
         Ordering::Less => Chirality::Right,
         Ordering::Equal => Chirality::Achiral,
         Ordering::Greater => Chirality::Left,
