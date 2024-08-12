@@ -93,14 +93,14 @@ pub fn ed_tunings_for_ternary(
     (3..ed_bound)
         .flat_map(|l| (2..l).flat_map(move |m| (1..m).map(move |s| vec![l, m, s])))
         .filter(|edostep_counts| {
-            let ed: i32 =
-                edostep_counts[0] * step_sig[0] as i32 
-                    + edostep_counts[1] * step_sig[1] as i32 
-                    + edostep_counts[2] * step_sig[2] as i32;
+            let ed: i32 = edostep_counts[0] * step_sig[0] as i32
+                + edostep_counts[1] * step_sig[1] as i32
+                + edostep_counts[2] * step_sig[2] as i32;
             let aber_size = steps_as_cents(edostep_counts[2], ed as f64, equave);
-            edostep_counts[0] * step_sig[0] as i32 
-                + edostep_counts[1] * step_sig[1] as i32 
-                + edostep_counts[2] * step_sig[2] as i32 <= ed_bound
+            edostep_counts[0] * step_sig[0] as i32
+                + edostep_counts[1] * step_sig[1] as i32
+                + edostep_counts[2] * step_sig[2] as i32
+                <= ed_bound
                 && aber_lower <= aber_size
                 && aber_size <= aber_upper
         })

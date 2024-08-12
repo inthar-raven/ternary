@@ -313,18 +313,16 @@ where
         let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
         (1..=floor_half)
             .flat_map(|subword_length| {
-                distinct_letters
-                    .iter()
-                    .map(move |letter| {
-                        let counts = CountVector::distinct_spectrum(scale, subword_length)
+                distinct_letters.iter().map(move |letter| {
+                    let counts = CountVector::distinct_spectrum(scale, subword_length)
                         .iter()
                         .filter_map(|dyad| dyad.get(letter))
                         .copied()
                         .collect::<BTreeSet<_>>();
-                        // the differences to collect
-                        *counts.last().expect("`counts` should be nonempty")
-                            - *counts.first().expect("`counts` should be nonempty") // this will always be >= 0 for a nonempty `BTreeSet`
-                    })
+                    // the differences to collect
+                    *counts.last().expect("`counts` should be nonempty")
+                        - *counts.first().expect("`counts` should be nonempty") // this will always be >= 0 for a nonempty `BTreeSet`
+                })
             })
             .max()
             .unwrap() as usize
@@ -648,12 +646,7 @@ where
         + (1..slice.len())
             .map(|i| slice.iter().take(i).cycle())
             .take_while(|iter| {
-                slice.to_vec()
-                    != iter
-                        .clone()
-                        .take(slice.len())
-                        .cloned()
-                        .collect::<Vec<T>>()
+                slice.to_vec() != iter.clone().take(slice.len()).cloned().collect::<Vec<T>>()
             })
             .collect::<Vec<_>>()
             .len();
