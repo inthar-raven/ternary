@@ -308,24 +308,26 @@ where
     if scale.len() <= 1 {
         scale.len()
     } else {
-        let mut max = 0;
+        // Only need to check half of the step size classes.
         let floor_half: usize = scale.len() / 2;
         let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
-        for subword_length in 1..=floor_half {
-            for letter in distinct_letters.iter() {
-                let counts = CountVector::distinct_spectrum(scale, subword_length)
+        (1..=floor_half)
+            .flat_map(|subword_length| {
+                distinct_letters
                     .iter()
-                    .filter_map(|dyad| dyad.get(letter))
-                    .copied()
-                    .collect::<BTreeSet<_>>();
-                let diff: i32 = *counts.last().expect("`counts` should be nonempty")
-                    - *counts.first().expect("`counts` should be nonempty"); // this will always be >= 0 for a nonempty `BTreeSet`
-                if diff > max {
-                    max = diff;
-                }
-            }
-        }
-        max as usize
+                    .map(move |letter| {
+                        let counts = CountVector::distinct_spectrum(scale, subword_length)
+                        .iter()
+                        .filter_map(|dyad| dyad.get(letter))
+                        .copied()
+                        .collect::<BTreeSet<_>>();
+                        // the differences to collect
+                        *counts.last().expect("`counts` should be nonempty")
+                            - *counts.first().expect("`counts` should be nonempty") // this will always be >= 0 for a nonempty `BTreeSet`
+                    })
+            })
+            .max()
+            .unwrap() as usize
     }
 }
 
