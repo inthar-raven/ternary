@@ -40,7 +40,7 @@ impl Subtendable for CountVector<Letter> {
 pub enum Chirality {
     /// Lexicographically first mode is greater than that of reversed scale word.
     Left,
-    /// Equal to reversed scale word.
+    /// Equal as circular word to reversed scale word.
     Achiral,
     /// Lexicographically first mode is less than that of reversed scale word.
     Right,
@@ -535,64 +535,16 @@ pub fn booth(scale: &[Letter]) -> usize {
 pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
     let (n0, n1, n2) = (sig[0], sig[1], sig[2]);
 
-    // Use all 6 permutations of (0, 1, 2) for the MOS substitution patterns n0*_ (n1*_ n2*_)
+    // Only need 3 permutations of (0, 1, 2) for the MOS substitution patterns n0*_ (n1*_ n2*_)
     let redundant_list = [
+        // n0L (n1m n2s)
         mos_substitution_scales_one_perm(n0, n1, n2),
-        mos_substitution_scales_one_perm(n0, n2, n1)
-            .into_iter()
-            .map(|scale| {
-                scale
-                    .into_iter()
-                    .map(|x| {
-                        if x == 1 {
-                            2
-                        } else if x == 2 {
-                            1
-                        } else {
-                            0
-                        }
-                    })
-                    .collect()
-            })
-            .collect(),
-        mos_substitution_scales_one_perm(n2, n1, n0)
-            .into_iter()
-            .map(|scale| {
-                scale
-                    .into_iter()
-                    .map(|x| {
-                        if x == 2 {
-                            0
-                        } else if x == 0 {
-                            2
-                        } else {
-                            1
-                        }
-                    })
-                    .collect()
-            })
-            .collect(),
-        mos_substitution_scales_one_perm(n1, n0, n2)
-            .into_iter()
-            .map(|scale| {
-                scale
-                    .into_iter()
-                    .map(|x| {
-                        if x == 1 {
-                            0
-                        } else if x == 0 {
-                            1
-                        } else {
-                            2
-                        }
-                    })
-                    .collect()
-            })
-            .collect(),
+        // n1m (n0L n2s)
         mos_substitution_scales_one_perm(n1, n2, n0)
             .into_iter()
             .map(|scale| scale.into_iter().map(|x| (x + 1) % 3).collect())
             .collect(),
+        // n2s (n0L n1m)
         mos_substitution_scales_one_perm(n2, n0, n1)
             .into_iter()
             .map(|scale| {
@@ -604,7 +556,7 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
             .collect(),
     ]
     .concat();
-
+    // Canonicalize every scale and remove duplicates
     redundant_list
         .into_iter()
         .map(|scale| least_mode(&scale))
@@ -661,7 +613,7 @@ pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
         && maximum_variety(&replace(scale, 2, 0)) == 2
 }
 
-/// The repeating portion of a slice,
+/// The repeating portion of a slice.
 pub fn period<T>(slice: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
@@ -685,7 +637,7 @@ where
 
 /// The repeating portion of `slice`,
 /// but `slice` is only required to be equal to some prefix of the infinite repetition of the weak period.
-/// For example, `[0, 1]`` is a weak period but not a strong period of `[0, 1, 0, 1, 0]`.
+/// For example, `[0, 1]` is a weak period but not a strong period of `[0, 1, 0, 1, 0]`.
 pub fn weak_period<T>(slice: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone,
@@ -697,7 +649,7 @@ where
                 slice.to_vec()
                     != iter
                         .clone()
-                        .take(slice.len()) // Take one more than the index, then repeat
+                        .take(slice.len())
                         .cloned()
                         .collect::<Vec<T>>()
             })

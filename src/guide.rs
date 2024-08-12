@@ -120,6 +120,7 @@ impl GuideFrame {
             multiplicity: 1,
         }
     }
+    // The comoplexity of a guide frame.
     pub fn complexity(&self) -> usize {
         self.gs.len() * self.polyoffset.len() * self.multiplicity
     }
@@ -151,18 +152,19 @@ impl GuideFrame {
                 .enumerate()
                 .map(|(i, subscale)| {
                     offset_vec(subscale_on_root, &subscale).map(|offset| {
-                        // `.and_then()` returns `None` if the previous result is `None`.
+                        // `.map()` returns `None` if the previous result is `None` and functorially applies the closure to `Some`s.
                         CountVector::from_slice(&word_on_degree(scale, 0, offset * d + i))
                     })
                 })
-                // None if there is any `None` returned by `map`.
+                // collect returns `None` if there is any `None` returned by `map`.
                 .collect::<Option<Vec<CountVector<usize>>>>();
             // println!("subscale_on_root: {:?}", subscale_on_root);
             // println!("maybe_offsets: {:?}", maybe_offsets);
             if let Some(offsets) = maybe_offsets {
-                // sort list of offsets by step class, just in case
+                // sort list of offsets by step class
                 let offsets: Vec<CountVector<usize>> =
                     offsets.into_iter().sorted_by_key(|v| v.len()).collect();
+                // If polyoffset is {0} use multiplicity 1
                 if offsets == [CountVector::ZERO] {
                     wfgs_list(scale)
                         .into_iter()

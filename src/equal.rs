@@ -92,12 +92,15 @@ pub fn ed_tunings_for_ternary(
 ) -> Vec<Vec<i32>> {
     (3..ed_bound)
         .flat_map(|l| (2..l).flat_map(move |m| (1..m).map(move |s| vec![l, m, s])))
-        .filter(|v| {
+        .filter(|edostep_counts| {
             let ed: i32 =
-                v[0] * step_sig[0] as i32 + v[1] * step_sig[1] as i32 + v[2] * step_sig[2] as i32;
-            let aber_size = steps_as_cents(v[2], ed as f64, equave);
-            v[0] * step_sig[0] as i32 + v[1] * step_sig[1] as i32 + v[2] * step_sig[2] as i32
-                <= ed_bound
+                edostep_counts[0] * step_sig[0] as i32 
+                    + edostep_counts[1] * step_sig[1] as i32 
+                    + edostep_counts[2] * step_sig[2] as i32;
+            let aber_size = steps_as_cents(edostep_counts[2], ed as f64, equave);
+            edostep_counts[0] * step_sig[0] as i32 
+                + edostep_counts[1] * step_sig[1] as i32 
+                + edostep_counts[2] * step_sig[2] as i32 <= ed_bound
                 && aber_lower <= aber_size
                 && aber_size <= aber_upper
         })
@@ -117,7 +120,7 @@ pub fn odd_limit_l1_error(odd: u64, edo: f64) -> f64 {
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
         .map(|r| Monzo::try_from_ratio(r).unwrap())
-        .map(|monzo| relative_error(monzo, edo).abs())
+        .map(|monzo| relative_error(monzo, edo).abs()) // get the magnitudes of the relative errors of primes
         .sum()
 }
 
@@ -127,7 +130,7 @@ pub fn odd_limit_l2_error(odd: u64, edo: f64) -> f64 {
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
         .map(|r| Monzo::try_from_ratio(r).unwrap())
-        .map(|monzo| relative_error(monzo, edo).pow(2))
+        .map(|monzo| relative_error(monzo, edo).pow(2)) // square the relative error of each prime
         .sum::<f64>()
         .sqrt()
 }
