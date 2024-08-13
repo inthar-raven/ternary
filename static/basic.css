@@ -236,7 +236,7 @@ thead th {
 }
 
 .data tr:nth-child(even) {
-  background-color: hsl(22, 100%, 36%);
+  background-color: rgb(20%, 10%, 30%);
 }
 
 table.clickable tr.selected {
