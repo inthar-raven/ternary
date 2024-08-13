@@ -620,9 +620,6 @@ function escapeHtml(text) {
   return text;
 }
 
-const scaleTable = document.getElementById("table-scales");
-const jiTuningTable = document.getElementById("table-ji-tunings");
-const edTuningTable = document.getElementById("table-ed-tunings");
 const query = window.location.search;
 const sigQuery = new URLSearchParams(query).get("step_sig");
 const wordQuery = new URLSearchParams(query).get("word");
@@ -655,6 +652,52 @@ if (sigQuery) {
           myInit,
         });
         if (response["status"] === 200) {
+          document.getElementById("tables").innerHTML = `
+                      <td>
+                        Scales
+                        <div
+                          style="
+                            overflow-y: auto;
+                            overflow-x: auto;
+                            vertical-align: top;
+                            height: 420px;
+                            width: 250px;
+                          "
+                        >
+                          <table class="data" id="table-scales"></table>
+                        </div>
+                      </td>
+                      <td>
+                        JI tunings
+                        <div
+                          style="
+                            overflow-y: auto;
+                            overflow-x: auto;
+                            vertical-align: top;
+                            height: 420px;
+                            width: 250px;
+                          "
+                        >
+                          <table class="data" id="table-ji-tunings"></table>
+                        </div>
+                      </td>
+                      <td>
+                        edo tunings
+                        <div
+                          style="
+                            overflow-y: auto;
+                            overflow-x: auto;
+                            vertical-align: top;
+                            height: 420px;
+                            width: 200px;
+                          "
+                        >
+                          <table class="data" id="table-ed-tunings"></table>
+                        </div>
+                      </td>`;
+          const scaleTable = document.getElementById("table-scales");
+          const jiTuningTable = document.getElementById("table-ji-tunings");
+          const edTuningTable = document.getElementById("table-ed-tunings");
           const json = await response.json();
           const stuff = json["scales"];
           const scales = stuff.map((j) => j["word"]);
@@ -822,7 +865,7 @@ if (sigQuery) {
         } else if (response["status"] === 400) {
           element.textContent = "Server error 400: Invalid input";
         } else if (response["status"] === 504) {
-          element.textContent = `Server error 504:<br/>Computation timed out after ${await response.text()} (timeout is 6 seconds)`;
+          element.innerHTML = `Server error 504:<br/>Computation timed out after ${await response.text()} (timeout is 6 seconds)`;
         } else {
           element.textContent = `Server error ${response["status"]}`;
         }
@@ -839,6 +882,37 @@ if (sigQuery) {
   });
 
   if (response["status"] === 200) {
+    document.getElementById("tables").innerHTML = `
+                <td>
+                  JI tunings
+                  <div
+                    style="
+                      overflow-y: auto;
+                      overflow-x: auto;
+                      vertical-align: top;
+                      height: 420px;
+                      width: 250px;
+                    "
+                  >
+                    <table class="data" id="table-ji-tunings"></table>
+                  </div>
+                </td>
+                <td>
+                  edo tunings
+                  <div
+                    style="
+                      overflow-y: auto;
+                      overflow-x: auto;
+                      vertical-align: top;
+                      height: 420px;
+                      width: 200px;
+                    "
+                  >
+                    <table class="data" id="table-ed-tunings"></table>
+                  </div>
+                </td>`;
+    const jiTuningTable = document.getElementById("table-ji-tunings");
+    const edTuningTable = document.getElementById("table-ed-tunings");
     const json = await response.json();
     const brightestMode = json["brightest"];
     currentWord = brightestMode;
@@ -849,9 +923,6 @@ if (sigQuery) {
       sig_[currentWord[i]] += 1;
     }
     const sig = Object.values(sig_); // values will be extracted ordered by the keys; for indexing by 0, 1, 2... rather than L, m, s
-
-    const jiTuningTable = document.getElementById("table-ji-tunings");
-    const edTuningTable = document.getElementById("table-ed-tunings");
 
     const jiTunings = json["ji_tunings"];
     const edTunings = json["ed_tunings"].map((stepRatio) => {
@@ -968,7 +1039,7 @@ if (sigQuery) {
   } else if (response["status"] === 400) {
     element.textContent = "Server error 400: Invalid input";
   } else if (response["status"] === 504) {
-    element.textContent = `Server error 504:<br/>Computation timed out after ${await response.text()} (timeout is 6 seconds)`;
+    element.innerHTML = `Server error 504:<br/>Computation timed out after ${await response.text()} (timeout is 6 seconds)`;
   } else {
     element.textContent = `Server error ${response["status"]}`;
   }
