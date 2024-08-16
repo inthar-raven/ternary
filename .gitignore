@@ -4,9 +4,4 @@ Cargo.lock
 bin/
 pkg/
 wasm-pack.log
-.vscode/launch.json
-.vscode/settings.json
-config.toml
-flamegraph.svg
-perf.data
-perf.data.old
+node_modules
