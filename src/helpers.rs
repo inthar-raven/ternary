@@ -9,7 +9,7 @@ pub enum ScaleError {
     NonCoprimeGenError,
     /// When a subset's size is required to divide the size of the whole scale but does not
     NonDivisibleSubsetError,
-    /// When an offset fails to meet the interleavedability condition, resulting in non-interleaved scales
+    /// When an offset fails to meet the interleavability condition, resulting in non-interleaved scales
     NotInterleavable,
     /// Default error value
     CannotMakeScale,

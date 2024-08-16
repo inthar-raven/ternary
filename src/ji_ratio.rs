@@ -3,10 +3,9 @@ use std::fmt;
 use std::ops::{Div, DivAssign, Mul, MulAssign};
 
 use num_traits::{CheckedDiv, CheckedMul};
-use serde::Serialize;
 
+use crate::helpers::gcd;
 use crate::interval::Dyad;
-use crate::utils::gcd;
 
 // ERRORS
 
@@ -53,7 +52,7 @@ impl std::error::Error for BadJiArith {}
 
 /// A quasi-primitive wrapper class for a JI ratio. Implements `Copy`.
 /// Will eventually be deprecated for most uses, but may be used for quick computations.
-#[derive(Debug, Default, Clone, Copy, Serialize)]
+#[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct RawJiRatio {
     numer: u64,
