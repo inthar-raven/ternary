@@ -1,10 +1,9 @@
 use itertools::Itertools;
-use serde::Serialize;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
 
-use crate::utils::{gcd, modinv, ScaleError};
+use crate::helpers::{gcd, modinv, ScaleError};
 
 pub type Letter = usize;
 
@@ -46,7 +45,7 @@ pub enum Chirality {
     Right,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// Wrapper type for the free abelian group on T.
 pub struct CountVector<T>(BTreeMap<T, i32>);
 
@@ -282,6 +281,7 @@ where
     }
     result
 }
+
 /// Whether `scale` as a word is strict variety.
 pub fn is_strict_variety<T>(scale: &[T]) -> bool
 where
@@ -308,24 +308,24 @@ where
     if scale.len() <= 1 {
         scale.len()
     } else {
-        let mut max = 0;
+        // Only need to check half of the step size classes.
         let floor_half: usize = scale.len() / 2;
         let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
-        for subword_length in 1..=floor_half {
-            for letter in distinct_letters.iter() {
-                let counts = CountVector::distinct_spectrum(scale, subword_length)
-                    .iter()
-                    .filter_map(|dyad| dyad.get(letter))
-                    .copied()
-                    .collect::<BTreeSet<_>>();
-                let diff: i32 = *counts.last().expect("`counts` should be nonempty")
-                    - *counts.first().expect("`counts` should be nonempty"); // this will always be >= 0 for a nonempty `BTreeSet`
-                if diff > max {
-                    max = diff;
-                }
-            }
-        }
-        max as usize
+        (1..=floor_half)
+            .flat_map(|subword_length| {
+                distinct_letters.iter().map(move |letter| {
+                    let counts = CountVector::distinct_spectrum(scale, subword_length)
+                        .iter()
+                        .filter_map(|dyad| dyad.get(letter))
+                        .copied()
+                        .collect::<BTreeSet<_>>();
+                    // the differences to collect
+                    *counts.last().expect("`counts` should be nonempty")
+                        - *counts.first().expect("`counts` should be nonempty") // this will always be >= 0 for a nonempty `BTreeSet`
+                })
+            })
+            .max()
+            .unwrap() as usize
     }
 }
 
@@ -341,8 +341,9 @@ pub fn darkest_mos_mode_and_gen_bresenham(
                 .expect("The dark generator is a (|L|⁻¹ mod |scale|)-step, since stacking it |L| times results in the s step (mod period).")
                 as usize;
         let mut result_scale: Vec<usize> = vec![];
-        let (mut current_x, mut current_y) = (0usize, 0usize); // Start from the (0, 0) and walk until the dark generator is reached; we now know how many steps to walk.
-        while current_x < a || current_y < b {
+        // Start from the origin (0, 0)
+        let (mut current_x, mut current_y) = (0usize, 0usize);
+        while (current_x, current_y) != (a, b) {
             if a * (current_y) >= b * (current_x + 1) {
                 // If going east (making a (1, 0) step) doesn't lead to going below the line y == b/a*x,
                 current_x += 1; // append the x step and reflect the change in the plane vector.
@@ -353,6 +354,8 @@ pub fn darkest_mos_mode_and_gen_bresenham(
                 result_scale.push(1);
             }
         }
+        // Get the dark generator. We know how many steps and that this will give the perfect generator, not the
+        // augmented one, since we just got the darkest mode.
         let result_gen = CountVector::from_slice(&result_scale[0..count_gen_steps]);
         (result_scale, result_gen)
     } else {
@@ -423,6 +426,7 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
 }
 
 /// The mode of the MOS aLbs with a given brightness (count of bright generators up from root).
+/// Returns `Err` unless 0 <= brightness <= a + b - 1.
 pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Result<Vec<Letter>, ScaleError> {
     if brightness >= a + b {
         Err(ScaleError::CannotMakeScale)
@@ -443,38 +447,80 @@ pub fn rotate<T: std::clone::Clone>(slice: &[T], degree: usize) -> Vec<T> {
     }
 }
 
-pub fn are_conjugate<T>(s1: &[T], s2: &[T]) -> bool
+/// Whether two slices with elements of type T are rotationally equivalent.
+pub fn rotationally_equivalent<T>(s1: &[T], s2: &[T]) -> bool
 where
     T: Clone + Eq,
 {
     (s1.len() == s2.len()) && { (0..s1.len()).any(|i| rotate(s1, i) == s2.to_vec()) }
 }
 
+/// The lexicographically least mode of a word (where the letters are in their usual order).
+pub fn least_mode(scale: &[Letter]) -> Vec<Letter> {
+    rotate(scale, booth(scale))
+}
+
+/// The rotation required from the current word to the
+/// lexicographically least mode of a word.
+/// Booth's algorithm requires at most 3*n* comparisons and *n* storage locations where *n* is the input word's length.
+/// See Booth, K. S. (1980). Lexicographically least circular substrings.
+/// Information Processing Letters, 10(4-5), 240–242. doi:10.1016/0020-0190(80)90149-0
+pub fn booth(scale: &[Letter]) -> usize {
+    let n = scale.len();
+    // `f` is the failure function of the least rotation; `usize::MAX` is used as a null value.
+    // null indicates that the failure function does not point backwards in the string.
+    // `usize::MAX` will behave the same way as -1 does, assuming wrapping unsigned addition
+    let mut f = vec![usize::MAX; 2 * n];
+    let mut k: usize = 0;
+    // `j` loops over `scale` twice.
+    for j in 1..2 * n {
+        let mut i = f[j - k - 1];
+        while i != usize::MAX && scale[j % n] != scale[k.wrapping_add(i).wrapping_add(1) % n] {
+            // (1) If the jth letter is less than s[(k + i + 1) % n] then change k to j - i - 1,
+            // in effect left-shifting the failure function and the input string.
+            // This appropriately compensates for the new, shorter least substring.
+            if scale[j % n] < scale[k.wrapping_add(i).wrapping_add(1) % n] {
+                k = j.wrapping_sub(i).wrapping_sub(1);
+            }
+            i = f[i];
+        }
+        if i == usize::MAX && scale[j % n] != scale[k.wrapping_add(i).wrapping_add(1) % n] {
+            // See note (1) above.
+            if scale[j % n] < scale[k.wrapping_add(i).wrapping_add(1) % n] {
+                k = j;
+            }
+            f[j - k] = usize::MAX;
+        } else {
+            f[j - k] = i.wrapping_add(1);
+        }
+        // The induction hypothesis is that
+        // at this point `f[0..j - k]` is the failure function of `s[k..(k+j)%n]`,
+        // and `k` is the lexicographically least subword of the letters scanned so far.
+    }
+    k
+}
+
 /// [Letterwise substitution](https://en.xen.wiki/w/MOS_substitution) for scale words.
 ///
 /// Note: This function does not fail even if the number of times `x` occurs in `template`
 /// does not divide `filler.len()`.
-pub fn subst<T>(template: &[T], x: &T, filler: &[T]) -> Vec<T>
-where
-    T: PartialEq + Clone,
-{
+pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
     let mut ret = vec![];
     let mut i: usize = 0;
     if !filler.is_empty() {
-        for letter in template {
-            if *letter == *x {
-                ret.push(filler[i % filler.len()].clone());
+        for &letter in template {
+            if letter == x {
+                // Use the currently pointed-to letter of `filler` in place of `x`.
+                ret.push(filler[i % filler.len()]);
+                // Only update `i` when an `x` is replaced.
                 i += 1;
             } else {
-                ret.push((*letter).clone());
+                ret.push(letter);
             }
         }
     } else {
-        return template
-            .iter()
-            .filter(|letter| **letter != *x)
-            .map(|y| (*y).clone())
-            .collect();
+        // If `filler` is empty, we return `template` but with all `x`s removed.
+        return delete(template, x);
     }
     ret
 }
@@ -489,46 +535,13 @@ fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<
     let gener_size = gener.len();
     (0..(n1 + n2))
         .map(|i| {
-            subst::<usize>(
+            subst(
                 &template,
-                &1usize,
+                1usize,
                 &rotate(&filler, (i * gener_size) % filler.len()),
             )
         })
         .collect()
-}
-
-/// The lexicographically brightest mode of a word (where the letters are in their usual order).
-/// (Booth's algorithm)
-pub fn least_mode(scale: &[Letter]) -> Vec<Letter> {
-    rotate(scale, booth(scale))
-}
-
-/// The lexicographically brightest mode of a word (where the letters are in their usual order).
-/// (Booth's algorithm)
-pub fn booth(scale: &[Letter]) -> usize {
-    let s = scale;
-    let n = scale.len();
-    let mut f = vec![usize::MAX; 2 * n];
-    let mut k: usize = 0;
-    for j in 1..2 * n {
-        let mut i = f[j - k - 1];
-        while i != usize::MAX && s[j % n] != s[k.wrapping_add(i).wrapping_add(1) % n] {
-            if s[j % n] < s[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j.wrapping_sub(i).wrapping_sub(1);
-            }
-            i = f[i];
-        }
-        if i == usize::MAX && s[j % n] != s[k.wrapping_add(i).wrapping_add(1) % n] {
-            if s[j % n] < s[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j;
-            }
-            f[j - k] = usize::MAX;
-        } else {
-            f[j - k] = i.wrapping_add(1);
-        }
-    }
-    k
 }
 
 /// The set of all [MOS substitution](https://en.xen.wiki/w/User:Inthar/MOS_substitution) ternary scales.
@@ -570,14 +583,14 @@ pub fn step_variety(scale: &[Letter]) -> usize {
     scale.iter().collect::<BTreeSet<_>>().len()
 }
 
-/// subst but single letters.
+/// `subst()` but the filler is just one letter.
 pub fn replace(scale: &[Letter], from: Letter, to: Letter) -> Vec<Letter> {
-    subst(scale, &from, &[to])
+    subst(scale, from, &[to])
 }
 
 /// Delete all instances of one letter.
 pub fn delete(scale: &[Letter], letter: Letter) -> Vec<Letter> {
-    scale.iter().filter(|x| **x != letter).copied().collect()
+    scale.iter().filter(|x| **x != letter).cloned().collect()
 }
 
 /// If `scale` is ternary, return whether identifying L = m, m = s, and s = 0 results in a MOS.
@@ -646,12 +659,7 @@ where
         + (1..slice.len())
             .map(|i| slice.iter().take(i).cycle())
             .take_while(|iter| {
-                slice.to_vec()
-                    != iter
-                        .clone()
-                        .take(slice.len())
-                        .cloned()
-                        .collect::<Vec<T>>()
+                slice.to_vec() != iter.clone().take(slice.len()).cloned().collect::<Vec<T>>()
             })
             .collect::<Vec<_>>()
             .len();
@@ -668,8 +676,7 @@ where
 
 /// The chirality of a scale word.
 pub fn chirality(word: &[Letter]) -> Chirality {
-    let least_mode_word = least_mode(word)
-
+    let least_mode_word = least_mode(word);
     let word_rev: Vec<usize> = word.iter().cloned().rev().collect();
     let least_mode_word_rev = least_mode(&word_rev);
 
@@ -683,7 +690,7 @@ pub fn chirality(word: &[Letter]) -> Chirality {
 #[cfg(test)]
 mod tests {
     #[allow(unused)]
-    use crate::utils::gcd;
+    use crate::helpers::gcd;
 
     use super::*;
 
