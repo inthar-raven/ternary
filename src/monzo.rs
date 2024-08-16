@@ -5,12 +5,11 @@ use std::ops::Index;
 
 use itertools::Itertools;
 use nalgebra::{ArrayStorage, SMatrix, SVector};
-use serde::Serialize;
 
+use crate::helpers::{bezout, is_sorted_strictly_desc};
 use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::RawJiRatio;
 use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
-use crate::utils::{bezout, is_sorted_strictly_desc};
 
 // TODO: Change `fn` to `Fn`
 type Norm = fn(Monzo) -> f64;
@@ -76,7 +75,7 @@ pub enum CantMakeMonzo {
 }
 
 /// nalgebra Vector representation of a bounded-prime-limit JI ratio.
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Monzo(SVector<i32, SMALL_PRIMES_COUNT>);
 
 impl Monzo {

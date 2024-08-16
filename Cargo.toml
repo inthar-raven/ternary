@@ -1,29 +1,16 @@
 [package]
 name = "ternary"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["inthar-raven <serotoceprafen@gmail.com>"]
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
-version = "0.0.0"
 
-[profile.release]
-debug = true
+[features]
+default = ["console_error_panic_hook"]
 
 [dependencies]
-slog = "2.5.2"
-slog-term = "2.5.0"
-slog-async = "2.4.0"
-
-env_logger = "0.11.3"
-actix-web = "4"
-actix-files = "0.6.6"
-actix-rt = { version = "2.10.0" }
-
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0"
-
 stacker = "0.1.15"
 
 itertools = "0.13.0"
@@ -36,9 +23,23 @@ nalgebra = { version = "0.33.0", features = ["serde-serialize"] }
 
 thiserror = "1.0.60"
 
-criterion = "0.5.1"
-serde_qs = { version = "0.13.0", features = ["actix4"] }
+wasm-bindgen = "0.2.93"
+serde = { version = "1.0.208", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
 
-[[bench]]
-name = "bench"
-harness = false
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[dependencies.web-sys]
+version = "0.3"
+features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window']
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.34"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"

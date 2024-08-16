@@ -1,10 +1,9 @@
 use itertools::Itertools;
-use serde::Serialize;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
 
-use crate::utils::{gcd, modinv, ScaleError};
+use crate::helpers::{gcd, modinv, ScaleError};
 
 pub type Letter = usize;
 
@@ -46,7 +45,7 @@ pub enum Chirality {
     Right,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 /// Wrapper type for the free abelian group on T.
 pub struct CountVector<T>(BTreeMap<T, i32>);
 
@@ -692,7 +691,7 @@ pub fn chirality(word: &[Letter]) -> Chirality {
 #[cfg(test)]
 mod tests {
     #[allow(unused)]
-    use crate::utils::gcd;
+    use crate::helpers::gcd;
 
     use super::*;
 

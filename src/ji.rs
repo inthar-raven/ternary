@@ -3,13 +3,10 @@ use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 
+use crate::helpers::{is_sorted_strictly_desc, pairs, ScaleError};
 use crate::interval::Dyad;
-// Inthar's higher-rank scale theory library
-// v0.0.1
-
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::monzo::Monzo;
-use crate::utils::{is_sorted_strictly_desc, pairs, ScaleError};
 use crate::words::{rotate, CountVector};
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
@@ -241,7 +238,7 @@ pub fn valid_polyoffsets(
     m: u64,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
-    Ok(crate::utils::powerset(&mode)
+    Ok(crate::helpers::powerset(&mode)
         .into_iter()
         .filter(|x| is_valid_polyoffset(strand, x))
         .collect())
@@ -253,7 +250,7 @@ pub fn maximal_valid_polyoffsets(
     m: u64,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
-    let power_set = crate::utils::powerset(&mode);
+    let power_set = crate::helpers::powerset(&mode);
     let valid_polyoffsets: Vec<_> = power_set
         .into_iter()
         .filter(|x| is_valid_polyoffset(strand, x))
@@ -261,7 +258,7 @@ pub fn maximal_valid_polyoffsets(
     Ok(valid_polyoffsets
         .clone()
         .into_iter()
-        .filter(|x| crate::utils::is_maximal_in(x.to_vec(), &valid_polyoffsets))
+        .filter(|x| crate::helpers::is_maximal_in(x.to_vec(), &valid_polyoffsets))
         .collect())
 }
 

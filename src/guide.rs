@@ -1,11 +1,10 @@
 use std::collections::BTreeSet;
 
 use itertools::Itertools;
-use serde::Serialize;
 
 use crate::{
+    helpers::gcd,
     primes::{factorize, is_prime},
-    utils::gcd,
     words::{offset_vec, rotate, rotations, weak_period, word_on_degree, CountVector, Subtendable},
 };
 
@@ -94,7 +93,7 @@ fn k_step_wfgs_list_for_subscale(
 /// As ad-hoc as it may seem, this complexity measure rests on the "thin" generator-offset structure of nice ternary scales
 /// (i.e. one side is the generator which there is usually much more of than there are offsets)
 /// and yields reasonable complexities for quasi-diatonic aberrismic scales. I might rename what I call these guide frame structures in light of this.)
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
     /// Either WFGS or multiple interleaved GSes that are WFGSes when considered individually.
     /// `gs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
