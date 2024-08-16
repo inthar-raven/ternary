@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 
-use actix_rt::task::yield_now;
-
-use crate::utils::{first_index_desc, first_index_smaller};
+use crate::helpers::{first_index_desc, first_index_smaller};
 use crate::words::Letter;
 
 fn partitions_exact_part_count_rec(n: usize, m: usize, parts: usize) -> Vec<Vec<usize>> {
@@ -65,7 +63,7 @@ fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
 /// Assumes that `content` does not have any `0` entries.
 ///
 /// (We're deliberately making this computation async, as it is expensive for large inputs and may need to be timed out by the caller.)
-pub async fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
+pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
     if content.is_empty() {
         vec![]
     } else {
@@ -99,8 +97,7 @@ pub async fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
             1,
             1,
             &mut coll,
-        )
-        .await;
+        );
         coll.shrink_to_fit();
         // Rename letters of the scale. We can use the same permutation, as it's a product of disjoint transpositions, thus order 2.
         coll = coll
@@ -122,7 +119,7 @@ pub async fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
 
 // Recursive part of algorithm in Sawada (2002)
 #[allow(clippy::too_many_arguments)]
-async fn sawada_mut(
+fn sawada_mut(
     rem_content: &mut Vec<usize>, //    Remaining content to add to the prenecklace;                Sawada's n is 0-indexed, static
     runs: &mut Vec<usize>, //           Run of consecutive (arity - 1)s starting here in the word;  Sawada's r is 0-indexed, static
     avail_letters: &mut Vec<Letter>, // INVARIANT TO UPHOLD: Always remove and add back the right letters in the right place
@@ -159,10 +156,9 @@ async fn sawada_mut(
                 rem_content[j] -= 1;
                 a[t] = j;
                 // Yield to caller before and after recursive call
-                yield_now().await;
                 stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
                     // Pins
-                    Box::pin(sawada_mut(
+                    sawada_mut(
                         rem_content,
                         runs,
                         avail_letters,
@@ -171,10 +167,8 @@ async fn sawada_mut(
                         if j == a[t - p] { p } else { t + 1 },
                         if j == arity - 1 { s } else { t + 1 },
                         curr_coll,
-                    ))
-                })
-                .await;
-                yield_now().await;
+                    )
+                });
                 // If j has been removed from `avail_letters`, add `j` back.
                 // This is how we backtrack in the tree.
                 if rem_content[j] == 0 {
