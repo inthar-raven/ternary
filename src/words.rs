@@ -677,7 +677,6 @@ where
 /// The chirality of a scale word.
 pub fn chirality(word: &[Letter]) -> Chirality {
     let least_mode_word = least_mode(word);
-
     let word_rev: Vec<usize> = word.iter().cloned().rev().collect();
     let least_mode_word_rev = least_mode(&word_rev);
 
