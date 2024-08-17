@@ -3,10 +3,11 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 ![Front page screenshot](https://raw.githubusercontent.com/inthar-raven/ternary/main/static/images/front.png)
 
 # How to build and run:
-* Install the Rust toolchain.
-* Install `npm`.
-* Run `npm install`, then run `npm run serve` in the project directory. 
-* Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
+1. Install the Rust toolchain.
+1. Run `cargo install wasm-pack`.
+1. Install `npm`.
+1. Run `npm install`, then run `npm run serve` in the project directory. 
+1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
 
 # Completed features:
 * Get the set of all scales (up to mode) with a certain step signature.
