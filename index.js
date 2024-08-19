@@ -12,8 +12,10 @@ const GROUND_INDIGO = "#6c00da";
 
 // global state
 let currentWord = null;
+let currentLatticeBasis = null;
 let currentTuning = null;
 let currentProfile = null;
+
 const statusElement = document.getElementById("status");
 import("./pkg").then((wasm) => {
   function displayStepVector(vector) {
@@ -62,59 +64,6 @@ import("./pkg").then((wasm) => {
       a.length === b.length &&
       a.every((val, index) => val === b[index])
     );
-  }
-
-  // deep equality for step vectors or any JSON containing only primitive values.
-  function isEqual(v1, v2) {
-    const keys1 = Object.keys(v1);
-    keys1.sort();
-    const keys2 = Object.keys(v2);
-    keys2.sort();
-
-    return (
-      arrayEquality(keys1, keys2) &&
-      keys1.every((key) => {
-        return v1[key] === v2[key];
-      })
-    );
-  }
-
-  function isEqual2(w1, w2) {
-    return arrayEquality(w1.sort(), w2.sort());
-  }
-
-  function wordOnDegree(word, degree, subwordLength) {
-    const result = [];
-    for (let i = 0; i < subwordLength; ++i) {
-      result.push(word[modulo(degree + i, word.length)]);
-    }
-    return result;
-  }
-
-  function dyadOnDegree(word, degree, subwordLength) {
-    const result = { L: 0, M: 0, s: 0 };
-    for (let i = 0; i < subwordLength; ++i) {
-      const currentLetter = word[modulo(degree + i, word.length)];
-      if (currentLetter in result) {
-        result[currentLetter] += 1;
-      }
-    }
-    return result;
-  }
-
-  function subStepVectors(v, w) {
-    let result = JSON.parse(JSON.stringify(v));
-    for (const key in v) {
-      if (key in w) {
-        const newValue = v[key] - w[key];
-        result[key] = newValue;
-      }
-    }
-    return result;
-  }
-
-  function min(a, b) {
-    a < b ? a : b;
   }
 
   // The m x m identity matrix.
@@ -251,7 +200,7 @@ import("./pkg").then((wasm) => {
   // Indicate what kind of guide frame it is. (simple, interleaved, multiple)
   //
   // TODO: show a legend for the different colored lines
-  function createLatticeView(scaleWord, structure) {
+  function createLatticeView() {
     statusElement.innerText = "";
 
     let A;
@@ -274,74 +223,35 @@ import("./pkg").then((wasm) => {
     font: 20px sans-serif;
     fill: black;
   }`;
-
-    let sig = [...Object.values(dyadOnDegree(scaleWord, 0, scaleWord.length))];
-    let n = scaleWord.length;
-    let g;
-    let h;
-
-    const gs = structure["gs"];
-
-    if (structure["multiplicity"] === 1) {
-      if (structure["polyoffset"].length === 1) {
-        // Check for two unequal step vectors.
-        outer: for (let i = 0; i < gs.length; ++i) {
-          for (let j = i; j < gs.length; ++j) {
-            if (!isEqual(gs[i], gs[j])) {
-              g = [...Object.values(gs[i])];
-              h = [...Object.values(gs[j])];
-              break outer;
-            }
-          }
-        }
-      } else {
-        g = [...Object.values(structure["aggregate"])];
-        h = [...Object.values(structure["polyoffset"][1])];
+  if (currentLatticeBasis) {
+    let g = currentLatticeBasis[0];
+    let h = currentLatticeBasis[1];
+    let sig = [0,0,0];
+    let n = currentWord.length;
+    for (let i = 0; i < n; ++i) {
+      switch (currentWord[i]) {
+        case "L":
+          ++sig[0];
+          break;
+        case "M":
+          ++sig[1];
+          break;
+        case "s":
+          ++sig[2];
+          break;
+        default:
+          break;
       }
-    } else {
-      g = [...Object.values(structure["aggregate"])];
-      h = [...Object.values(dyadOnDegree(
-        scaleWord,
-        scaleWord.length / structure["multiplicity"],
-        scaleWord.length / structure["multiplicity"],
-      ))];
     }
     [A, B, C, D] = [1, 0, 0, 1];
-    // Tell user what the dimensions are.
-    // First we solve
-    // [g_L, g_M, g_s] [L_x, L_y] = [1, 0]
-    // [h_L, h_M, h_s] [M_x, M_y] = [1/2, sqrt(3)/2]
-    // [σ_L, σ_M, σ_s] [S_x, S_y] = [n, 0]
-    // for L_x, L_y, M_x, M_y, S_x, S_y.
-    if (
-      !gaussianElimination(
-        [
-          g[0] ?? 0,
-          g[1] ?? 0,
-          g[2] ?? 0,
-          h[0] ?? 0,
-          h[1] ?? 0,
-          h[2] ?? 0,
-          sig[0],
-          sig[1],
-          sig[2],
-        ],
-        [A, B, C, D, 0, 0],
-        3,
-        3,
-        2,
-      )
-    ) {
-      [h, g] = [g, h];
-    }
     let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
       [
-        g[0] ?? 0,
-        g[1] ?? 0,
-        g[2] ?? 0,
-        h[0] ?? 0,
-        h[1] ?? 0,
-        h[2] ?? 0,
+        g[0],
+        g[1],
+        g[2],
+        h[0],
+        h[1],
+        h[2],
         sig[0],
         sig[1],
         sig[2],
@@ -401,8 +311,8 @@ import("./pkg").then((wasm) => {
         y="${currentY + 3}"
         fill="white"
         font-size="0.5em"
-      >${modulo(deg, scaleWord.length)}</text>`;
-      switch (scaleWord[deg]) {
+      >${modulo(deg, n)}</text>`;
+      switch (currentWord[deg]) {
         case "L":
           currentX += L_x * SPACING_X;
           currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
@@ -426,7 +336,10 @@ import("./pkg").then((wasm) => {
     );
     latticeElement.innerHTML += `<h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
     latticeElement.appendChild(svgTag);
+  } else {
+    throw new Error("No suitable lattice basis");
   }
+}
 
   // Name the svg element and return a reference to the lattice element and the svg tag.
   function initializeSvg(htmlElement, height, width) {
@@ -754,7 +667,9 @@ stack()`
             document.querySelector('input[name="mos-subst"]:checked').value,
           );
           const scales = sigResult["profiles"].map((j) => j["word"]);
-          const guideFrames = sigResult["profiles"].map((j) => j["structure"]);
+          const latticeBases = sigResult["profiles"].map((j) => j["lattice_basis"]);
+          console.log(latticeBases);
+
           const profiles = sigResult["profiles"];
 
           const jiTunings = sigResult["ji_tunings"];
@@ -777,6 +692,7 @@ stack()`
             scaleRows[2].classList.add("selected"); // For some reason 2 is the first row of a nonempty table.
             currentWord = scales[0];
             currentProfile = profiles[0];
+            currentLatticeBasis = currentProfile["lattice_basis"];
 
             for (let i = 2; i < scaleRows.length; ++i) {
               scaleRows[i].addEventListener("click", async () => {
@@ -789,14 +705,14 @@ stack()`
                 scaleRows[i].classList.add("selected");
                 // get scale pattern
                 let scaleWord = scales[i - 2];
-                let guideFrame = guideFrames[i - 2];
                 currentProfile = profiles[i - 2];
+                currentLatticeBasis = latticeBases[i - 2];
                 currentWord = scaleWord;
                 showSonicWeaveCode();
                 showScaleProfile();
 
                 try {
-                  createLatticeView(scaleWord, guideFrame);
+                  createLatticeView();
                 } catch (err) {
                   statusElement.innerText = err;
                 }
@@ -825,7 +741,7 @@ stack()`
                 currentTuning = jiTunings[i - 2];
                 showSonicWeaveCode();
                 showScaleProfile();
-                createLatticeView(currentWord, currentProfile["structure"]);
+                createLatticeView();
               } else {
                 statusElement.textContent = NO_HIGH_RANK_SCALES;
               }
@@ -859,14 +775,14 @@ stack()`
                 const edoTuning = edoTunings[i - 2];
                 currentTuning = edoTuning;
                 showScaleProfile();
-                createLatticeView(currentWord, currentProfile["structure"]);
+                createLatticeView();
                 showSonicWeaveCode();
               });
             }
           }
           showSonicWeaveCode();
           showScaleProfile();
-          createLatticeView(scales[0], guideFrames[0]);
+          createLatticeView();
         }
       }
     } catch (err) {
@@ -944,7 +860,7 @@ stack()`
             thisRow.classList.add("selected");
             currentTuning = jiTunings[i - 2];
             showScaleProfile();
-            createLatticeView(currentWord, guideFrame);
+            createLatticeView();
             showSonicWeaveCode();
           } else {
             statusElement.textContent = NO_HIGH_RANK_SCALES;
@@ -974,7 +890,7 @@ stack()`
             const edoTuning = edoTunings[i - 2];
             currentTuning = edoTuning;
             showScaleProfile();
-            createLatticeView(currentWord, guideFrame);
+            createLatticeView();
             showSonicWeaveCode();
           });
         }
@@ -984,9 +900,10 @@ stack()`
       currentTuning = edoTuning;
       showSonicWeaveCode();
       currentProfile = profile;
+      currentLatticeBasis = currentProfile["lattice_basis"];
       const guideFrame = currentProfile["structure"];
       showScaleProfile();
-      createLatticeView(currentWord, guideFrame);
+      createLatticeView();
       showSonicWeaveCode();
     } catch (err) {
       statusElement.innerText = err;

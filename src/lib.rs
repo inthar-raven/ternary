@@ -60,8 +60,17 @@ extern "C" {
     fn log(s: &str);
 }
 
+fn det3(v0: &[u8], v1: &[u8], v2: &[u8]) -> i16 {
+    v0[0] as i16 * v1[1] as i16 * v2[2] as i16
+        + v0[1] as i16 * v1[2] as i16 * v2[0] as i16
+        + v0[2] as i16 * v1[0] as i16 * v2[1] as i16
+        - v0[2] as i16 * v1[1] as i16 * v2[0] as i16
+        - v0[1] as i16 * v1[0] as i16 * v2[2] as i16
+        - v0[0] as i16 * v1[2] as i16 * v2[1] as i16
+}
+
 // A representation of a GuideFrame that should be WASM-readable
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct GuideResult {
     /// Either WFGS or multiple interleaved WFGSes
     /// `wfgs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
@@ -83,6 +92,8 @@ pub struct GuideResult {
 pub struct ScaleProfile {
     /// brightest word
     word: String,
+    /// unimodular basis for lattice is there is one
+    lattice_basis: Option<Vec<Vec<u8>>>,
     /// lowest-complexity guide frame structure provided there is one
     structure: Option<GuideResult>,
     /// whether scale is L=M monotone MOS
@@ -141,87 +152,127 @@ fn numbers_to_string(word: &[usize]) -> String {
     result
 }
 
+fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
+    let GuideFrame {
+        ref gs,
+        ref polyoffset,
+        ref multiplicity,
+    } = structure;
+    if *multiplicity == 1 {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            aggregate: {
+                let cv: CountVector<usize> = gs
+                    .iter()
+                    .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
+                let btreemap = cv.into_inner();
+                vec![
+                    *btreemap.get(&0).unwrap_or(&0) as u8,
+                    *btreemap.get(&1).unwrap_or(&0) as u8,
+                    *btreemap.get(&2).unwrap_or(&0) as u8,
+                ]
+            },
+            polyoffset: polyoffset
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            multiplicity: 1,
+            complexity: structure.complexity() as u8,
+        }
+    } else {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            aggregate: {
+                let cv: CountVector<usize> = gs
+                    .iter()
+                    .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
+                let btreemap = cv.into_inner();
+                vec![
+                    *btreemap.get(&0).unwrap_or(&0) as u8,
+                    *btreemap.get(&1).unwrap_or(&0) as u8,
+                    *btreemap.get(&2).unwrap_or(&0) as u8,
+                ]
+            },
+            polyoffset: vec![vec![0, 0, 0]],
+            multiplicity: *multiplicity as u8,
+            complexity: structure.clone().complexity() as u8,
+        }
+    }
+}
+
+fn get_unimodular_basis(
+    structures: &[GuideFrame],
+    step_sig: &[u8],
+) -> Option<(Vec<Vec<u8>>, GuideResult)> {
+    for structure in structures {
+        let structure = guide_frame_to_result(structure);
+        let gs = structure.clone().gs.clone();
+        for i in 0..gs.clone().len() {
+            for j in i..gs.clone().len() {
+                if det3(step_sig, &gs.clone()[i], &gs.clone()[j]).abs() == 1 {
+                    return Some((
+                        vec![gs.clone()[i].clone(), gs.clone()[j].clone()],
+                        structure,
+                    ));
+                }
+            }
+        }
+        let polyoffset = structure.clone().polyoffset;
+        for v in polyoffset {
+            for w in structure.clone().gs {
+                if det3(step_sig, &v, &w).abs() == 1 {
+                    return Some((vec![v, w], structure));
+                }
+            }
+        }
+    }
+    None
+}
+
 pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let brightest = numbers_to_string(&least_mode(query));
     let lm = monotone_lm(query);
     let ms = monotone_ms(query);
     let s0 = monotone_s0(query);
     let mv = maximum_variety(query) as u8;
-    if let Some(structure) = guide_structures(query).first() {
-        let GuideFrame {
-            gs,
-            polyoffset,
-            multiplicity,
-        } = structure;
-        let structure = if *multiplicity == 1 {
-            GuideResult {
-                gs: gs
-                    .iter()
-                    .map(|cv| {
-                        let btreemap = cv.into_inner();
-                        vec![
-                            *btreemap.get(&0).unwrap_or(&0) as u8,
-                            *btreemap.get(&1).unwrap_or(&0) as u8,
-                            *btreemap.get(&2).unwrap_or(&0) as u8,
-                        ]
-                    })
-                    .collect(),
-                aggregate: {
-                    let cv: CountVector<usize> = gs
-                        .iter()
-                        .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
-                    let btreemap = cv.into_inner();
-                    vec![
-                        *btreemap.get(&0).unwrap_or(&0) as u8,
-                        *btreemap.get(&1).unwrap_or(&0) as u8,
-                        *btreemap.get(&2).unwrap_or(&0) as u8,
-                    ]
-                },
-                polyoffset: polyoffset
-                    .iter()
-                    .map(|cv| {
-                        let btreemap = cv.into_inner();
-                        vec![
-                            *btreemap.get(&0).unwrap_or(&0) as u8,
-                            *btreemap.get(&1).unwrap_or(&0) as u8,
-                            *btreemap.get(&2).unwrap_or(&0) as u8,
-                        ]
-                    })
-                    .collect(),
-                multiplicity: 1,
-                complexity: structure.complexity() as u8,
-            }
-        } else {
-            GuideResult {
-                gs: gs
-                    .iter()
-                    .map(|cv| {
-                        let btreemap = cv.into_inner();
-                        vec![
-                            *btreemap.get(&0).unwrap_or(&0) as u8,
-                            *btreemap.get(&1).unwrap_or(&0) as u8,
-                            *btreemap.get(&2).unwrap_or(&0) as u8,
-                        ]
-                    })
-                    .collect(),
-                aggregate: {
-                    let cv: CountVector<usize> = gs
-                        .iter()
-                        .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
-                    let btreemap = cv.into_inner();
-                    vec![
-                        *btreemap.get(&0).unwrap_or(&0) as u8,
-                        *btreemap.get(&1).unwrap_or(&0) as u8,
-                        *btreemap.get(&2).unwrap_or(&0) as u8,
-                    ]
-                },
-                polyoffset: vec![vec![0, 0, 0]],
-                multiplicity: *multiplicity as u8,
-                complexity: structure.complexity() as u8,
-            }
-        };
+    let step_sig = word_to_sig(query)
+        .iter()
+        .map(|x| *x as u8)
+        .collect::<Vec<u8>>();
+    let structures = guide_structures(query);
+    let some_guide_frame = structures.first();
+    if let Some(pair) = get_unimodular_basis(&guide_structures(query), &step_sig) {
+        let (lattice_basis, structure) = pair;
         ScaleProfile {
             word: brightest,
+            lattice_basis: Some(lattice_basis),
             structure: Some(structure),
             lm,
             ms,
@@ -231,7 +282,8 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     } else {
         ScaleProfile {
             word: brightest,
-            structure: None,
+            lattice_basis: None,
+            structure: some_guide_frame.map(guide_frame_to_result),
             lm,
             ms,
             s0,
