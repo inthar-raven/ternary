@@ -740,7 +740,7 @@ stack()`
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edoTuningTable = document.getElementById("table-ed-tunings");
-          const arr = wasm.sig_to_profiles(
+          const sigResult = wasm.sig_result(
             sig,
             document.getElementById("monotone-lm").checked,
             document.getElementById("monotone-ms").checked,
@@ -753,12 +753,12 @@ stack()`
             document.querySelector('input[name="mv-constraint"]:checked').value,
             document.querySelector('input[name="mos-subst"]:checked').value,
           );
-          const scales = arr.map((j) => j["word"]);
-          const guideFrames = arr.map((j) => j["structure"]);
-          const profiles = arr;
+          const scales = sigResult["profiles"].map((j) => j["word"]);
+          const guideFrames = sigResult["profiles"].map((j) => j["structure"]);
+          const profiles = sigResult["profiles"];
 
-          const jiTunings = wasm.word_to_ji_tunings(scales[0]);
-          const edoTunings = wasm.word_to_ed_tunings(scales[0]);
+          const jiTunings = sigResult["ji_tunings"];
+          const edoTunings = sigResult["ed_tunings"];
           let letters;
           if (arity === 3) {
             letters = ["L", "m", "s"];
@@ -877,10 +877,11 @@ stack()`
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
-    const profile = wasm.word_to_profile(query);
-    const brightestMode = wasm.word_to_brightest(query);
-    const jiTunings = wasm.word_to_ji_tunings(query);
-    const edoTunings = wasm.word_to_ed_tunings(query);
+    const wordResult = wasm.word_result(query);
+    const profile = wordResult["profile"];
+    const brightestMode = wordResult["profile"]["word"];
+    const jiTunings = wordResult["ji_tunings"];
+    const edoTunings = wordResult["ed_tunings"];
     document.getElementById("tables").innerHTML = `
                 <td>
                   JI tunings
