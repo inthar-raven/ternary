@@ -73,12 +73,12 @@ fn det3(v0: &[u8], v1: &[u8], v2: &[u8]) -> i16 {
 #[derive(Clone, Debug, Serialize)]
 pub struct GuideResult {
     /// Either Guided GS or multiple interleaved Guided GSes
-    /// `guided_gs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
+    /// `guided_gs` generates a guided generator sequence (detempered single-period MOS) subscale.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
     pub gs: Vec<Vec<u8>>,
     /// The aggregate generator
     pub aggregate: Vec<u8>,
-    /// `polyoffset` is the set of intervals that each well-formed generator sequence chain is based on. Always includes the unison.
+    /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes the unison.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
     pub polyoffset: Vec<Vec<u8>>,
     /// complexity result

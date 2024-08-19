@@ -22,7 +22,7 @@ where
         .collect::<Vec<_>>()
 }
 /*
-    A well-formed generator sequence (Guided GS) is a generator sequence made of stacked `k`-steps,
+    A guided generator sequence (Guided GS) is a generator sequence made of stacked `k`-steps,
     where `k` is fixed and `gcd(k, scale.len()) == 1`.
     The interval left over after stacking (which is a `k`-step) is different from all the others,
     and where the generators in the generator sequence are distinct from any non-k-step interval.
@@ -96,9 +96,9 @@ fn k_step_guided_gs_list_for_subscale(
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
     /// Either Guided GS or multiple interleaved GSes that are Guided GSes when considered individually.
-    /// `gs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
+    /// `gs` generates a guided generator sequence (detempered single-period MOS) subscale.
     pub gs: Vec<CountVector<usize>>,
-    /// `polyoffset` is the set of intervals that each well-formed generator sequence chain is based on. Always includes `CountVector::ZERO`.
+    /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
     pub polyoffset: Vec<CountVector<usize>>,
     /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-edo.
     pub multiplicity: usize,
