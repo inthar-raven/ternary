@@ -10,6 +10,11 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 1. Run `npm install`, then run `npm run serve` in the project directory.
 1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
 
+# Dev scripts
+1. `npm run build`: Build the app
+2. `npm run serve`: Deploy the app on a development server.
+3. `npm run format`: Run `prettier` on all HTML, CSS, JavaScript, and TypeScript files.
+
 # Completed features:
 
 - Get the set of all scales (up to mode) with a certain step signature.
