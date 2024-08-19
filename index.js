@@ -253,7 +253,7 @@ import("./pkg").then((wasm) => {
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
   // 3. choose a zero point
-  // Indicate what kind of guide frame it is. (simple, interleaved, multiple)
+  // TODO: Indicate what kind of guide frame it is. (simple, multiple/interleaved)
   //
   // TODO: show a legend for the different colored lines
   function createLatticeView() {
@@ -869,7 +869,6 @@ stack()`
       showSonicWeaveCode();
       currentProfile = profile;
       currentLatticeBasis = currentProfile["lattice_basis"];
-      const guideFrame = currentProfile["structure"];
       showScaleProfile();
       createLatticeView();
       showSonicWeaveCode();

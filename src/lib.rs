@@ -42,7 +42,7 @@ use std::collections::HashSet;
 use serde::Serialize;
 use serde_wasm_bindgen::to_value;
 
-use guide::guide_structures;
+use guide::guide_frames;
 use guide::GuideFrame;
 use interval::JiRatio;
 use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
@@ -72,8 +72,8 @@ fn det3(v0: &[u8], v1: &[u8], v2: &[u8]) -> i16 {
 // A representation of a GuideFrame that should be WASM-readable
 #[derive(Clone, Debug, Serialize)]
 pub struct GuideResult {
-    /// Either WFGS or multiple interleaved WFGSes
-    /// `wfgs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
+    /// Either Guided GS or multiple interleaved Guided GSes
+    /// `guided_gs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
     pub gs: Vec<Vec<u8>>,
     /// The aggregate generator
@@ -266,9 +266,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u8)
         .collect::<Vec<u8>>();
-    let structures = guide_structures(query);
+    let structures = guide_frames(query);
     let some_guide_frame = structures.first();
-    if let Some(pair) = get_unimodular_basis(&guide_structures(query), &step_sig) {
+    if let Some(pair) = get_unimodular_basis(&guide_frames(query), &step_sig) {
         let (lattice_basis, structure) = pair;
         ScaleProfile {
             word: brightest,
@@ -376,7 +376,7 @@ pub fn sig_result(
             && (match ggs_len {
                 0 => true,
                 l => {
-                    let guide_frames = guide_structures(scale);
+                    let guide_frames = guide_frames(scale);
                     if ggs_len_constraint == "exactly" {
                         !guide_frames.is_empty() && guide_frames[0].gs.len() == l as usize
                     } else {
@@ -397,7 +397,7 @@ pub fn sig_result(
             && (match complexity {
                 0 => true,
                 c => {
-                    let guide_frames = guide_structures(scale);
+                    let guide_frames = guide_frames(scale);
                     if complexity_constraint == "exactly" {
                         !guide_frames.is_empty() && guide_frames[0].complexity() == c as usize
                     } else {
@@ -416,7 +416,7 @@ pub fn sig_result(
         .into_iter()
         .filter(|scale| filtering_cond(scale))
         .sorted_unstable_by_key(|scale| {
-            if let Some(first) = guide_structures(scale).first() {
+            if let Some(first) = guide_frames(scale).first() {
                 first.complexity()
             } else {
                 usize::MAX

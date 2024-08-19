@@ -9,8 +9,8 @@ use crate::{
 };
 
 // Given a necklace of stacked k-steps, where k is fixed,
-// get all valid WFGSes using k-steps on any rotation.
-fn wfgs_chains<T>(chain: &[T]) -> Vec<Vec<T>>
+// get all valid Guided GSes using k-steps on any rotation.
+fn guided_gs_chains<T>(chain: &[T]) -> Vec<Vec<T>>
 where
     T: core::fmt::Debug + PartialEq + Clone + Eq + Send,
 {
@@ -22,14 +22,14 @@ where
         .collect::<Vec<_>>()
 }
 /*
-    A well-formed generator sequence (WFGS) is a generator sequence made of stacked `k`-steps,
+    A well-formed generator sequence (Guided GS) is a generator sequence made of stacked `k`-steps,
     where `k` is fixed and `gcd(k, scale.len()) == 1`.
     The interval left over after stacking (which is a `k`-step) is different from all the others,
     and where the generators in the generator sequence are distinct from any non-k-step interval.
     There is no need to check the last condition for step vectors.
 */
-fn k_step_wfgs_list(k: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
-    wfgs_chains(&stacked_k_steps(k, neck))
+fn k_step_guided_gs_list(k: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+    guided_gs_chains(&stacked_k_steps(k, neck))
 }
 
 pub fn stacked_k_steps<T>(k: usize, neck: &[T]) -> Vec<T::Interval>
@@ -42,44 +42,44 @@ where
         .collect()
 }
 
-/// TODO: To get all WFGSes, we actually need to iterate through all the step classes, not just ones <= len / 2.
-/// All WFGSes that generate a given abstract necklace.
-pub fn wfgs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+/// TODO: To get all Guided GSes, we actually need to iterate through all the step classes, not just ones <= len / 2.
+/// All Guided GSes that generate a given abstract necklace.
+pub fn guided_gs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let len = neck.len();
     (2..=len - 2) // Don't include 1-step GSes
         .filter(|&k| gcd(k as u64, len as u64) == 1)
-        .flat_map(|k| k_step_wfgs_list(k, neck))
+        .flat_map(|k| k_step_guided_gs_list(k, neck))
         .collect()
 }
 
-/// All WFGSes of length `l` that generate a given abstract necklace.
-pub fn wfgs_list_of_len(l: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+/// All Guided GSes of length `l` that generate a given abstract necklace.
+pub fn guided_gs_list_of_len(l: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let neck_len = neck.len();
     (2..=neck_len / 2) // Don't include 1-step GSes
         .filter(|&k| gcd(k as u64, neck_len as u64) == 1)
-        .flat_map(|k| k_step_wfgs_list(k, neck))
+        .flat_map(|k| k_step_guided_gs_list(k, neck))
         .filter(|vs| l == vs.len())
         .collect()
 }
 
-// WFGS of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
-fn wfgs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<CountVector<usize>>> {
+// Guided GS of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
+fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<CountVector<usize>>> {
     if subscale.len() == 2 {
         vec![vec![subscale[0].clone()]]
     } else {
         let len = subscale.len();
         (2..=len / 2) // Don't include 1-step GSes
             .filter(|&k| gcd(k as u64, len as u64) == 1)
-            .flat_map(|k| k_step_wfgs_list_for_subscale(k, subscale))
+            .flat_map(|k| k_step_guided_gs_list_for_subscale(k, subscale))
             .collect()
     }
 }
 
-fn k_step_wfgs_list_for_subscale(
+fn k_step_guided_gs_list_for_subscale(
     k: usize,
     subscale: &[CountVector<usize>],
 ) -> Vec<Vec<CountVector<usize>>> {
-    wfgs_chains(&stacked_k_steps(k, subscale))
+    guided_gs_chains(&stacked_k_steps(k, subscale))
 }
 
 /// A guide frame structure for a scale word, consisting of a generator sequence together with a set of offsets or a multiplicity.
@@ -95,7 +95,7 @@ fn k_step_wfgs_list_for_subscale(
 /// and yields reasonable complexities for quasi-diatonic aberrismic scales. I might rename what I call these guide frame structures in light of this.)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
-    /// Either WFGS or multiple interleaved GSes that are WFGSes when considered individually.
+    /// Either Guided GS or multiple interleaved GSes that are Guided GSes when considered individually.
     /// `gs` generates a well-formed generator sequence (detempered single-period MOS) subscale.
     pub gs: Vec<CountVector<usize>>,
     /// `polyoffset` is the set of intervals that each well-formed generator sequence chain is based on. Always includes `CountVector::ZERO`.
@@ -165,7 +165,7 @@ impl GuideFrame {
                     offsets.into_iter().sorted_by_key(|v| v.len()).collect();
                 // If polyoffset is {0} use multiplicity 1
                 if offsets == [CountVector::ZERO] {
-                    wfgs_list(scale)
+                    guided_gs_list(scale)
                         .into_iter()
                         .map(|gs| Self {
                             gs,
@@ -176,7 +176,7 @@ impl GuideFrame {
                         .dedup()
                         .collect::<Vec<_>>()
                 } else {
-                    wfgs_list_for_subscale(subscale_on_root)
+                    guided_gs_list_for_subscale(subscale_on_root)
                         .into_iter()
                         .map(|gs| Self {
                             gs,
@@ -271,7 +271,7 @@ impl GuideFrame {
 }
 
 /// Return the collection of guide frames for the given scale word, sorted by complexity.
-pub fn guide_structures(scale: &[usize]) -> Vec<GuideFrame> {
+pub fn guide_frames(scale: &[usize]) -> Vec<GuideFrame> {
     (2..=scale.len() - 2) // steps subtended by generator used for the guided generator sequence
         .flat_map(|k| GuideFrame::try_all_variants(scale, k))
         .sorted_by_key(GuideFrame::complexity)
@@ -290,12 +290,12 @@ mod tests {
     fn test_fix_bug_for_4sr() {
         let diamech_4sr: [Letter; 11] = [0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 2];
 
-        assert!(wfgs_list_of_len(3, &diamech_4sr).contains(&vec![
+        assert!(guided_gs_list_of_len(3, &diamech_4sr).contains(&vec![
             CountVector::from_slice(&[0, 2]),
             CountVector::from_slice(&[0, 1]),
             CountVector::from_slice(&[0, 2]),
         ]));
-        assert!(wfgs_list(&diamech_4sr).contains(&vec![
+        assert!(guided_gs_list(&diamech_4sr).contains(&vec![
             CountVector::from_slice(&[0, 2]),
             CountVector::from_slice(&[0, 1]),
             CountVector::from_slice(&[0, 2]),
@@ -327,9 +327,9 @@ mod tests {
         );
     }
     #[test]
-    fn test_wfgs_based_guide_structure() {
+    fn test_guided_gs_based_guide_frame() {
         let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
-        let guide_moses = guide_structures(&pinedye);
+        let guide_moses = guide_frames(&pinedye);
         println!("Pinedye has guide MOS structures: {:?}", guide_moses);
         assert!(guide_moses.contains(&GuideFrame::new_simple(
             vec![
@@ -341,7 +341,7 @@ mod tests {
         )));
 
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let guide_moses = guide_structures(&diasem);
+        let guide_moses = guide_frames(&diasem);
         println!("Diasem has guide MOS structures: {:?}", guide_moses);
         assert!(guide_moses.contains(&GuideFrame::new_simple(
             vec![
@@ -363,7 +363,7 @@ mod tests {
         );
 
         let blackdye: [usize; 10] = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
-        let guide_moses = guide_structures(&blackdye);
+        let guide_moses = guide_frames(&blackdye);
         println!("Blackdye has guide MOS structures: {:?}", guide_moses);
         assert!(guide_moses.contains(&GuideFrame::new_simple(
             vec![CountVector::from_slice(&[0, 0, 1, 2])],
@@ -379,7 +379,7 @@ mod tests {
         );
 
         let diamech_4sl: [usize; 11] = [1, 0, 2, 0, 2, 0, 1, 0, 2, 0, 2];
-        let guide_moses = guide_structures(&diamech_4sl);
+        let guide_moses = guide_frames(&diamech_4sl);
         println!("Diamech has guide MOS structures: {:?}", guide_moses);
         assert!(guide_moses.contains(&GuideFrame::new_simple(
             vec![
@@ -403,7 +403,7 @@ mod tests {
         );
 
         let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1];
-        let guide_moses = guide_structures(&diachrome_5sc);
+        let guide_moses = guide_frames(&diachrome_5sc);
         println!("Diachrome has guide MOS structures: {:?}", guide_moses);
         assert!(guide_moses.contains(&GuideFrame::new_multiple(
             vec![CountVector::from_slice(&[0, 0, 1, 2, 2]),],
@@ -466,10 +466,10 @@ mod tests {
         }
     }
     #[test]
-    fn test_wfgs_chains() {
+    fn test_guided_gs_chains() {
         let diasem: [usize; 9] = [0, 1, 0, 2, 0, 1, 0, 2, 0];
         let two_steps = stacked_k_steps(2, &diasem);
-        let chains = wfgs_chains(two_steps.as_slice());
+        let chains = guided_gs_chains(two_steps.as_slice());
         assert_eq!(
             chains,
             vec![vec![
@@ -478,7 +478,7 @@ mod tests {
             ]]
         );
         let four_steps = stacked_k_steps(4, &diasem);
-        let chains = wfgs_chains(four_steps.as_slice());
+        let chains = guided_gs_chains(four_steps.as_slice());
         assert_eq!(
             BTreeSet::from_iter(chains.into_iter()),
             BTreeSet::from_iter(
@@ -502,16 +502,16 @@ mod tests {
             )
         );
         /*
-        Valid WFGS necklaces for 010201020:
+        Valid Guided GS necklaces for 010201020:
         10 20 10 20 01 02 01 02 (closing 00) -> abababab -> GS(a, b)
         1020 1020 0102 0102 0010 2010 2001 0201 (closing 0200) -> aaaabaaac -> GS(a, a, a, a, b)
         2010 2001 0201 0200 1020 1020 0102 0102 (closing 0010) -> aaabaaaac -> GS(a, a, a, b, a)
          */
     }
     #[test]
-    fn test_gets_len_2_wfgs_for_diasem() {
+    fn test_gets_len_2_guided_gs_for_diasem() {
         let diasem: [usize; 9] = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let gen_seqs = wfgs_list_of_len(2, &diasem);
+        let gen_seqs = guided_gs_list_of_len(2, &diasem);
         assert_eq!(
             gen_seqs,
             vec![vec![
@@ -522,9 +522,9 @@ mod tests {
     }
 
     #[test]
-    fn test_gets_wfgs_for_diamech() {
+    fn test_gets_guided_gs_for_diamech() {
         let diamech_4sl: [usize; 11] = [1, 0, 2, 0, 2, 0, 1, 0, 2, 0, 2];
-        let gen_seqs = wfgs_list(&diamech_4sl);
+        let gen_seqs = guided_gs_list(&diamech_4sl);
         assert_eq!(
             BTreeSet::from_iter(gen_seqs.into_iter()),
             BTreeSet::from_iter(
@@ -578,7 +578,7 @@ mod tests {
             )
         );
         /*
-                    Valid WFGS necklaces for 10202010202:
+                    Valid Guided GS necklaces for 10202010202:
                     02 02 01 02 02 10 20 20 10 20 (21)
 
                     202 102 020 102 021 020 201 020 210 202 (010) -- abcbbcbcbad -> GS(a,b,c,b,b,c,b,c,b)
