@@ -12,7 +12,9 @@ pub mod helpers;
 pub mod primes;
 pub mod words;
 
+use itertools::Itertools;
 use wasm_bindgen::prelude::*;
+use words::Letter;
 
 #[wasm_bindgen]
 extern "C" {
@@ -37,21 +39,26 @@ const STEP_LETTERS: [&str; 12] = [
 use std::cmp::min;
 use std::collections::HashSet;
 
-use itertools::Itertools;
 use serde::Serialize;
 use serde_wasm_bindgen::to_value;
 
 use guide::guide_structures;
 use guide::GuideFrame;
 use interval::JiRatio;
-use words::{
-    least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector, Letter,
-};
+use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
 
 // for the edo search
 pub const EDO_BOUND: i32 = 53;
 pub const S_LOWER_BOUND: f64 = 20.0;
 pub const S_UPPER_BOUND: f64 = 200.0;
+
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
 // A representation of a GuideFrame that should be WASM-readable
 #[derive(Debug, Serialize)]
@@ -71,15 +78,35 @@ pub struct GuideResult {
     pub complexity: u8,
 }
 
-// A representation of a Scale Profile. Doesn't include tunings.
+/// A representation of a Scale Profile. Doesn't include tunings.
 #[derive(Debug, Serialize)]
 pub struct ScaleProfile {
+    /// brightest word
     word: String,
-    structure: GuideResult,
+    /// lowest-complexity guide frame structure provided there is one
+    structure: Option<GuideResult>,
+    /// whether scale is L=M monotone MOS
     lm: bool,
+    /// whether scale is M=s monotone MOS
     ms: bool,
+    /// whether sclae is s=0 monotone MOS
     s0: bool,
+    /// maximum variety of scale
     mv: u8,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SigResult {
+    profiles: Vec<ScaleProfile>,
+    ji_tunings: Vec<Vec<String>>,
+    ed_tunings: Vec<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WordResult {
+    profile: ScaleProfile,
+    ji_tunings: Vec<Vec<String>>,
+    ed_tunings: Vec<Vec<String>>,
 }
 
 fn string_to_numbers(word: &str) -> Vec<usize> {
@@ -88,6 +115,16 @@ fn string_to_numbers(word: &str) -> Vec<usize> {
     for c in word.chars() {
         if let Some(letter) = STEP_LETTERS[min(arity, 12)].find(c) {
             result.push(letter);
+        }
+    }
+    result
+}
+
+fn word_to_sig(input: &[usize]) -> Vec<usize> {
+    let mut result = vec![0, 0, 0];
+    for &i in input {
+        if i < 3 {
+            result[i] += 1;
         }
     }
     result
@@ -104,11 +141,13 @@ fn numbers_to_string(word: &[usize]) -> String {
     result
 }
 
-#[wasm_bindgen]
-pub fn word_to_profile(query: String) -> Result<JsValue, JsValue> {
-    let word_in_numbers = string_to_numbers(&query);
-    let brightest = numbers_to_string(&least_mode(&word_in_numbers));
-    if let Some(structure) = guide_structures(&string_to_numbers(&query)).first() {
+pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
+    let brightest = numbers_to_string(&least_mode(query));
+    let lm = monotone_lm(query);
+    let ms = monotone_ms(query);
+    let s0 = monotone_s0(query);
+    let mv = maximum_variety(query) as u8;
+    if let Some(structure) = guide_structures(query).first() {
         let GuideFrame {
             gs,
             polyoffset,
@@ -181,21 +220,36 @@ pub fn word_to_profile(query: String) -> Result<JsValue, JsValue> {
                 complexity: structure.complexity() as u8,
             }
         };
-        let lm = monotone_lm(&word_in_numbers);
-        let ms = monotone_ms(&word_in_numbers);
-        let s0 = monotone_s0(&word_in_numbers);
-        let mv = maximum_variety(&word_in_numbers) as u8;
-        Ok(to_value(&ScaleProfile {
+        ScaleProfile {
             word: brightest,
-            structure,
+            structure: Some(structure),
             lm,
             ms,
             s0,
             mv,
-        })?)
+        }
     } else {
-        Err(JsValue::NULL)
+        ScaleProfile {
+            word: brightest,
+            structure: None,
+            lm,
+            ms,
+            s0,
+            mv,
+        }
     }
+}
+
+#[wasm_bindgen]
+pub fn word_result(query: String) -> Result<JsValue, JsValue> {
+    let word_as_numbers = string_to_numbers(&query);
+    let step_sig = word_to_sig(&word_as_numbers);
+
+    Ok(to_value(&WordResult {
+        profile: word_to_profile(&word_as_numbers),
+        ji_tunings: sig_to_ji_tunings(&step_sig),
+        ed_tunings: sig_to_ed_tunings(&step_sig),
+    })?)
 }
 
 #[wasm_bindgen]
@@ -211,45 +265,22 @@ pub fn word_to_mv(query: String) -> u8 {
     maximum_variety(&word_in_numbers) as u8
 }
 
-#[wasm_bindgen]
-pub fn word_to_ji_tunings(query: String) -> Vec<JsValue> {
-    let word_in_numbers = string_to_numbers(&query);
-    let step_sig = {
-        let mut r = vec![0; 3];
-        for letter in word_in_numbers {
-            if letter < 3 {
-                r[letter] += 1;
-            }
-        }
-        r
-    };
+pub fn sig_to_ji_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {
     let ji_tunings =
-        crate::ji::solve_step_sig_81_odd_limit(&step_sig, crate::monzo::Monzo::OCTAVE, false);
+        crate::ji::solve_step_sig_81_odd_limit(step_sig, crate::monzo::Monzo::OCTAVE, false);
     ji_tunings
         .into_iter()
         .map(|v| {
             v.into_iter()
                 .map(|monzo| format!("{}/{}", monzo.numer(), monzo.denom()))
                 .collect::<Vec<_>>()
-                .into()
         })
         .collect::<Vec<_>>()
 }
 
-#[wasm_bindgen]
-pub fn word_to_ed_tunings(query: String) -> Vec<JsValue> {
-    let word_in_numbers = string_to_numbers(&query);
-    let step_sig = {
-        let mut r = vec![0; 3];
-        for letter in word_in_numbers {
-            if letter < 3 {
-                r[letter] += 1;
-            }
-        }
-        r
-    };
+pub fn sig_to_ed_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {
     let ed_tunings = crate::equal::ed_tunings_for_ternary(
-        &step_sig,
+        step_sig,
         crate::ji_ratio::RawJiRatio::OCTAVE,
         EDO_BOUND,
         S_LOWER_BOUND,
@@ -266,14 +297,13 @@ pub fn word_to_ed_tunings(query: String) -> Vec<JsValue> {
             v.iter()
                 .map(|i| format!("{}\\{}", i, edo))
                 .collect::<Vec<_>>()
-                .into()
         })
         .collect::<Vec<_>>()
 }
 
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn sig_to_profiles(
+pub fn sig_result(
     query: Vec<u8>,
     lm: bool,
     ms: bool,
@@ -285,7 +315,7 @@ pub fn sig_to_profiles(
     mv: u8,
     mv_constraint: String,
     mos_subst: String,
-) -> Vec<JsValue> {
+) -> Result<JsValue, JsValue> {
     let step_sig = query;
     let filtering_cond = |scale: &[Letter]| {
         (!lm || monotone_lm(scale))
@@ -341,9 +371,9 @@ pub fn sig_to_profiles(
             }
         })
         .collect::<Vec<_>>();
-    let mut result = vec![];
-    for scale in scales {
-        result.push(word_to_profile(numbers_to_string(&scale)).unwrap_or(JsValue::NULL));
-    }
-    result
+    Ok(to_value(&SigResult {
+        profiles: scales.iter().map(|scale| word_to_profile(scale)).collect(),
+        ji_tunings: sig_to_ji_tunings(&step_sig),
+        ed_tunings: sig_to_ed_tunings(&step_sig),
+    })?)
 }
