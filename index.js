@@ -10,189 +10,245 @@ const EDGE_WIDTH = 2;
 
 const GROUND_INDIGO = "#6c00da";
 
-// global state
+// global state (TODO: replace this with arguments for functions that show scale and tuning data)
 let currentWord = null;
 let currentLatticeBasis = null;
 let currentTuning = null;
 let currentProfile = null;
 
 const statusElement = document.getElementById("status");
-import("./pkg").then((wasm) => {
-  function displayStepVector(vector) {
-    const keys = [...Object.keys(vector)];
-    const sizeIdentifiers = ["L", "M", "s"];
-    if (keys.length === 0) {
-      return "0";
-    }
-    let result = "";
-    for (let i = 0; i < keys.length; ++i) {
-      result += `${vector[keys[i]]}${sizeIdentifiers[i]}`;
-      if (i < keys.length - 1) {
-        result += "+";
-      }
-    }
-    return result;
+function displayStepVector(vector) {
+  const keys = [...Object.keys(vector)];
+  const sizeIdentifiers = ["L", "M", "s"];
+  if (keys.length === 0) {
+    return "0";
   }
-
-  function gcd(a, b) {
-    if (a === 0) {
-      return b;
-    } else if (b === 0) {
-      return a;
-    } else {
-      return a > b ? gcd(a % b, b) : a === b ? a : gcd(a, b % a);
+  let result = "";
+  for (let i = 0; i < keys.length; ++i) {
+    result += `${vector[keys[i]]}${sizeIdentifiers[i]}`;
+    if (i < keys.length - 1) {
+      result += "+";
     }
   }
+  return result;
+}
 
-  // Modulo that works like Python %
-  function modulo(a, m) {
-    return (m + (a % m)) % m;
+function gcd(a, b) {
+  if (a === 0) {
+    return b;
+  } else if (b === 0) {
+    return a;
+  } else {
+    return a > b ? gcd(a % b, b) : a === b ? a : gcd(a, b % a);
   }
+}
 
-  function stepVectorLength(vector) {
-    let result = 0;
-    for (let key of Object.keys(vector)) {
-      result += vector[key];
+// Modulo that works like Python %
+function modulo(a, m) {
+  return (m + (a % m)) % m;
+}
+
+function stepVectorLength(vector) {
+  let result = 0;
+  for (let key of Object.keys(vector)) {
+    result += vector[key];
+  }
+  return result;
+}
+// The m x m identity matrix.
+function eye(m) {
+  let arr = Array(m * m);
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < m; j++) {
+      arr[m * i + j] = i === j ? 1 : 0;
     }
-    return result;
   }
+  return arr;
+}
 
-  function arrayEquality(a, b) {
-    return (
-      Array.isArray(a) &&
-      Array.isArray(b) &&
-      a.length === b.length &&
-      a.every((val, index) => val === b[index])
+// Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
+function swapRows(arr, m, n, i1, i2) {
+  if (i1 < 0 || i1 >= m) {
+    throw new Error(
+      `switchRows(): matrix index out of bounds! i1: ${i1} but m: ${m}`,
     );
   }
+  if (i2 < 0 || i2 >= m) {
+    throw new Error(
+      `switchRows(): matrix index out of bounds! i2: ${i2} but m: ${m}`,
+    );
+  }
+  for (let j = 0; j < n; j++) {
+    const new1 = arr[n * i2 + j];
+    const new2 = arr[n * i1 + j];
+    [arr[n * i1 + j], arr[n * i2 + j]] = [new1, new2];
+  }
+}
 
-  // The m x m identity matrix.
-  function eye(m) {
-    let arr = Array(m * m);
-    for (let i = 0; i < m; i++) {
-      for (let j = 0; j < m; j++) {
-        arr[m * i + j] = i === j ? 1 : 0;
+// Scales row `i` of a matrix by `coeff`.
+function multiplyRow(arr, m, n, i, coeff) {
+  for (let j = 0; j < n; j++) {
+    arr[n * i + j] *= coeff;
+  }
+}
+
+// Does the operation "[row i2 of arr] += coeff * [row i1 of arr]".
+function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
+  for (let j = 0; j < n; j++) {
+    arr[n * i2 + j] += coeff * arr[n * i1 + j];
+  }
+}
+
+// Use Gaussian elimination to solve a linear system `left` * x = `right`.
+// Both `left` and `right` are assumed to have `m` rows;
+// `left` has `n1` columns, and `right` has `n2`.
+// The function returns the RHS after this process.
+function gaussianElimination(left, right, m, n1, n2) {
+  // Don't mutate the input
+  let leftClone = structuredClone(left);
+  let rightClone = structuredClone(right);
+  // Iterating over columns, clear all entries below the pivot
+  for (let j = 0; j < Math.min(m, n1); ++j) {
+    let i = j + 1;
+    // Try to make the (j, j) entry nonzero by swapping rows
+    while (i < m && Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
+      swapRows(leftClone, m, n1, j, i);
+      swapRows(rightClone, m, n2, j, i);
+      i++;
+    }
+    // Return null to indicate a singular matrix
+    if (Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
+      return null;
+    }
+    // Clear lower triangle{
+    const pivot = leftClone[n1 * j + j];
+    for (let i2 = j + 1; i2 < m; ++i2) {
+      const target = leftClone[n1 * i2 + j];
+      if (Math.abs(target) >= Number.EPSILON) {
+        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
+        addMultipleOfFirstRowToSecond(
+          rightClone,
+          m,
+          n2,
+          j,
+          i2,
+          -target / pivot,
+        );
       }
     }
-    return arr;
   }
-
-  // Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
-  function swapRows(arr, m, n, i1, i2) {
-    if (i1 < 0 || i1 >= m) {
-      throw new Error(
-        `switchRows(): matrix index out of bounds! i1: ${i1} but m: ${m}`,
-      );
-    }
-    if (i2 < 0 || i2 >= m) {
-      throw new Error(
-        `switchRows(): matrix index out of bounds! i2: ${i2} but m: ${m}`,
-      );
-    }
-    for (let j = 0; j < n; j++) {
-      const new1 = arr[n * i2 + j];
-      const new2 = arr[n * i1 + j];
-      [arr[n * i1 + j], arr[n * i2 + j]] = [new1, new2];
-    }
-  }
-
-  // Scales row `i` of a matrix by `coeff`.
-  function multiplyRow(arr, m, n, i, coeff) {
-    for (let j = 0; j < n; j++) {
-      arr[n * i + j] *= coeff;
-    }
-  }
-
-  // Does the operation "[row i2 of arr] += coeff * [row i1 of arr]".
-  function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
-    for (let j = 0; j < n; j++) {
-      arr[n * i2 + j] += coeff * arr[n * i1 + j];
-    }
-  }
-
-  // Use Gaussian elimination to solve a linear system `left` * x = `right`.
-  // Both `left` and `right` are assumed to have `m` rows;
-  // `left` has `n1` columns, and `right` has `n2`.
-  // The function returns the RHS after this process.
-  function gaussianElimination(left, right, m, n1, n2) {
-    // Don't mutate the input
-    let leftClone = structuredClone(left);
-    let rightClone = structuredClone(right);
-    // Iterating over columns, clear all entries below the pivot
-    for (let j = 0; j < Math.min(m, n1); ++j) {
-      let i = j + 1;
-      // Try to make the (j, j) entry nonzero by swapping rows
-      while (i < m && Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
-        swapRows(leftClone, m, n1, j, i);
-        swapRows(rightClone, m, n2, j, i);
-        i++;
-      }
-      // Return null to indicate a singular matrix
-      if (Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
-        return null;
-      }
-      // Clear lower triangle{
-      const pivot = leftClone[n1 * j + j];
-      for (let i2 = j + 1; i2 < m; ++i2) {
-        const target = leftClone[n1 * i2 + j];
-        if (Math.abs(target) >= Number.EPSILON) {
-          addMultipleOfFirstRowToSecond(
-            leftClone,
-            m,
-            n1,
-            j,
-            i2,
-            -target / pivot,
-          );
-          addMultipleOfFirstRowToSecond(
-            rightClone,
-            m,
-            n2,
-            j,
-            i2,
-            -target / pivot,
-          );
-        }
+  // Clear upper triangle
+  for (let j = Math.min(m, n1) - 1; j >= 0; --j) {
+    const pivot = leftClone[n1 * j + j];
+    for (let i2 = 0; i2 < j; ++i2) {
+      const target = leftClone[n1 * i2 + j];
+      if (Math.abs(target) >= Number.EPSILON) {
+        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
+        addMultipleOfFirstRowToSecond(
+          rightClone,
+          m,
+          n2,
+          j,
+          i2,
+          -target / pivot,
+        );
       }
     }
-    // Clear upper triangle
-    for (let j = Math.min(m, n1) - 1; j >= 0; --j) {
-      const pivot = leftClone[n1 * j + j];
-      for (let i2 = 0; i2 < j; ++i2) {
-        const target = leftClone[n1 * i2 + j];
-        if (Math.abs(target) >= Number.EPSILON) {
-          addMultipleOfFirstRowToSecond(
-            leftClone,
-            m,
-            n1,
-            j,
-            i2,
-            -target / pivot,
-          );
-          addMultipleOfFirstRowToSecond(
-            rightClone,
-            m,
-            n2,
-            j,
-            i2,
-            -target / pivot,
-          );
-        }
+    // Scale rows so LHS gets 1 on diag
+    // (Mutation can happen via another alias, though not via the `const` aliases we defined above.)
+    multiplyRow(leftClone, m, n1, j, 1 / pivot);
+    multiplyRow(rightClone, m, n2, j, 1 / pivot);
+  }
+  return rightClone;
+}
+
+// Finds the inverse of `matrix`,
+// If `matrix` is not invertible, throws an error.
+function inverseMatrix(matrix, m) {
+  return gaussianElimination(matrix, eye(m), m, m, m);
+}
+
+// Makes a table in `tableElement` with the given `data`.
+function makeTable(tableElement, data, header = "") {
+  const tableViewTr = document.createElement("tr");
+  let tableView = tableContent(data, header);
+  tableViewTr.appendChild(tableView);
+  tableElement.appendChild(tableViewTr);
+}
+
+// Return a new table view
+// TODO: make table entries selectable
+function tableContent(data, header = "") {
+  const table = tableHead(data, header);
+  const tbody = table.createTBody();
+  if (data[0] instanceof Array) {
+    for (const [i, element] of data.entries()) {
+      let row = tbody.insertRow();
+      let cell1 = row.insertCell();
+      cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
+      for (const value of data[i].values()) {
+        // iterate over columns
+        let td = document.createElement("td");
+        td.appendChild(document.createTextNode(value));
+        row.appendChild(td);
       }
-      // Scale rows so LHS gets 1 on diag
-      // (Mutation can happen via another alias, though not via the `const` aliases we defined above.)
-      multiplyRow(leftClone, m, n1, j, 1 / pivot);
-      multiplyRow(rightClone, m, n2, j, 1 / pivot);
     }
-    return rightClone;
+  } else if (typeof data[0] === "object") {
+    for (const [i, element] of data.entries()) {
+      let row = tbody.insertRow();
+      let cell1 = row.insertCell();
+      cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
+      for (const value of Object.values(element)) {
+        // iterate over columns
+        let td = document.createElement("td");
+        td.appendChild(document.createTextNode(`${value}`));
+        row.appendChild(td);
+      }
+    }
+  } else {
+    for (const [i, _] of data.entries()) {
+      let row = tbody.insertRow();
+      let cell1 = row.insertCell();
+      cell1.appendChild(document.createTextNode(`${i + 1}`)); //row numbering
+      let td = document.createElement("td");
+      td.appendChild(document.createTextNode(data[i]));
+      row.appendChild(td);
+    }
   }
+  return table;
+}
 
-  // Finds the inverse of `matrix`,
-  // If `matrix` is not invertible, throws an error.
-  function inverseMatrix(matrix, m) {
-    return gaussianElimination(matrix, eye(m), m, m, m);
+function tableHead(data, header = "") {
+  const table = document.createElement("table");
+  const thead = table.createTHead();
+  table.setAttribute("class", "scrollable clickable");
+  let headRow = thead.insertRow();
+  let th = document.createElement("th");
+  th.appendChild(document.createTextNode("#"));
+  headRow.appendChild(th);
+  if (data) {
+    if (data[0] instanceof Array) {
+      for (let i = 0; i < data[0].length; ++i) {
+        let th = document.createElement("th");
+        th.appendChild(document.createTextNode(`${i}`));
+        headRow.appendChild(th);
+      }
+    } else if (typeof data[0] === "object") {
+      for (let key of Object.keys(data[0])) {
+        let th = document.createElement("th");
+        th.appendChild(document.createTextNode(`${key}`));
+        headRow.appendChild(th);
+      }
+    } else {
+      let th = document.createElement("th");
+      th.appendChild(document.createTextNode(`${header}`));
+      headRow.appendChild(th);
+    }
   }
+  return table;
+}
 
+import("./pkg").then((wasm) => {
   // New approach:
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
@@ -201,343 +257,250 @@ import("./pkg").then((wasm) => {
   //
   // TODO: show a legend for the different colored lines
   function createLatticeView() {
-    statusElement.innerText = "";
+    if (statusElement) {
+      statusElement.innerText = "";
 
-    let A;
-    let B;
-    let C;
-    let D;
+      let A;
+      let B;
+      let C;
+      let D;
 
-    // Create lattice visualization
-    const latticeElement = document.getElementById("lattice-vis");
-    latticeElement.innerHTML = "";
-    latticeElement.setAttribute("style", "vertical-align: text-top;");
-    const svgTag = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "svg",
-    );
-    svgTag.setAttribute("id", "lattice");
-    const svgStyle = document.createElement("style");
-    svgStyle.innerHTML = `
-  .small {
-    font: 20px sans-serif;
-    fill: black;
-  }`;
-  if (currentLatticeBasis) {
-    let g = currentLatticeBasis[0];
-    let h = currentLatticeBasis[1];
-    let sig = [0,0,0];
-    let n = currentWord.length;
-    for (let i = 0; i < n; ++i) {
-      switch (currentWord[i]) {
-        case "L":
-          ++sig[0];
-          break;
-        case "M":
-          ++sig[1];
-          break;
-        case "s":
-          ++sig[2];
-          break;
-        default:
-          break;
-      }
-    }
-    [A, B, C, D] = [1, 0, 0, 1];
-    let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
-      [
-        g[0],
-        g[1],
-        g[2],
-        h[0],
-        h[1],
-        h[2],
-        sig[0],
-        sig[1],
-        sig[2],
-      ],
-      [A, B, C, D, 0, 0],
-      3,
-      3,
-      2,
-    );
-    for (let i = -8; i <= 8; ++i) {
-      // Lines of constant g
-      const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
-      const p0y = ORIGIN_X + B * SPACING_Y * i;
-      const p1x = p0x + C * SPACING_X * 10; // add a large positive h offset
-      const p1y = p0y + D * SPACING_Y * 10;
-      const p2x = p0x + C * SPACING_X * -10; // add a large negative h offset
-      const p2y = p0y + D * SPACING_Y * -10;
-      // Lines of constant h
-      const q0x = ORIGIN_X + C * SPACING_X * i;
-      const q0y = ORIGIN_Y + D * SPACING_Y * i;
-      const q1x = q0x + A * SPACING_X * 10;
-      const q1y = q0y + B * SPACING_Y * 10;
-      const q2x = q0x + A * SPACING_X * -10;
-      const q2y = q0y + B * SPACING_Y * -10;
+      // Create lattice visualization
+      const latticeElement = document.getElementById("lattice-vis");
+      if (latticeElement) {
+        latticeElement.innerHTML = "";
+        latticeElement.setAttribute("style", "vertical-align: text-top;");
+        const svgTag = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "svg",
+        );
+        svgTag.setAttribute("id", "lattice");
+        const svgStyle = document.createElement("style");
+        svgStyle.innerHTML = `
+      .small {
+        font: 20px sans-serif;
+        fill: black;
+      }`;
+        if (currentWord) {
+          if (currentLatticeBasis) {
+            let g = currentLatticeBasis[0];
+            let h = currentLatticeBasis[1];
+            let sig = [0, 0, 0];
+            let n = currentWord.length;
+            for (let i = 0; i < n; ++i) {
+              switch (currentWord[i]) {
+                case "L":
+                  ++sig[0];
+                  break;
+                case "M":
+                  ++sig[1];
+                  break;
+                case "s":
+                  ++sig[2];
+                  break;
+                default:
+                  break;
+              }
+            }
+            [A, B, C, D] = [1, 0, 0, 1];
+            let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
+              [g[0], g[1], g[2], h[0], h[1], h[2], sig[0], sig[1], sig[2]],
+              [A, B, C, D, 0, 0],
+              3,
+              3,
+              2,
+            );
+            for (let i = -8; i <= 8; ++i) {
+              // Lines of constant g
+              const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
+              const p0y = ORIGIN_X + B * SPACING_Y * i;
+              const p1x = p0x + C * SPACING_X * 10; // add a large positive h offset
+              const p1y = p0y + D * SPACING_Y * 10;
+              const p2x = p0x + C * SPACING_X * -10; // add a large negative h offset
+              const p2y = p0y + D * SPACING_Y * -10;
+              // Lines of constant h
+              const q0x = ORIGIN_X + C * SPACING_X * i;
+              const q0y = ORIGIN_Y + D * SPACING_Y * i;
+              const q1x = q0x + A * SPACING_X * 10;
+              const q1y = q0y + B * SPACING_Y * 10;
+              const q2x = q0x + A * SPACING_X * -10;
+              const q2y = q0y + B * SPACING_Y * -10;
 
-      // draw the line of constant g
-      svgTag.innerHTML += `<line
-            x1="${p1x}"
-            y1="${p1y}"
-            x2="${p2x}"
-            y2="${p2y}"
-            style="stroke:${GROUND_INDIGO}; stroke-width:${EDGE_WIDTH}"
-          />`;
-      // draw the line of constant h
-      svgTag.innerHTML += `<line
-            x1="${q1x}"
-            y1="${q1y}"
-            x2="${q2x}"
-            y2="${q2y}"
-            style="stroke:gray; stroke-width:${EDGE_WIDTH}"
-          />`;
-    }
+              // draw the line of constant g
+              svgTag.innerHTML += `<line
+                x1="${p1x}"
+                y1="${p1y}"
+                x2="${p2x}"
+                y2="${p2y}"
+                style="stroke:${GROUND_INDIGO}; stroke-width:${EDGE_WIDTH}"
+              />`;
+              // draw the line of constant h
+              svgTag.innerHTML += `<line
+                x1="${q1x}"
+                y1="${q1y}"
+                x2="${q2x}"
+                y2="${q2y}"
+                style="stroke:gray; stroke-width:${EDGE_WIDTH}"
+              />`;
+            }
 
-    let currentX = ORIGIN_X;
-    let currentY = ORIGIN_Y;
-    for (let deg = 0; deg < n; ++deg) {
-      svgTag.innerHTML += `<circle 
-        cx="${currentX}"
-        cy="${currentY}"
-        r="${UNOCCUPIED_DOT_RADIUS}"
-        color="white"
-        stroke="black" 
-        stroke-width="1"
-      />
-      <text
-        x="${currentX - 3}"
-        y="${currentY + 3}"
-        fill="white"
-        font-size="0.5em"
-      >${modulo(deg, n)}</text>`;
-      switch (currentWord[deg]) {
-        case "L":
-          currentX += L_x * SPACING_X;
-          currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
-          break;
-        case "M":
-          currentX += M_x * SPACING_X;
-          currentY += M_y * SPACING_Y;
-          break;
-        case "s":
-          currentX += S_x * SPACING_X;
-          currentY += S_y * SPACING_Y;
-          break;
-        default:
-          throw new Error("Invalid letter");
-      }
-    }
-    // We deferred appending elements until now
-    svgTag.setAttribute(
-      "viewBox",
-      `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
-    );
-    latticeElement.innerHTML += `<h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
-    latticeElement.appendChild(svgTag);
-  } else {
-    throw new Error("No suitable lattice basis");
-  }
-}
-
-  // Name the svg element and return a reference to the lattice element and the svg tag.
-  function initializeSvg(htmlElement, height, width) {
-    // Create lattice visualization
-    const latticeElement = document.getElementById(htmlElement);
-    latticeElement.innerHTML = "";
-    latticeElement.setAttribute("style", "vertical-align: text-top;");
-    const svgTag = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "svg",
-    );
-    latticeElement.appendChild(svgTag);
-    svgTag.setAttribute("id", "lattice");
-    const svgStyle = document.createElement("style");
-    svgStyle.innerHTML = `
-  .small {
-    font: 20px sans-serif;
-    fill: black;
-  }`;
-
-    svgTag.appendChild(svgStyle);
-    return [latticeElement, svgTag];
-  }
-
-  // Makes a table in `tableElement` with the given `data`.
-  function makeTable(tableElement, data, header = "") {
-    const tableViewTr = document.createElement("tr");
-    let tableView = tableContent(data, header);
-    tableViewTr.appendChild(tableView);
-    tableElement.appendChild(tableViewTr);
-  }
-
-  // Return a new table view
-  // TODO: make table entries selectable
-  function tableContent(data, header = "") {
-    const table = tableHead(data, header);
-    const tbody = table.createTBody();
-    if (data[0] instanceof Array) {
-      for (const [i, element] of data.entries()) {
-        let row = tbody.insertRow();
-        let cell1 = row.insertCell();
-        cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
-        for (const value of data[i].values()) {
-          // iterate over columns
-          let td = document.createElement("td");
-          td.appendChild(document.createTextNode(value));
-          row.appendChild(td);
+            let currentX = ORIGIN_X;
+            let currentY = ORIGIN_Y;
+            for (let deg = 0; deg < n; ++deg) {
+              svgTag.innerHTML += `<circle 
+            cx="${currentX}"
+            cy="${currentY}"
+            r="${UNOCCUPIED_DOT_RADIUS}"
+            color="white"
+            stroke="black" 
+            stroke-width="1"
+          />
+          <text
+            x="${currentX - 3}"
+            y="${currentY + 3}"
+            fill="white"
+            font-size="0.5em"
+          >${modulo(deg, n)}</text>`;
+              switch (currentWord[deg]) {
+                case "L":
+                  currentX += L_x * SPACING_X;
+                  currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
+                  break;
+                case "M":
+                  currentX += M_x * SPACING_X;
+                  currentY += M_y * SPACING_Y;
+                  break;
+                case "s":
+                  currentX += S_x * SPACING_X;
+                  currentY += S_y * SPACING_Y;
+                  break;
+                default:
+                  throw new Error("Invalid letter");
+              }
+            }
+            // We deferred appending elements until now
+            svgTag.setAttribute(
+              "viewBox",
+              `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
+            );
+            latticeElement.innerHTML += `<h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.appendChild(svgTag);
+          } else {
+            throw new Error("No suitable lattice basis");
+          }
+        } else {
+          throw new Error("`currentWord` is null or undefined");
         }
       }
-    } else if (typeof data[0] === "object") {
-      for (const [i, element] of data.entries()) {
-        let row = tbody.insertRow();
-        let cell1 = row.insertCell();
-        cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
-        for (const value of Object.values(element)) {
-          // iterate over columns
-          let td = document.createElement("td");
-          td.appendChild(document.createTextNode(value));
-          row.appendChild(td);
-        }
-      }
-    } else {
-      for (const [i, _] of data.entries()) {
-        let row = tbody.insertRow();
-        let cell1 = row.insertCell();
-        cell1.appendChild(document.createTextNode(`${i + 1}`)); //row numbering
-        let td = document.createElement("td");
-        td.appendChild(document.createTextNode(data[i]));
-        row.appendChild(td);
-      }
     }
-    return table;
-  }
-
-  function tableHead(data, header = "") {
-    const table = document.createElement("table");
-    const thead = table.createTHead();
-    table.setAttribute("class", "scrollable clickable");
-    let headRow = thead.insertRow();
-    let th = document.createElement("th");
-    th.appendChild(document.createTextNode("#"));
-    headRow.appendChild(th);
-    if (data) {
-      if (data[0] instanceof Array) {
-        for (let i = 0; i < data[0].length; ++i) {
-          let th = document.createElement("th");
-          th.appendChild(document.createTextNode(`${i}`));
-          headRow.appendChild(th);
-        }
-      } else if (typeof data[0] === "object") {
-        for (let key of Object.keys(data[0])) {
-          let th = document.createElement("th");
-          th.appendChild(document.createTextNode(`${key}`));
-          headRow.appendChild(th);
-        }
-      } else {
-        let th = document.createElement("th");
-        th.appendChild(document.createTextNode(`${header}`));
-        headRow.appendChild(th);
-      }
-    }
-    return table;
   }
 
   // Function for showing the SonicWeave code
   function showSonicWeaveCode() {
-    const arity = new Set(Array.from(currentWord)).size;
     if (currentWord) {
+      const arity = new Set(Array.from(currentWord)).size;
       if (currentTuning) {
         const element = document.getElementById("sw-code");
-        element.innerHTML = `<h2>SonicWeave code</h2>
-      (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>`;
-        element.innerHTML += `<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>`;
+        if (element) {
+          element.innerHTML = `<h2>SonicWeave code</h2>
+        (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>`;
+          element.innerHTML += `<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>`;
 
-        // Make a "copy to clipboard" button
-        const copyButtonLabel = "Copy";
+          // Make a "copy to clipboard" button
+          const copyButtonLabel = "Copy";
 
-        async function copyCode(block, button) {
-          let code = block.querySelector("code");
-          let text = code.innerText;
+          async function copyCode(block, button) {
+            let code = block.querySelector("code");
+            let text = code.innerText;
 
-          await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(text);
 
-          // visual feedback that task is completed
-          button.innerText = "Copied!";
+            // visual feedback that task is completed
+            button.innerText = "Copied!";
 
-          setTimeout(() => {
-            button.innerText = copyButtonLabel;
-          }, 700);
-        }
-
-        // use a class selector if available
-        let blocks = document.querySelectorAll("pre");
-
-        blocks.forEach((block) => {
-          // only add button if browser supports Clipboard API
-          if (navigator.clipboard) {
-            let button = document.createElement("button");
-
-            button.innerText = copyButtonLabel;
-            block.appendChild(button);
-
-            button.addEventListener("click", async () => {
-              await copyCode(block, button);
-            });
+            setTimeout(() => {
+              button.innerText = copyButtonLabel;
+            }, 700);
           }
-        });
 
-        let codeblock = document.getElementById("codeblock");
-        const arr = Array.from(currentWord);
-        codeblock.innerHTML =
-          arity === 3
-            ? `let L = ${currentTuning[0]}
+          // use a class selector if available
+          let blocks = document.querySelectorAll("pre");
+
+          blocks.forEach((block) => {
+            // only add button if browser supports Clipboard API
+            if (navigator.clipboard) {
+              let button = document.createElement("button");
+
+              button.innerText = copyButtonLabel;
+              block.appendChild(button);
+
+              button.addEventListener("click", async () => {
+                await copyCode(block, button);
+              });
+            }
+          });
+
+          let codeblock = document.getElementById("codeblock");
+          const arr = Array.from(currentWord);
+          if (codeblock) {
+            codeblock.innerHTML =
+              arity === 3
+                ? `let L = ${currentTuning[0]}
 let M = ${currentTuning[1]}
 let s = ${currentTuning[2]}
 ${arr.join(";")};
 stack()`
-            : arity === 2
-              ? `let L = ${currentTuning[0]}
+                : arity === 2
+                  ? `let L = ${currentTuning[0]}
 let s = ${currentTuning[1]}
 ${arr.join(";")};
 stack()`
-              : arity === 1
-                ? `let X = ${currentTuning[0]}
+                  : arity === 1
+                    ? `let X = ${currentTuning[0]}
 ${arr.join(";")};
 stack()`
-                : "Scales of rank > 3 are not supported";
+                    : "Scales of rank > 3 are not supported";
+          }
+        }
       }
     }
   }
 
   function showScaleProfile() {
     const el = document.getElementById("scale-profile");
-    el.innerHTML = "";
-    const h2 = document.createElement("h2");
-    h2.innerText = `Scale profile for ${currentWord}`;
-    el.appendChild(h2);
-    const structure = currentProfile["structure"];
-    el.innerHTML += `<b>Guide frame</b><br/><small>`;
-    let gsDisp =
-      `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g)}`)}`.slice(1);
-    el.innerHTML += `Guided generator sequence of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-    el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"])}<br/>`; // TODO prettify
-    el.innerHTML += `Interleaving polyoffset ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
-    el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-    el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
-    el.innerHTML += `<b>Monotone MOS properties</b><br/>`;
-    el.innerHTML += currentProfile["lm"] ? `L = M<br/>` : "";
-    el.innerHTML += currentProfile["ms"] ? `M = s<br/>` : "";
-    el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
-    if (
-      !currentProfile["lm"] &&
-      !currentProfile["ms"] &&
-      !currentProfile["s0"]
-    ) {
-      el.innerHTML += `None<br/>`;
+    if (el) {
+      el.innerHTML = "";
+      const h2 = document.createElement("h2");
+      h2.innerText = `Scale profile for ${currentWord}`;
+      el.appendChild(h2);
+      if (currentProfile) {
+        const structure = currentProfile["structure"];
+        if (structure) {
+          el.innerHTML += `<b>Guide frame</b><br/><small>`;
+          let gsDisp =
+            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g)}`)}`.slice(
+              1,
+            );
+          el.innerHTML += `Guided generator sequence of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
+          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"])}<br/>`; // TODO prettify
+          el.innerHTML += `Interleaving polyoffset ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
+          el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
+          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
+          el.innerHTML += `<b>Monotone MOS properties</b><br/>`;
+          el.innerHTML += currentProfile["lm"] ? `L = M<br/>` : "";
+          el.innerHTML += currentProfile["ms"] ? `M = s<br/>` : "";
+          el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
+          if (
+            !currentProfile["lm"] &&
+            !currentProfile["ms"] &&
+            !currentProfile["s0"]
+          ) {
+            el.innerHTML += `None<br/>`;
+          }
+          el.innerHTML += `<br/>Maximum variety ${currentProfile["mv"]}</small>`;
+        }
+      }
     }
-    el.innerHTML += `<br/>Maximum variety ${currentProfile["mv"]}</small>`;
   }
 
   // display both the step vector in sum form and what interval it is in the current tuning
@@ -599,11 +562,11 @@ stack()`
     const arity = sig.filter((m) => m > 0).length;
     const scaleSize = sig.reduce((acc, m) => (acc += m), 0);
     try {
-    if (scaleSize === 0) {
-      statusElement.textContent = "Scale is empty. This is a bug.";
-    } else if (arity > RANK_LIMIT) {
-      statusElement.textContent = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
-    } else {
+      if (scaleSize === 0) {
+        statusElement.textContent = "Scale is empty. This is a bug.";
+      } else if (arity > RANK_LIMIT) {
+        statusElement.textContent = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
+      } else {
         if (arity > 0) {
           statusElement.textContent = "Computing...";
 
@@ -659,15 +622,20 @@ stack()`
             document.getElementById("monotone-ms").checked,
             document.getElementById("monotone-s0").checked,
             Number(document.getElementById("ggs-len").value),
-            document.querySelector('input[name="ggs-len-constraint"]:checked').value,
+            document.querySelector('input[name="ggs-len-constraint"]:checked')
+              .value,
             Number(document.getElementById("complexity").value),
-            document.querySelector('input[name="complexity-constraint"]:checked').value,
+            document.querySelector(
+              'input[name="complexity-constraint"]:checked',
+            ).value,
             Number(document.getElementById("mv").value),
             document.querySelector('input[name="mv-constraint"]:checked').value,
             document.querySelector('input[name="mos-subst"]:checked').value,
           );
           const scales = sigResult["profiles"].map((j) => j["word"]);
-          const latticeBases = sigResult["profiles"].map((j) => j["lattice_basis"]);
+          const latticeBases = sigResult["profiles"].map(
+            (j) => j["lattice_basis"],
+          );
           console.log(latticeBases);
 
           const profiles = sigResult["profiles"];
