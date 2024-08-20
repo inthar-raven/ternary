@@ -7,7 +7,8 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 1. Install the Rust toolchain.
 1. Run `cargo install wasm-pack`.
 1. Install `npm`.
-1. Run `npm install`, then run `npm run serve` in the project directory.
+1. Run `npm install` in the project directory.
+1. Run `npm run serve` in the project directory.
 1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
 
 # Dev scripts
