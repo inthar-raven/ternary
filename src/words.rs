@@ -203,6 +203,19 @@ where
     }
 }
 
+pub fn countvector_to_slice(v: CountVector<usize>) -> Vec<i32> {
+    if v.is_empty() {
+        vec![]
+    } else {
+        let max = *v.into_inner().last_key_value().unwrap().0;
+        let mut result = vec![0; max + 1];
+        for key in v.into_inner().keys() {
+            result[*key] = *v.get(key).unwrap();
+        }
+        result
+    }
+}
+
 /// The dyad on the specified degree of the scale as a `CountVector`.
 pub fn dyad_on_degree<T>(scale: &[T], degree: usize, interval_class: usize) -> CountVector<T>
 where
