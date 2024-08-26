@@ -14,6 +14,8 @@ pub mod words;
 
 use itertools::Itertools;
 use wasm_bindgen::prelude::*;
+use words::countvector_to_slice;
+use words::dyad_on_degree;
 use words::Letter;
 
 #[wasm_bindgen]
@@ -229,28 +231,70 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
 
 fn get_unimodular_basis(
     structures: &[GuideFrame],
+    scale: &[usize],
     step_sig: &[u8],
 ) -> Option<(Vec<Vec<u8>>, GuideResult)> {
-    for structure in structures {
-        let structure = guide_frame_to_result(structure);
-        let gs = structure.clone().gs.clone();
-        for i in 0..gs.clone().len() {
-            for j in i..gs.clone().len() {
-                if det3(step_sig, &gs.clone()[i], &gs.clone()[j]).abs() == 1 {
-                    return Some((
-                        vec![gs.clone()[i].clone(), gs.clone()[j].clone()],
-                        structure,
-                    ));
-                }
+    /*
+    if (structure["multiplicity"] === 1) {
+      if (structure["polyoffset"].length === 1) {
+        // Check for two unequal step vectors.
+        outer: for (let i = 0; i < gs.length; ++i) {
+          for (let j = i; j < gs.length; ++j) {
+            if (!isEqual(gs[i], gs[j])) {
+              g = [...Object.values(gs[i])];
+              h = [...Object.values(gs[j])];
+              break outer;
             }
+          }
         }
-        let polyoffset = structure.clone().polyoffset;
-        for v in polyoffset {
-            for w in structure.clone().gs {
-                if det3(step_sig, &v, &w).abs() == 1 {
-                    return Some((vec![v, w], structure));
+      } else {
+        g = [...Object.values(structure["aggregate"])];
+        h = [...Object.values(structure["polyoffset"][1])];
+      }
+    } else {
+      g = [...Object.values(structure["aggregate"])];
+      h = [...Object.values(dyadOnDegree(
+        scaleWord,
+        scaleWord.length / structure["multiplicity"],
+        scaleWord.length / structure["multiplicity"],
+      ))];
+    }
+     */
+    for structure in structures {
+        if structure.multiplicity == 1 {
+            let structure = guide_frame_to_result(structure);
+            let gs = structure.gs.clone();
+            for i in 0..gs.clone().len() {
+                for j in i..gs.clone().len() {
+                    if det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
+                        return Some((vec![gs[i].clone(), gs[j].clone()], structure));
+                    }
                 }
             }
+            let polyoffset = structure.clone().polyoffset;
+            for v in polyoffset {
+                for w in structure.clone().gs {
+                    if det3(step_sig, &v, &w).abs() == 1 {
+                        return Some((vec![v, w], structure));
+                    }
+                }
+            }
+        } else {
+            // this branch handles diregular scales
+            let structure = guide_frame_to_result(structure);
+            let vec_for_gs_element = structure.gs[0].clone();
+            let vec_for_detempered_period = countvector_to_slice(dyad_on_degree(
+                scale,
+                0,
+                scale.len() / structure.clone().multiplicity as usize,
+            ))
+            .iter()
+            .map(|x| *x as u8)
+            .collect();
+            return Some((
+                vec![vec_for_gs_element, vec_for_detempered_period],
+                structure,
+            ));
         }
     }
     None
@@ -266,9 +310,11 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u8)
         .collect::<Vec<u8>>();
-    let structures = guide_frames(query);
-    let some_guide_frame = structures.first();
-    if let Some(pair) = get_unimodular_basis(&guide_frames(query), &step_sig) {
+    if let Some(pair) = get_unimodular_basis(
+        &guide_frames(query),
+        &string_to_numbers(&brightest),
+        &step_sig,
+    ) {
         let (lattice_basis, structure) = pair;
         ScaleProfile {
             word: brightest,
@@ -283,7 +329,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         ScaleProfile {
             word: brightest,
             lattice_basis: None,
-            structure: some_guide_frame.map(guide_frame_to_result),
+            structure: None,
             lm,
             ms,
             s0,

@@ -181,6 +181,19 @@ impl<T> CountVector<T> {
     }
 }
 
+pub fn countvector_to_slice(v: CountVector<usize>) -> Vec<i32> {
+    if v.is_empty() {
+        vec![]
+    } else {
+        let max = *v.into_inner().last_key_value().unwrap().0;
+        let mut result = vec![0; max + 1];
+        for key in v.into_inner().keys() {
+            result[*key] = *v.get(key).unwrap();
+        }
+        result
+    }
+}
+
 /// Treating `scale` as a circular string (that is, "scale[i] == scale[i % scale.len()]"),
 /// take a slice of length `subword_length` from `degree`; assumes `subword_length` <= `scale`.len().
 /// Reduce `degree` first.
