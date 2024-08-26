@@ -17,6 +17,7 @@ let currentTuning = null;
 let currentProfile = null;
 
 const statusElement = document.getElementById("status");
+
 function displayStepVector(vector) {
   const keys = [...Object.keys(vector)];
   const sizeIdentifiers = ["L", "M", "s"];
@@ -496,6 +497,11 @@ stack()`
             !currentProfile["s0"]
           ) {
             el.innerHTML += `None<br/>`;
+          }
+          if (currentProfile["chirality"] === "Achiral") {
+            el.innerHTML += `<br/>Chirality: Achiral`;
+          } else {
+            el.innerHTML += `<br/>Chirality: ${currentProfile["chirality"]} (reversed: ${currentProfile["reversed"]})`;
           }
           el.innerHTML += `<br/>Maximum variety ${currentProfile["mv"]}</small>`;
         }

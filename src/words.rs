@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use serde::Serialize;
 use std::cmp::{max, Ordering};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
@@ -35,7 +36,7 @@ impl Subtendable for CountVector<Letter> {
 }
 
 /// The [chirality](https://en.xen.wiki/w/Chirality) of a scale.
-#[derive(Copy, Clone, Debug, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Serialize)]
 pub enum Chirality {
     /// Lexicographically first mode is greater than that of reversed scale word.
     Left,

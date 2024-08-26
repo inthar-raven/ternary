@@ -14,9 +14,8 @@ pub mod words;
 
 use itertools::Itertools;
 use wasm_bindgen::prelude::*;
-use words::countvector_to_slice;
-use words::dyad_on_degree;
-use words::Letter;
+use words::{chirality, countvector_to_slice, dyad_on_degree};
+use words::{Chirality, Letter};
 
 #[wasm_bindgen]
 extern "C" {
@@ -96,6 +95,10 @@ pub struct ScaleProfile {
     word: String,
     /// unimodular basis for lattice is there is one
     lattice_basis: Option<Vec<Vec<u8>>>,
+    /// chirality
+    chirality: Chirality,
+    /// brightest mode of reversed word
+    reversed: String,
     /// lowest-complexity guide frame structure provided there is one
     structure: Option<GuideResult>,
     /// whether scale is L=M monotone MOS
@@ -305,6 +308,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let lm = monotone_lm(query);
     let ms = monotone_ms(query);
     let s0 = monotone_s0(query);
+    let chirality = chirality(query);
+    let reversed = least_mode(&query.iter().copied().rev().collect::<Vec<usize>>());
+    let reversed = numbers_to_string(&reversed);
     let mv = maximum_variety(query) as u8;
     let step_sig = word_to_sig(query)
         .iter()
@@ -319,6 +325,8 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         ScaleProfile {
             word: brightest,
             lattice_basis: Some(lattice_basis),
+            chirality,
+            reversed,
             structure: Some(structure),
             lm,
             ms,
@@ -329,6 +337,8 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         ScaleProfile {
             word: brightest,
             lattice_basis: None,
+            chirality,
+            reversed,
             structure: None,
             lm,
             ms,
