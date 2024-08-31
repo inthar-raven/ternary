@@ -384,7 +384,7 @@ import("./pkg").then((wasm) => {
               "viewBox",
               `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
             );
-            latticeElement.innerHTML += `<h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
             latticeElement.appendChild(svgTag);
           } else {
             throw new Error("No suitable lattice basis");
@@ -403,7 +403,7 @@ import("./pkg").then((wasm) => {
       if (currentTuning) {
         const element = document.getElementById("sw-code");
         if (element) {
-          element.innerHTML = `<h2>SonicWeave code</h2>
+          element.innerHTML = `<hr/><h2>SonicWeave code</h2>
         (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>`;
           element.innerHTML += `<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>`;
 
@@ -577,6 +577,10 @@ stack()`
           statusElement.textContent = "Computing...";
 
           document.getElementById("tables").innerHTML = `
+      <hr /><h2>Tables</h2>
+      
+      <table>
+        <tr>
                       <td>
                         Scales
                         <div
@@ -618,7 +622,7 @@ stack()`
                         >
                           <table class="data" id="table-ed-tunings"></table>
                         </div>
-                      </td>`;
+                      </td></tr></table>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edoTuningTable = document.getElementById("table-ed-tunings");
