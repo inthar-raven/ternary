@@ -20,7 +20,7 @@ const statusElement = document.getElementById("status");
 
 function displayStepVector(vector) {
   const keys = [...Object.keys(vector)];
-  const sizeIdentifiers = ["L", "M", "s"];
+  const sizeIdentifiers = ["L", "m", "s"];
   if (keys.length === 0) {
     return "0";
   }
@@ -293,7 +293,7 @@ import("./pkg").then((wasm) => {
                 case "L":
                   ++sig[0];
                   break;
-                case "M":
+                case "m":
                   ++sig[1];
                   break;
                 case "s":
@@ -348,12 +348,12 @@ import("./pkg").then((wasm) => {
             let currentX = ORIGIN_X;
             let currentY = ORIGIN_Y;
             for (let deg = 0; deg < n; ++deg) {
-              svgTag.innerHTML += `<circle 
+              svgTag.innerHTML += `<circle
             cx="${currentX}"
             cy="${currentY}"
             r="${UNOCCUPIED_DOT_RADIUS}"
             color="white"
-            stroke="black" 
+            stroke="black"
             stroke-width="1"
           />
           <text
@@ -367,7 +367,7 @@ import("./pkg").then((wasm) => {
                   currentX += L_x * SPACING_X;
                   currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
                   break;
-                case "M":
+                case "m":
                   currentX += M_x * SPACING_X;
                   currentY += M_y * SPACING_Y;
                   break;
@@ -447,7 +447,7 @@ import("./pkg").then((wasm) => {
             codeblock.innerHTML =
               arity === 3
                 ? `let L = ${currentTuning[0]}
-let M = ${currentTuning[1]}
+let m = ${currentTuning[1]}
 let s = ${currentTuning[2]}
 ${arr.join(";")};
 stack()`
@@ -488,8 +488,8 @@ stack()`
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
           el.innerHTML += `<b>Monotone MOS properties</b><br/>`;
-          el.innerHTML += currentProfile["lm"] ? `L = M<br/>` : "";
-          el.innerHTML += currentProfile["ms"] ? `M = s<br/>` : "";
+          el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
+          el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
           el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
           if (
             !currentProfile["lm"] &&
@@ -578,7 +578,7 @@ stack()`
 
           document.getElementById("tables").innerHTML = `
       <hr /><h2>Tables</h2>
-      
+
       <table>
         <tr>
                       <td>

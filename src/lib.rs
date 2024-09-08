@@ -20,20 +20,30 @@ use words::{Chirality, Letter};
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 const STEP_LETTERS: [&str; 12] = [
     "",                                                     // 0
     "X",                                                    // 1
     "Ls",                                                   // 2
-    "LMs",                                                  // 3
-    "LMns",                                                 // 4
-    "HLMns",                                                // 5
-    "HLMnst",                                               // 6
-    "BHLMnst",                                              // 7
-    "BHLMnstw",                                             // 8
-    "BCHLMnstw",                                            // 9
-    "BCHLMnpstw",                                           // 10
+    "Lms",                                                  // 3
+    "Lmns",                                                 // 4
+    "HLmns",                                                // 5
+    "HLmnst",                                               // 6
+    "BHLmnst",                                              // 7
+    "BHLmnstw",                                             // 8
+    "BCHLmnstw",                                            // 9
+    "BCHLmnpstw",                                           // 10
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", // >= 11
 ];
 
@@ -52,14 +62,6 @@ use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, 
 pub const EDO_BOUND: i32 = 53;
 pub const S_LOWER_BOUND: f64 = 20.0;
 pub const S_UPPER_BOUND: f64 = 200.0;
-
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
 fn det3(v0: &[u8], v1: &[u8], v2: &[u8]) -> i16 {
     v0[0] as i16 * v1[1] as i16 * v2[2] as i16
@@ -321,6 +323,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         &string_to_numbers(&brightest),
         &step_sig,
     ) {
+        console_log!("{:?}: {:?}", query, guide_frames(query));
         let (lattice_basis, structure) = pair;
         ScaleProfile {
             word: brightest,
