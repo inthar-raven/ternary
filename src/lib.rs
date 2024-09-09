@@ -272,6 +272,7 @@ fn get_unimodular_basis(
             for i in 0..gs.clone().len() {
                 for j in i..gs.clone().len() {
                     if det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
+                        console_log!("first branch");
                         return Some((vec![gs[i].clone(), gs[j].clone()], structure));
                     }
                 }
@@ -280,6 +281,7 @@ fn get_unimodular_basis(
             for v in polyoffset {
                 for w in structure.clone().gs {
                     if det3(step_sig, &v, &w).abs() == 1 {
+                        console_log!("second branch");
                         return Some((vec![v, w], structure));
                     }
                 }
@@ -295,11 +297,14 @@ fn get_unimodular_basis(
             ))
             .iter()
             .map(|x| *x as u8)
-            .collect();
-            return Some((
-                vec![vec_for_gs_element, vec_for_detempered_period],
-                structure,
-            ));
+            .collect::<Vec<_>>();
+            if det3(step_sig, &vec_for_gs_element, &vec_for_detempered_period) == 1 {
+                console_log!("third branch");
+                return Some((
+                    vec![vec_for_gs_element, vec_for_detempered_period],
+                    structure,
+                ));
+            }
         }
     }
     None
