@@ -2,7 +2,7 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 
 ![Front page screenshot](https://raw.githubusercontent.com/inthar-raven/ternary/main/static/images/front.png)
 
-# How to build and run:
+# How to build and run
 
 1. Install the Rust toolchain.
 1. Run `cargo install wasm-pack`.
@@ -19,7 +19,7 @@ By default the WASM is compiled in release mode. To compile it in development mo
 2. `npm run serve`: Deploy the app on a development server.
 3. `npm run format`: Run `prettier` on all HTML, CSS, JavaScript, and TypeScript files.
 
-# Completed features:
+# Completed features
 
 - Get the set of all scales (up to mode) with a certain step signature.
 - Given a step signature, it gives you tuples of JI steps with bounded complexity for the scale (assuming octave equivalence).
