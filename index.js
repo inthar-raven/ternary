@@ -475,6 +475,7 @@ stack()`
       h2.innerText = `Scale profile for ${currentWord}`;
       el.appendChild(h2);
       if (currentProfile) {
+        const ploidacot = currentProfile["ploidacot"];
         const structure = currentProfile["structure"];
         if (structure) {
           el.innerHTML += `<b>Guide frame</b><br/><small>`;
@@ -487,6 +488,15 @@ stack()`
           el.innerHTML += `Interleaving polyoffset ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
+          if (ploidacot) {
+            const ploid = ploidacot["ploid"];
+            const ploidString = ploid === 1 ? "" : `${ploid}-ploid `;
+            const shear = ploidacot["shear"];
+            const shearString = shear === 0 ? "" : `${shear}-sheared `;
+            const cot = ploidacot["cot"];
+            const cotString = `${cot}-cot`;
+            el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot"  target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
+          }
           el.innerHTML += `<b>Monotone MOS properties</b><br/>`;
           el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
           el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
