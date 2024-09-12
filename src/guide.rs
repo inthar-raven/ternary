@@ -1,11 +1,24 @@
 use std::collections::BTreeSet;
 
 use itertools::Itertools;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    fn alert(s: &str);
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
 use crate::{
     helpers::gcd,
-    primes::{factorize, is_prime},
-    words::{offset_vec, rotate, rotations, weak_period, word_on_degree, CountVector, Subtendable},
+    primes::factorize,
+    words::{
+        dyad_on_degree, offset_vec, rotate, rotations, weak_period, word_on_degree, CountVector,
+        Letter, Subtendable,
+    },
 };
 
 // Given a necklace of stacked k-steps, where k is fixed,
@@ -14,10 +27,14 @@ fn guided_gs_chains<T>(chain: &[T]) -> Vec<Vec<T>>
 where
     T: core::fmt::Debug + PartialEq + Clone + Eq + Send,
 {
+    // println!("chain: {:?}", chain);
     let len = chain.len();
     rotations(chain)
         .into_iter()
-        .filter(|list| !(list[..len - 1].contains(&list[len - 1])))
+        .filter(|list| {
+            // println!("list: {:?}, {}", list, !(list[..len - 1].contains(&list[len - 1])));
+            !(list[..len - 1].contains(&list[len - 1]))
+        })
         .map(|chain| weak_period(&chain[..len - 1]))
         .collect::<Vec<_>>()
 }
@@ -36,6 +53,7 @@ pub fn stacked_k_steps<T>(k: usize, neck: &[T]) -> Vec<T::Interval>
 where
     T: Subtendable + std::fmt::Debug,
 {
+    // println!("scale: {:?}", neck);
     (0..neck.len())
         .map(|i| word_on_degree(neck, k * i, k))
         .map(|subword| <T as Subtendable>::interval_from_slice(&subword))
@@ -62,6 +80,14 @@ pub fn guided_gs_list_of_len(l: usize, neck: &[usize]) -> Vec<Vec<CountVector<us
         .collect()
 }
 
+#[allow(unused)]
+fn k_step_guided_gs_list_for_subscale(
+    k: usize,
+    subscale: &[CountVector<usize>],
+) -> Vec<Vec<CountVector<usize>>> {
+    guided_gs_chains(&stacked_k_steps(k, subscale))
+}
+
 // Guided GS of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
 fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<CountVector<usize>>> {
     if subscale.len() == 2 {
@@ -74,14 +100,6 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
             .collect()
     }
 }
-
-fn k_step_guided_gs_list_for_subscale(
-    k: usize,
-    subscale: &[CountVector<usize>],
-) -> Vec<Vec<CountVector<usize>>> {
-    guided_gs_chains(&stacked_k_steps(k, subscale))
-}
-
 /// A guide frame structure for a scale word, consisting of a generator sequence together with a set of offsets or a multiplicity.
 /// Multiplicity greater than 1 is a generalization of diregular MV3s;
 /// scales of this type always have the number of notes divisible by the multiplicity.
@@ -100,152 +118,195 @@ pub struct GuideFrame {
     pub gs: Vec<CountVector<usize>>,
     /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
     pub polyoffset: Vec<CountVector<usize>>,
-    /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-edo.
-    pub multiplicity: usize,
 }
 
 impl GuideFrame {
-    pub fn new_multiple(gs: Vec<CountVector<usize>>, multiplicity: usize) -> Self {
+    pub fn new_simple(gs: Vec<CountVector<usize>>) -> Self {
         Self {
             gs,
-            multiplicity,
             polyoffset: vec![CountVector::ZERO],
         }
     }
-    pub fn new_simple(gs: Vec<CountVector<usize>>, polyoffset: Vec<CountVector<usize>>) -> Self {
-        Self {
-            gs,
-            polyoffset,
-            multiplicity: 1,
-        }
+    pub fn new_multiple(gs: Vec<CountVector<usize>>, polyoffset: Vec<CountVector<usize>>) -> Self {
+        Self { gs, polyoffset }
     }
     // The comoplexity of a guide frame.
     pub fn complexity(&self) -> usize {
-        self.gs.len() * self.polyoffset.len() * self.multiplicity
+        self.gs.len() * self.polyoffset.len()
+    }
+    // The multiplicity
+    pub fn multiplicity(&self) -> usize {
+        self.polyoffset.len()
     }
     // Try to get simple or interleaved guide frames with k-step generators.
-    pub fn try_simple_or_interleaved(scale: &[usize], k: usize) -> Vec<Self> {
-        if scale.is_empty() {
+    pub fn try_simple(scale: &[usize], k: usize) -> Vec<Self> {
+        if scale.is_empty() || gcd(scale.len() as u64, k as u64) != 1 {
             vec![]
         } else {
-            let d = gcd(scale.len() as u64, k as u64) as usize;
-            let subscales = (0..d)
-                .map(|degree| rotate(scale, degree))
-                .map(|rotation| {
-                    stacked_k_steps(d, &rotation[..scale.len()])[..scale.len() / d].to_vec()
-                })
-                .collect::<Vec<_>>();
-            let subscales_cloned = subscales.clone();
-            let subscale_on_root = subscales_cloned
-                .split_first()
-                .expect("since we checked that `scale` is nonempty, this operation should be infallible")
-                .0;
-            // println!("subscale_on_root: {:?}", subscale_on_root);
-
-            // All of the subscales must be rotations of one another.
-            // `offset_vec()` returns a witness to rotational equivalence (an offset) if there is any;
-            // the offsets are combined to form the polyoffset.
-            // If it returns `None` for any subscale, the whole procedure fails.
-            let maybe_offsets = subscales
+            k_step_guided_gs_list(k, scale)
                 .into_iter()
-                .enumerate()
-                .map(|(i, subscale)| {
-                    offset_vec(subscale_on_root, &subscale).map(|offset| {
-                        // `.map()` returns `None` if the previous result is `None` and functorially applies the closure to `Some`s.
-                        CountVector::from_slice(&word_on_degree(scale, 0, offset * d + i))
-                    })
+                .map(|gs| Self {
+                    gs,
+                    polyoffset: vec![CountVector::ZERO],
                 })
-                // collect returns `None` if there is any `None` returned by `map`.
-                .collect::<Option<Vec<CountVector<usize>>>>();
-            // println!("subscale_on_root: {:?}", subscale_on_root);
-            // println!("maybe_offsets: {:?}", maybe_offsets);
-            if let Some(offsets) = maybe_offsets {
-                // sort list of offsets by step class
-                let offsets: Vec<CountVector<usize>> =
-                    offsets.into_iter().sorted_by_key(|v| v.len()).collect();
-                // If polyoffset is {0} use multiplicity 1
-                if offsets == [CountVector::ZERO] {
-                    guided_gs_list(scale)
-                        .into_iter()
-                        .map(|gs| Self {
-                            gs,
-                            polyoffset: offsets.to_owned(),
-                            multiplicity: 1,
-                        })
-                        .sorted()
-                        .dedup()
-                        .collect::<Vec<_>>()
-                } else {
-                    guided_gs_list_for_subscale(subscale_on_root)
-                        .into_iter()
-                        .map(|gs| Self {
-                            gs,
-                            polyoffset: offsets.to_owned(),
-                            multiplicity: 1,
-                        })
-                        .sorted()
-                        .dedup()
-                        .collect::<Vec<_>>()
-                }
-            } else {
-                vec![]
-            }
+                .sorted()
+                .dedup()
+                .collect::<Vec<_>>()
         }
     }
     pub fn try_multiple(scale: &[usize], multiplicity: usize, k: usize) -> Vec<Self> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
-        if is_prime(scale.len() as u64) || scale.is_empty() || scale.len() % multiplicity != 0 {
+        if multiplicity == 1 || scale.is_empty() || scale.len() % multiplicity != 0 {
             vec![]
         } else {
             let d = gcd(k as u64, scale.len() as u64) as usize;
-            if d == 1 {
-                // One-strand multi-GS scales.
-                // For each rotation (there are `scale.len() / multiplicity` of them we want to consider),
-                // we will get a collection with `multiplicity` elements
-                // all of which have to be equal.
-                let valid_gses: Vec<Vec<CountVector<usize>>> = (0..scale.len() / multiplicity)
-                    .map(|degree| {
-                        // Stack k-steps and split the result into `multiplicity` vecs of equal length
-                        let s = stacked_k_steps(k, &rotate(scale, degree));
-                        (0..multiplicity)
-                            .map(|i| {
-                                s[scale.len() / multiplicity * i
-                                    ..scale.len() / multiplicity * (i + 1)]
-                                    .to_vec()
+            let co_d = scale.len() / d;
+            if co_d % multiplicity != 0 {
+                if d == multiplicity {
+                    // It's an interleaved scale.
+                    let subscales = (0..d)
+                        .map(|degree| rotate(scale, degree))
+                        .map(|rotation| {
+                            stacked_k_steps(d, &rotation[..scale.len()])[..scale.len() / d].to_vec()
+                        })
+                        .collect::<Vec<_>>();
+                    let subscales_cloned = subscales.clone();
+                    let subscale_on_root = subscales_cloned
+                        .split_first()
+                        .expect("since we checked that `scale` is nonempty, this operation should be infallible")
+                        .0;
+                    // println!("subscale_on_root: {:?}", subscale_on_root);
+
+                    // All of the subscales must be rotations of one another.
+                    // `offset_vec()` returns a witness to rotational equivalence (an offset) if there is any;
+                    // the offsets are combined to form the polyoffset.
+                    // If it returns `None` for any subscale, the whole procedure fails.
+                    let maybe_offsets = subscales
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, subscale)| {
+                            offset_vec(subscale_on_root, &subscale).map(|offset| {
+                                // `.map()` returns `None` if the previous result is `None` and functorially applies the closure to `Some`s.
+                                CountVector::from_slice(&word_on_degree(scale, 0, offset * d + i))
                             })
-                            .collect::<Vec<_>>()
-                    })
-                    .filter(|gses| {
-                        // To qualify as a valid GS, the last element cannot be in the GS.
-                        !gses[0][0..scale.len() / multiplicity - 1]
-                            .iter()
-                            .contains(&gses[0][scale.len() / multiplicity - 1])
-                        // Ignoring the last element, all of the vecs have to be equal.
-                        && gses.iter()
-                            .map(|gs|
-                                gs[0..scale.len() / multiplicity - 1].to_vec()
-                            )
-                            .all_equal()
-                    })
-                    // Get the first generator chain, which should exist and be equal to all the other GSes in the list.
-                    .map(|gses| gses[0][0..scale.len() / multiplicity - 1].to_vec())
-                    // Turn the chain into a generator sequence recipe.
-                    .map(|gs| weak_period(&gs))
-                    .collect();
-                // Convert each valid multi-GS into a `GuideFrame` struct.
-                valid_gses
-                    .into_iter()
-                    .map(|gs| Self {
-                        gs,
-                        polyoffset: vec![CountVector::ZERO],
-                        multiplicity,
-                    })
-                    .sorted()
-                    .dedup()
-                    .collect()
+                        })
+                        // collect returns `None` if there is any `None` returned by `map`.
+                        .collect::<Option<Vec<CountVector<usize>>>>();
+                    // println!("subscale_on_root: {:?}", subscale_on_root);
+                    // println!("maybe_offsets: {:?}", maybe_offsets);
+                    if let Some(offsets) = maybe_offsets {
+                        // sort list of offsets by step class
+                        let offsets: Vec<CountVector<usize>> =
+                            offsets.into_iter().sorted_by_key(|v| v.len()).collect();
+                        // If polyoffset is {0} use multiplicity 1
+                        if offsets == [CountVector::ZERO] {
+                            guided_gs_list(scale)
+                                .into_iter()
+                                .map(|gs| Self {
+                                    gs,
+                                    polyoffset: offsets.to_owned(),
+                                })
+                                .sorted()
+                                .dedup()
+                                .collect::<Vec<_>>()
+                        } else {
+                            guided_gs_list_for_subscale(subscale_on_root)
+                                .into_iter()
+                                .map(|gs| Self {
+                                    gs,
+                                    polyoffset: offsets.to_owned(),
+                                })
+                                .sorted()
+                                .dedup()
+                                .collect::<Vec<_>>()
+                        }
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![]
+                }
             } else {
-                // Interleaved multi-GS scales are not handled yet.
-                vec![]
+                // stack at most this many k-steps
+                let chain_length: usize = co_d / multiplicity;
+                if chain_length == 1 {
+                    // check that all chain lengths of 1 are equal
+                    vec![]
+                } else {
+                    // For every degree of `scale`, get stack of gs_length_limit-many k-steps on that degree.
+                    let gen_chains_enumerated = (0..scale.len())
+                        .map(|degree| {
+                            let mode = rotate(scale, degree);
+                            stacked_k_steps(k, &mode)[0..chain_length].to_vec()
+                        })
+                        .enumerate()
+                        .filter(|(_, stack)| {
+                            // Each stack is generated by a GS,
+                            // but for the GS to be a guided GS, the last element must differ from all previous elements.
+                            let mut init = stack.iter().take(chain_length - 1);
+                            let last = stack
+                                .last()
+                                .expect("last exists because gs_length_limit >= 2");
+                            // `init` will be nonempty, so the following check won't be vacuous.
+                            init.all(|k_step| *k_step != *last)
+                        });
+                    let gses: Vec<Vec<CountVector<Letter>>> = gen_chains_enumerated
+                        .clone()
+                        // Take prefix of gs_length_limit - 1 elements and get what GS it is generated by
+                        .map(|(_, chain)| weak_period(&chain[0..chain_length - 1]))
+                        .sorted()
+                        .dedup()
+                        .collect();
+                    gses.iter()
+                        .map(|gs| {
+                            (
+                                gs,
+                                gen_chains_enumerated
+                                    .clone()
+                                    // Check only the prefix of gs_length_limit - 1 elements, because that's what the guided GS is based on.
+                                    .filter(|(_, gen_chain)| {
+                                        weak_period(&gen_chain[..chain_length - 1]) == *gs.clone()
+                                    })
+                                    // Get all indices on which this particular GS occurs.
+                                    .map(|(i, _)| i)
+                                    .collect::<Vec<_>>(),
+                            )
+                        })
+                        .filter(|(_, polyoffset_indices)| {
+                            // Filter by whether the number of gen chains each GS occurs on is equal to the multiplcity.
+                            // We also need to check that all of the chains are disjoint.
+                            let mut union_of_chains: Vec<_> = polyoffset_indices
+                                .iter()
+                                .flat_map(|first| {
+                                    (0..scale.len() / multiplicity)
+                                        .map(|i| (first + i * k) % scale.len())
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect();
+                            union_of_chains.sort();
+                            union_of_chains.dedup();
+                            let chains_are_disjoint: bool = union_of_chains.len() == scale.len();
+                            chains_are_disjoint && polyoffset_indices.len() == multiplicity
+                        })
+                        .map(|(gs, polyoffset_indices)| {
+                            let first_deg = polyoffset_indices[0];
+                            let polyoffset: Vec<CountVector<Letter>> = polyoffset_indices
+                                .iter()
+                                .map(|degree| {
+                                    dyad_on_degree(
+                                        &rotate(scale, first_deg),
+                                        first_deg,
+                                        degree - first_deg,
+                                    )
+                                })
+                                .collect();
+                            Self {
+                                gs: gs.clone(),
+                                polyoffset,
+                            }
+                        })
+                        .collect()
+                }
             }
         }
     }
@@ -257,7 +318,7 @@ impl GuideFrame {
             .dedup()
             .map(|p| p as usize)
             .collect();
-        let simple_guide_moses: Vec<GuideFrame> = Self::try_simple_or_interleaved(scale, k);
+        let simple_guide_moses: Vec<GuideFrame> = Self::try_simple(scale, k);
         let multiple_guide_moses: Vec<GuideFrame> = if BTreeSet::from_iter(scale.iter()).len() > 1 {
             prime_factors
                 .into_iter()
@@ -266,13 +327,17 @@ impl GuideFrame {
         } else {
             vec![]
         };
-        [simple_guide_moses, multiple_guide_moses].concat()
+
+        let mut guide_frames = [simple_guide_moses, multiple_guide_moses].concat();
+        guide_frames.sort_by_key(GuideFrame::complexity);
+        println!("{:?}", guide_frames);
+        guide_frames
     }
 }
 
 /// Return the collection of guide frames for the given scale word, sorted by complexity.
 pub fn guide_frames(scale: &[usize]) -> Vec<GuideFrame> {
-    (2..=scale.len() - 2) // steps subtended by generator used for the guided generator sequence
+    (2..=scale.len() / 2) // steps subtended by generator used for the guided generator sequence
         .flat_map(|k| GuideFrame::try_all_variants(scale, k))
         .sorted_by_key(GuideFrame::complexity)
         .collect()
@@ -285,7 +350,12 @@ mod tests {
     use crate::words::{CountVector, Letter};
 
     use super::*;
-
+    #[test]
+    fn test_blackdye() {
+        let blackdye: [usize; 10] = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
+        let should_have_mult_2 = GuideFrame::try_multiple(&blackdye, 2, 4);
+        assert!(!should_have_mult_2.is_empty());
+    }
     #[test]
     fn test_fix_bug_for_4sr() {
         let diamech_4sr: [Letter; 11] = [0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 2];
@@ -300,118 +370,100 @@ mod tests {
             CountVector::from_slice(&[0, 1]),
             CountVector::from_slice(&[0, 2]),
         ]));
-        let guide_frames = GuideFrame::try_simple_or_interleaved(&diamech_4sr, 2);
-        println!("{:?}", guide_frames);
-        assert!(guide_frames.contains(&GuideFrame::new_simple(
-            vec![
-                CountVector::from_slice(&[0, 2]),
-                CountVector::from_slice(&[0, 1]),
-                CountVector::from_slice(&[0, 2]),
-            ],
-            vec![CountVector::ZERO],
-        )));
-    }
-
-    #[test]
-    fn test_try_simple_or_interleaved() {
-        let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1];
-        let should_be_nonempty = GuideFrame::try_simple_or_interleaved(&diachrome_5sc, 6);
-        assert_ne!(should_be_nonempty, vec![]);
-        println!("{:?}", should_be_nonempty);
-        println!(
-            "{:?}",
-            should_be_nonempty
-                .into_iter()
-                .map(|gf| gf.complexity())
-                .collect::<Vec<_>>()
-        );
+        let guide_frames = GuideFrame::try_simple(&diamech_4sr, 2);
+        // println!("{:?}", guide_frames);
+        assert!(guide_frames.contains(&GuideFrame::new_simple(vec![
+            CountVector::from_slice(&[0, 2]),
+            CountVector::from_slice(&[0, 1]),
+            CountVector::from_slice(&[0, 2]),
+        ])));
     }
     #[test]
     fn test_guided_gs_based_guide_frame() {
         let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
-        let guide_moses = guide_frames(&pinedye);
-        println!("Pinedye has guide MOS structures: {:?}", guide_moses);
-        assert!(guide_moses.contains(&GuideFrame::new_simple(
-            vec![
-                CountVector::from_slice(&[0, 0, 2]),
-                CountVector::from_slice(&[0, 0, 1]),
-                CountVector::from_slice(&[0, 0, 1]),
-            ],
-            vec![CountVector::ZERO],
-        )));
+        let pinedye_guide_moses = guide_frames(&pinedye);
+        assert!(pinedye_guide_moses.contains(&GuideFrame::new_simple(vec![
+            CountVector::from_slice(&[0, 0, 2]),
+            CountVector::from_slice(&[0, 0, 1]),
+            CountVector::from_slice(&[0, 0, 1]),
+        ])));
 
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let guide_moses = guide_frames(&diasem);
-        println!("Diasem has guide MOS structures: {:?}", guide_moses);
-        assert!(guide_moses.contains(&GuideFrame::new_simple(
-            vec![
+        let diasem_guide_moses = guide_frames(&diasem);
+        assert!(diasem_guide_moses.contains(&GuideFrame::new_simple(vec![
+            CountVector::from_slice(&[0, 1]),
+            CountVector::from_slice(&[0, 2])
+        ])));
+        assert_eq!(
+            GuideFrame::new_simple(vec![
                 CountVector::from_slice(&[0, 1]),
                 CountVector::from_slice(&[0, 2])
-            ],
-            vec![CountVector::ZERO],
-        )));
-        assert_eq!(
-            GuideFrame::new_simple(
-                vec![
-                    CountVector::from_slice(&[0, 1]),
-                    CountVector::from_slice(&[0, 2])
-                ],
-                vec![CountVector::ZERO],
-            )
+            ],)
             .complexity(),
             2
         );
-
         let blackdye: [usize; 10] = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
-        let guide_moses = guide_frames(&blackdye);
-        println!("Blackdye has guide MOS structures: {:?}", guide_moses);
-        assert!(guide_moses.contains(&GuideFrame::new_simple(
-            vec![CountVector::from_slice(&[0, 0, 1, 2])],
-            vec![CountVector::ZERO, CountVector::from_slice(&[0])],
+        let blackdye_guide_moses = guide_frames(&blackdye);
+        assert!(blackdye_guide_moses.contains(&GuideFrame::new_multiple(
+            vec![CountVector::from_slice(&[0, 0, 1, 2]),],
+            vec![CountVector::ZERO, CountVector::from_slice(&[0]),]
         )));
-        assert_eq!(
-            GuideFrame::new_simple(
-                vec![CountVector::from_slice(&[0, 0, 1, 2])],
-                vec![CountVector::ZERO, CountVector::from_slice(&[0])],
-            )
-            .complexity(),
-            2
-        );
 
         let diamech_4sl: [usize; 11] = [1, 0, 2, 0, 2, 0, 1, 0, 2, 0, 2];
-        let guide_moses = guide_frames(&diamech_4sl);
-        println!("Diamech has guide MOS structures: {:?}", guide_moses);
-        assert!(guide_moses.contains(&GuideFrame::new_simple(
-            vec![
+        let diamech_guide_moses = guide_frames(&diamech_4sl);
+        assert!(diamech_guide_moses.contains(&GuideFrame::new_simple(vec![
+            CountVector::from_slice(&[0, 2]),
+            CountVector::from_slice(&[0, 2]),
+            CountVector::from_slice(&[0, 1]),
+        ],)));
+        assert_eq!(
+            GuideFrame::new_simple(vec![
                 CountVector::from_slice(&[0, 2]),
                 CountVector::from_slice(&[0, 2]),
                 CountVector::from_slice(&[0, 1]),
-            ],
-            vec![CountVector::ZERO],
-        )));
-        assert_eq!(
-            GuideFrame::new_simple(
-                vec![
-                    CountVector::from_slice(&[0, 2]),
-                    CountVector::from_slice(&[0, 2]),
-                    CountVector::from_slice(&[0, 1]),
-                ],
-                vec![CountVector::ZERO],
-            )
+            ])
             .complexity(),
             3
         );
 
         let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1];
-        let guide_moses = guide_frames(&diachrome_5sc);
-        println!("Diachrome has guide MOS structures: {:?}", guide_moses);
-        assert!(guide_moses.contains(&GuideFrame::new_multiple(
-            vec![CountVector::from_slice(&[0, 0, 1, 2, 2]),],
-            2,
-        )));
+        let diachrome_guide_moses = guide_frames(&diachrome_5sc);
+        assert!(
+            diachrome_guide_moses.contains(&GuideFrame::new_multiple(
+                vec![CountVector::from_slice(&[0, 0, 1, 2, 2]),],
+                vec![
+                    CountVector::ZERO,
+                    CountVector::from_slice(&[0, 0, 0, 1, 2, 2]),
+                ],
+            )) || diachrome_guide_moses.contains(&GuideFrame::new_multiple(
+                vec![CountVector::from_slice(&[0, 0, 1, 2, 2]),],
+                vec![
+                    CountVector::ZERO,
+                    CountVector::from_slice(&[0, 0, 1, 2, 2, 2]),
+                ],
+            ))
+        );
         assert_eq!(
-            GuideFrame::new_multiple(vec![CountVector::from_slice(&[0, 0, 1, 2, 2])], 2)
-                .complexity(),
+            GuideFrame::new_multiple(
+                vec![CountVector::from_slice(&[0, 0, 1, 2, 2])],
+                vec![
+                    CountVector::ZERO,
+                    CountVector::from_slice(&[0, 0, 1, 2, 2, 2]),
+                ],
+            )
+            .complexity(),
+            2
+        );
+
+        assert_eq!(
+            GuideFrame::new_multiple(
+                vec![CountVector::from_slice(&[0, 0, 1, 2, 2])],
+                vec![
+                    CountVector::ZERO,
+                    CountVector::from_slice(&[0, 0, 1, 2, 2, 2]),
+                ],
+            )
+            .multiplicity(),
             2
         );
     }

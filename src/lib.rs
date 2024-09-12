@@ -14,7 +14,7 @@ pub mod words;
 
 use itertools::Itertools;
 use wasm_bindgen::prelude::*;
-use words::{chirality, countvector_to_slice, dyad_on_degree};
+use words::chirality;
 use words::{Chirality, Letter};
 
 #[wasm_bindgen]
@@ -26,6 +26,7 @@ extern "C" {
     fn log(s: &str);
 }
 
+#[allow(unused_macros)]
 macro_rules! console_log {
     // Note that this is using the `log` function imported above during
     // `bare_bones`
@@ -163,9 +164,8 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
     let GuideFrame {
         ref gs,
         ref polyoffset,
-        ref multiplicity,
     } = structure;
-    if *multiplicity == 1 {
+    if structure.multiplicity() == 1 {
         GuideResult {
             gs: gs
                 .iter()
@@ -200,7 +200,7 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
                     ]
                 })
                 .collect(),
-            multiplicity: 1,
+            multiplicity: structure.multiplicity() as u8,
             complexity: structure.complexity() as u8,
         }
     } else {
@@ -227,8 +227,18 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
                     *btreemap.get(&2).unwrap_or(&0) as u8,
                 ]
             },
-            polyoffset: vec![vec![0, 0, 0]],
-            multiplicity: *multiplicity as u8,
+            polyoffset: polyoffset
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            multiplicity: structure.multiplicity() as u8,
             complexity: structure.clone().complexity() as u8,
         }
     }
@@ -236,7 +246,6 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
 
 fn get_unimodular_basis(
     structures: &[GuideFrame],
-    scale: &[usize],
     step_sig: &[u8],
 ) -> Option<(Vec<Vec<u8>>, GuideResult)> {
     /*
@@ -266,13 +275,12 @@ fn get_unimodular_basis(
     }
      */
     for structure in structures {
-        if structure.multiplicity == 1 {
+        if structure.multiplicity() == 1 {
             let structure = guide_frame_to_result(structure);
             let gs = structure.gs.clone();
             for i in 0..gs.clone().len() {
                 for j in i..gs.clone().len() {
                     if det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
-                        console_log!("first branch");
                         return Some((vec![gs[i].clone(), gs[j].clone()], structure));
                     }
                 }
@@ -281,29 +289,17 @@ fn get_unimodular_basis(
             for v in polyoffset {
                 for w in structure.clone().gs {
                     if det3(step_sig, &v, &w).abs() == 1 {
-                        console_log!("second branch");
                         return Some((vec![v, w], structure));
                     }
                 }
             }
         } else {
-            // this branch handles diregular scales
+            // this branch handles multiplicity > 1 scales
             let structure = guide_frame_to_result(structure);
             let vec_for_gs_element = structure.gs[0].clone();
-            let vec_for_detempered_period = countvector_to_slice(dyad_on_degree(
-                scale,
-                0,
-                scale.len() / structure.clone().multiplicity as usize,
-            ))
-            .iter()
-            .map(|x| *x as u8)
-            .collect::<Vec<_>>();
-            if det3(step_sig, &vec_for_gs_element, &vec_for_detempered_period) == 1 {
-                console_log!("third branch");
-                return Some((
-                    vec![vec_for_gs_element, vec_for_detempered_period],
-                    structure,
-                ));
+            let vec_for_offset = structure.polyoffset.last().unwrap();
+            if det3(step_sig, &vec_for_gs_element, vec_for_offset).abs() == 1 {
+                return Some((vec![vec_for_gs_element, vec_for_offset.clone()], structure));
             }
         }
     }
@@ -323,12 +319,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u8)
         .collect::<Vec<u8>>();
-    if let Some(pair) = get_unimodular_basis(
-        &guide_frames(query),
-        &string_to_numbers(&brightest),
-        &step_sig,
-    ) {
-        console_log!("{:?}: {:?}", query, guide_frames(query));
+    if let Some(pair) = get_unimodular_basis(&guide_frames(query), &step_sig) {
         let (lattice_basis, structure) = pair;
         ScaleProfile {
             word: brightest,
@@ -479,16 +470,19 @@ pub fn sig_result(
     let scales = scales
         .into_iter()
         .filter(|scale| filtering_cond(scale))
-        .sorted_unstable_by_key(|scale| {
-            if let Some(first) = guide_frames(scale).first() {
-                first.complexity()
-            } else {
-                usize::MAX
-            }
-        })
         .collect::<Vec<_>>();
     Ok(to_value(&SigResult {
-        profiles: scales.iter().map(|scale| word_to_profile(scale)).collect(),
+        profiles: scales
+            .iter()
+            .map(|scale| word_to_profile(scale))
+            .sorted_by_key(|profile| {
+                if let Some(guide) = &profile.structure {
+                    guide.complexity
+                } else {
+                    u8::MAX
+                }
+            })
+            .collect(),
         ji_tunings: sig_to_ji_tunings(&step_sig),
         ed_tunings: sig_to_ed_tunings(&step_sig),
     })?)

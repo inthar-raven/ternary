@@ -646,8 +646,6 @@ stack()`
           const latticeBases = sigResult["profiles"].map(
             (j) => j["lattice_basis"],
           );
-          console.log(latticeBases);
-
           const profiles = sigResult["profiles"];
 
           const jiTunings = sigResult["ji_tunings"];
