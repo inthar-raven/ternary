@@ -478,12 +478,13 @@ stack()`
         const ploidacot = currentProfile["ploidacot"];
         const structure = currentProfile["structure"];
         if (structure) {
-          el.innerHTML += `<b>Guide frame</b><br/><small>`;
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
+           " target="_blank">Guide frame</a></b><br/><small>`;
           let gsDisp =
             `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g)}`)}`.slice(
               1,
             );
-          el.innerHTML += `Guided generator sequence of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
+          el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
           el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"])}<br/>`; // TODO prettify
           el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
@@ -495,9 +496,9 @@ stack()`
             const shearString = shear === 0 ? "" : `${shear}-sheared `;
             const cot = ploidacot["cot"];
             const cotString = `${cot}-cot`;
-            el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot"  target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
+            el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot" target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
           }
-          el.innerHTML += `<b>Monotone MOS properties</b><br/>`;
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
           el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
           el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
           el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
@@ -509,11 +510,11 @@ stack()`
             el.innerHTML += `None<br/>`;
           }
           if (currentProfile["chirality"] === "Achiral") {
-            el.innerHTML += `<br/>Chirality: Achiral`;
+            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
           } else {
-            el.innerHTML += `<br/>Chirality: ${currentProfile["chirality"]} (reversed: ${currentProfile["reversed"]})`;
+            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${currentProfile["chirality"]} (reversed: ${currentProfile["reversed"]})`;
           }
-          el.innerHTML += `<br/>Maximum variety ${currentProfile["mv"]}</small>`;
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${currentProfile["mv"]}</small>`;
         }
       }
     }
