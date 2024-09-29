@@ -156,7 +156,7 @@ fn numbers_to_string(word: &[usize]) -> String {
     let arity = word.iter().collect::<HashSet<_>>().len();
     for i in word {
         if *i <= arity {
-            result.push(STEP_LETTERS[min(arity, 12)].chars().nth(*i).unwrap());
+            result.push(STEP_LETTERS[min(arity, 12)].chars().nth(*i).unwrap_or('?'));
         }
     }
     result
@@ -299,9 +299,12 @@ fn get_unimodular_basis(
             // this branch handles multiplicity > 1 scales
             let structure = guide_frame_to_result(structure);
             let vec_for_gs_element = structure.gs[0].clone();
-            let vec_for_offset = structure.polyoffset.last().unwrap();
-            if det3(step_sig, &vec_for_gs_element, vec_for_offset).abs() == 1 {
-                return Some((vec![vec_for_gs_element, vec_for_offset.clone()], structure));
+            if let Some(vec_for_offset) = structure.polyoffset.last() {
+                if det3(step_sig, &vec_for_gs_element, vec_for_offset).abs() == 1 {
+                    return Some((vec![vec_for_gs_element, vec_for_offset.clone()], structure));
+                }
+            } else {
+                return None;
             }
         }
     }

@@ -119,7 +119,7 @@ pub fn odd_limit_l1_error(odd: u64, edo: f64) -> f64 {
     odd_limit(odd)
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
-        .map(|r| Monzo::try_from_ratio(r).unwrap())
+        .map(|r| Monzo::try_from_ratio(r).unwrap_or(Monzo::UNISON))
         .map(|monzo| relative_error(monzo, edo).abs()) // get the magnitudes of the relative errors of primes
         .sum()
 }
@@ -129,7 +129,7 @@ pub fn odd_limit_l2_error(odd: u64, edo: f64) -> f64 {
     odd_limit(odd)
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
-        .map(|r| Monzo::try_from_ratio(r).unwrap())
+        .map(|r| Monzo::try_from_ratio(r).unwrap_or(Monzo::UNISON))
         .map(|monzo| relative_error(monzo, edo).pow(2)) // square the relative error of each prime
         .sum::<f64>()
         .sqrt()

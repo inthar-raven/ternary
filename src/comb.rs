@@ -360,9 +360,13 @@ impl VecPerm {
                 if seek_0 < seek_non0 {
                     // If `slice` has a `0` and it's before a non-`0` element, swap 'em.
                     vec.swap(seek_0, seek_non0);
-                    perm = VecPerm::transposition(vec.len(), seek_0, seek_non0)
-                        .o(&perm)
-                        .unwrap(); // Multiply by the transposition.
+                    let p = VecPerm::transposition(vec.len(), seek_0, seek_non0).o(&perm);
+                    // Multiply by the transposition.
+                    if let Ok(p1) = p {
+                        perm = p1;
+                    } else {
+                        return (slice.to_vec(), Self::id(slice.len()));
+                    }
                 } else {
                     // Early return, nothing to do.
                     return (vec, perm);
@@ -372,23 +376,29 @@ impl VecPerm {
                     (inner_slice, inner_perm) =
                         Self::sift_zeros(&slice[(seek_0 + 1)..=(seek_non0 - 1)]);
                 });
-                vec = Self::nest_replacing(&vec, &inner_slice, seek_0 + 1).unwrap();
-                perm.pi = Self::nest_replacing(
-                    &perm.pi,
-                    &inner_perm
-                        .pi
-                        .into_iter()
-                        .map(|x| x + seek_0 + 1)
-                        .collect::<Vec<_>>(),
-                    seek_0 + 1,
-                )
-                .unwrap();
-                (vec, perm)
+                if let Ok(vec) = Self::nest_replacing(&vec, &inner_slice, seek_0 + 1) {
+                    let p = Self::nest_replacing(
+                        &perm.pi,
+                        &inner_perm
+                            .pi
+                            .into_iter()
+                            .map(|x| x + seek_0 + 1)
+                            .collect::<Vec<_>>(),
+                        seek_0 + 1,
+                    );
+                    if let Ok(perm) = p {
+                        (vec, VecPerm { pi: perm })
+                    } else {
+                        (slice.to_vec(), Self::id(slice.len()))
+                    }
+                } else {
+                    (slice.to_vec(), Self::id(slice.len()))
+                }
             }
         }
     }
 }
-/*
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,13 +408,13 @@ mod tests {
     fn test_necklace_generation_with_zeros_in_content() {
         let content = [1usize, 1, 0, 0, 1];
         let attempt: BTreeSet<Vec<usize>> =
-            BTreeSet::from_iter(necklaces_fixed_content(&content).into_iter()).await;
+            BTreeSet::from_iter(necklaces_fixed_content(&content).into_iter());
         let correct_scales = vec![vec![0, 1, 4], vec![0, 4, 1]];
         let correct_result: BTreeSet<Vec<usize>> = BTreeSet::from_iter(correct_scales.into_iter());
         assert_eq!(attempt, correct_result);
         let content = [5usize, 0, 0, 0, 2];
         let attempt: BTreeSet<Vec<usize>> =
-            BTreeSet::from_iter(necklaces_fixed_content(&content).into_iter()).await;
+            BTreeSet::from_iter(necklaces_fixed_content(&content).into_iter());
         let correct_result: BTreeSet<Vec<usize>> = BTreeSet::from_iter(
             vec![
                 vec![0, 0, 0, 4, 0, 0, 4],
@@ -1034,4 +1044,3 @@ mod tests {
         assert_eq!(attempt, correct_set);
     }
 }
-    */

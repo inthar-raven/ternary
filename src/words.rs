@@ -185,13 +185,19 @@ impl<T> CountVector<T> {
 pub fn countvector_to_slice(v: CountVector<usize>) -> Vec<i32> {
     if v.is_empty() {
         vec![]
-    } else {
-        let max = *v.into_inner().last_key_value().unwrap().0;
+    } else if let Some(max_key_value) = v.into_inner().last_key_value() {
+        let max = max_key_value.0;
         let mut result = vec![0; max + 1];
         for key in v.into_inner().keys() {
-            result[*key] = *v.get(key).unwrap();
+            if let Some(value) = v.get(key) {
+                result[*key] = *value;
+            } else {
+                return vec![];
+            }
         }
         result
+    } else {
+        vec![]
     }
 }
 
@@ -325,7 +331,7 @@ where
         // Only need to check half of the step size classes.
         let floor_half: usize = scale.len() / 2;
         let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
-        (1..=floor_half)
+        let mb_max = (1..=floor_half)
             .flat_map(|subword_length| {
                 distinct_letters.iter().map(move |letter| {
                     let counts = CountVector::distinct_spectrum(scale, subword_length)
@@ -338,8 +344,12 @@ where
                         - *counts.first().expect("`counts` should be nonempty") // this will always be >= 0 for a nonempty `BTreeSet`
                 })
             })
-            .max()
-            .unwrap() as usize
+            .max();
+        if let Some(max) = mb_max {
+            max as usize
+        } else {
+            usize::MAX
+        }
     }
 }
 

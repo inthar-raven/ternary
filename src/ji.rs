@@ -372,21 +372,6 @@ pub fn well_formed_necklace_in_ji_scale(
         Err(ScaleError::NonCoprimeGenError)
     }
 }
-/// Uses tempering to 2901533edo (a highly consistent edo) as a heuristic to check the CS property.
-pub fn is_cs_ji_scale_fast(scale: &[RawJiRatio]) -> bool {
-    let val_2901533 = crate::equal::gpval(2901533.0);
-    (1..=scale.len() / 2)
-        .map(|i| {
-            spectrum(scale, i)
-                .into_inner()
-                .keys()
-                .map(|r| val_2901533.evaluate(Monzo::try_from_ratio(*r).unwrap()))
-                .collect::<BTreeSet<_>>()
-        })
-        .reduce(|acc, next| acc.intersection(&next).copied().collect())
-        .expect("should be nonempty since 1..=scale.len() / 2 is nonempty for a nonempty `scale`")
-        .is_empty()
-}
 
 #[cfg(test)]
 mod tests {
