@@ -4,9 +4,9 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 
 # How to build and run
 
-1. Install the Rust toolchain.
+1. [Install the Rust toolchain](https://www.rust-lang.org/tools/install).
 1. Run `cargo install wasm-pack`.
-1. Install `npm`.
+1. [Install `npm`](https://nodejs.org/en/download/package-manager).
 1. Run `npm install` in the project directory.
 1. Run `npm run serve` in the project directory.
 1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
