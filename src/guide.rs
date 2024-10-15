@@ -110,8 +110,8 @@ pub struct Ploidacot {
     /// The number of parts the voicing of 3/2 is split into
     /// If the 3/2 is comprised of several ploids, this is 0 ("acot").
     pub cot: usize,
-    /// Determines the voicing of 3/2 used
-    /// 0 indicates 3/2 is used; each increment elevates the voicing by a 2/1.
+    /// Determines the voicing of 3/2 used.
+    /// 0 indicates 3/2 is used; each increment elevates the voicing by a (2^(1/ploid)).
     pub shear: usize,
 }
 
@@ -144,7 +144,7 @@ impl Ploidacot {
             } else {
                 // Check if aggregate generator can be interpreted as a fifth
                 for i in 0..gs.len() {
-                    if patent_fifth_mapping + i * n == multigen_class {
+                    if patent_fifth_mapping + i * n / ploid == multigen_class {
                         let cot = gs.len();
                         let shear = i;
                         return Some(Self { ploid, cot, shear });
@@ -152,7 +152,7 @@ impl Ploidacot {
                 }
                 let patent_fourth_mapping = 2 * n - patent_3_mapping;
                 for i in 0..gs.len() {
-                    if patent_fourth_mapping + i * n == multigen_class {
+                    if patent_fourth_mapping + i * n / ploid == multigen_class {
                         let cot = gs.len();
                         let shear = (cot - 1 - i) % cot;
                         return Some(Self { ploid, cot, shear });
