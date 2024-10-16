@@ -154,7 +154,7 @@ impl Ploidacot {
                 for i in 0..gs.len() {
                     if patent_fourth_mapping + i * n / ploid == multigen_class {
                         let cot = gs.len();
-                        let shear = (cot - 1 - i) % cot;
+                        let shear = (cot - ploid - i) % cot;
                         return Some(Self { ploid, cot, shear });
                     }
                 }
