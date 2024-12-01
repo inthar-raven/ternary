@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 pub mod comb;
 #[macro_use]
 pub mod equal;
@@ -60,7 +60,7 @@ use interval::JiRatio;
 use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
 
 // for the edo search
-pub const EDO_BOUND: i32 = 53;
+pub const EDO_BOUND: i32 = 99;
 pub const S_LOWER_BOUND: f64 = 20.0;
 pub const S_UPPER_BOUND: f64 = 200.0;
 
