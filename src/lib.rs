@@ -55,12 +55,12 @@ use serde::Serialize;
 use serde_wasm_bindgen::to_value;
 
 use guide::guide_frames;
-use guide::{GuideFrame, Ploidacot};
+use guide::GuideFrame;
 use interval::JiRatio;
 use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
 
 // for the edo search
-pub const EDO_BOUND: i32 = 99;
+pub const EDO_BOUND: i32 = 111;
 pub const S_LOWER_BOUND: f64 = 20.0;
 pub const S_UPPER_BOUND: f64 = 200.0;
 
@@ -104,8 +104,6 @@ pub struct ScaleProfile {
     reversed: String,
     /// lowest-complexity guide frame structure provided there is one
     structure: Option<GuideResult>,
-    /// detempered Ploidacot interpretation
-    ploidacot: Option<Ploidacot>,
     /// whether scale is L=M monotone MOS
     lm: bool,
     /// whether scale is M=s monotone MOS
@@ -329,7 +327,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         ScaleProfile {
             word: brightest,
             lattice_basis: Some(lattice_basis),
-            ploidacot: Ploidacot::try_get_ploidacot(query),
+            // ploidacot: Ploidacot::try_get_ploidacot(query),
             chirality,
             reversed,
             structure: Some(structure),
@@ -342,7 +340,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         ScaleProfile {
             word: brightest,
             lattice_basis: None,
-            ploidacot: Ploidacot::try_get_ploidacot(query),
+            // ploidacot: Ploidacot::try_get_ploidacot(query),
             chirality,
             reversed,
             structure: None,

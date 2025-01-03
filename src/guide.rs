@@ -102,6 +102,7 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
     }
 }
 
+/*
 /// This is [Ploidacot](https://en.xen.wiki/w/Ploidacot) but with possible "contorsion".
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct Ploidacot {
@@ -165,6 +166,7 @@ impl Ploidacot {
         }
     }
 }
+*/
 
 /// A guide frame structure for a scale word, consisting of a generator sequence together with a set of offsets or a multiplicity.
 /// Multiplicity greater than 1 is a generalization of diregular MV3s;
@@ -426,6 +428,7 @@ mod tests {
     use crate::words::{CountVector, Letter};
 
     use super::*;
+    /*
     #[test]
     fn test_ploidacot() {
         let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
@@ -479,6 +482,7 @@ mod tests {
             })
         );
     }
+    */
     #[test]
     fn test_lllmllms() {
         let bad_scale: [usize; 8] = [0, 0, 0, 1, 0, 0, 1, 2];

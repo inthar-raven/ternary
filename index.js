@@ -475,7 +475,7 @@ stack()`
       h2.innerText = `Scale profile for ${currentWord}`;
       el.appendChild(h2);
       if (currentProfile) {
-        const ploidacot = currentProfile["ploidacot"];
+        // const ploidacot = currentProfile["ploidacot"];
         const structure = currentProfile["structure"];
         if (structure) {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
@@ -489,6 +489,7 @@ stack()`
           el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
+          /*
           if (ploidacot) {
             const ploid = ploidacot["ploid"];
             const ploidString = ploid === 1 ? "" : `${ploid}-ploid `;
@@ -498,6 +499,7 @@ stack()`
             const cotString = `${cot}-cot`;
             el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot" target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
           }
+          */
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
           el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
           el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
