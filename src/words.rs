@@ -602,6 +602,13 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
         .collect()
 }
 
+/// Whether `scale` is a MOS substitution scale subst at(bf1 cf2).
+pub fn is_mos_subst(scale: &[Letter], t: Letter, f1: Letter, f2: Letter) -> bool {
+    step_variety(scale) == 3 // Is it ternary?
+        && maximum_variety(&delete(scale, t)) == 2 // Is the result of deleting t a MOS?
+        && maximum_variety(&replace(scale, f1, f2)) == 2 // Is the result of identifying letters of the filling MOS a MOS?        
+}
+
 /// Return the number of distinct steps in `scale`.
 pub fn step_variety(scale: &[Letter]) -> usize {
     scale.iter().collect::<BTreeSet<_>>().len()

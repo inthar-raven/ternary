@@ -14,7 +14,7 @@ pub mod words;
 
 use itertools::Itertools;
 use wasm_bindgen::prelude::*;
-use words::chirality;
+use words::{chirality, is_mos_subst};
 use words::{Chirality, Letter};
 
 #[wasm_bindgen]
@@ -104,12 +104,18 @@ pub struct ScaleProfile {
     reversed: String,
     /// lowest-complexity guide frame structure provided there is one
     structure: Option<GuideResult>,
-    /// whether scale is L=M monotone MOS
+    /// whether scale is L=m monotone MOS
     lm: bool,
-    /// whether scale is M=s monotone MOS
+    /// whether scale is m=s monotone MOS
     ms: bool,
-    /// whether sclae is s=0 monotone MOS
+    /// whether scale is s=0 monotone MOS
     s0: bool,
+    /// whether scale is a subst aL(bmcs)
+    subst_l_ms: bool,
+    /// whether scale is a subst bm(aLcs)
+    subst_m_ls: bool,
+    /// whether scale is a subst cs(aLbm)
+    subst_s_lm: bool,
     /// maximum variety of scale
     mv: u8,
 }
@@ -322,6 +328,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u8)
         .collect::<Vec<u8>>();
+    let subst_l_ms = is_mos_subst(query, 0, 1, 2);
+    let subst_m_ls = is_mos_subst(query, 1, 0, 2);
+    let subst_s_lm = is_mos_subst(query, 2, 0, 1);
     if let Some(pair) = get_unimodular_basis(&guide_frames(query), &step_sig) {
         let (lattice_basis, structure) = pair;
         ScaleProfile {
@@ -334,6 +343,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             lm,
             ms,
             s0,
+            subst_l_ms,
+            subst_m_ls,
+            subst_s_lm,
             mv,
         }
     } else {
@@ -347,6 +359,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             lm,
             ms,
             s0,
+            subst_l_ms,
+            subst_m_ls,
+            subst_s_lm,
             mv,
         }
     }
