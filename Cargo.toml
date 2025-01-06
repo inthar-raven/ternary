@@ -13,7 +13,7 @@ default = ["console_error_panic_hook"]
 [dependencies]
 stacker = "0.1.15"
 
-itertools = "0.13.0"
+itertools = "0.14.0"
 
 num-traits = "0.2.19"
 num-integer = "0.1.46"
