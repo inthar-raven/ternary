@@ -1,2 +1,2 @@
 
-pub struct SubgroupMonzo(Vec<(Monzo, i32)>);
+pub struct SubgroupMonzo([(Monzo, i32); 3]); // Using just 3-member vectors for now

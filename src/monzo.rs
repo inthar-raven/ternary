@@ -12,7 +12,6 @@ use crate::ji_ratio::RawJiRatio;
 use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
 
 // TODO: Change `fn` to `Fn`
-type Norm = fn(Monzo) -> f64;
 type Weighting = fn(Monzo) -> [f64; SMALL_PRIMES_COUNT];
 
 macro_rules! const_concat {
@@ -1870,69 +1869,8 @@ impl Sum for Monzo {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused)]
     use super::*;
     use crate::ji_ratio::RawJiRatio;
-    /// Find the shortest lattice point on the line `dir`*t + `pt`.
-    /// The result is meant to be an improved version of `pt` when rewriting the lattice with basis (`dir`, `pt`)
-    /// in a different basis.
-    /// `dir` should be shorter than `pt`.
-    #[allow(unused)]
-    fn find_shortest(norm: Norm, dir: Monzo, pt: Monzo) -> Monzo {
-        let mut prev = pt - dir;
-        let mut curr = pt;
-        let mut next = pt + dir;
-        loop {
-            match norm(prev).total_cmp(&norm(curr)) {
-                Ordering::Greater => {
-                    match norm(curr).total_cmp(&norm(next)) {
-                        Ordering::Greater => {
-                            // norm(prev) > norm(curr) > norm(next), move towards next
-                            (prev, curr, next) = (prev + dir, curr + dir, next + dir);
-                        }
-                        _ => {
-                            // norm(prev) > norm(curr) =< norm(next)
-                            return curr;
-                        }
-                    }
-                }
-                Ordering::Less => {
-                    match norm(curr).total_cmp(&norm(next)) {
-                        Ordering::Greater => {
-                            // norm(prev) < norm(curr) > norm(next) should never happen
-                            unreachable!(
-                                "norm(prev) < norm(curr) > norm(next) should never happen"
-                            );
-                        }
-                        Ordering::Less => {
-                            // norm(prev) < norm(curr) < norm(next), move towards prev
-                            (prev, curr, next) = (prev - dir, curr - dir, next - dir);
-                        }
-                        _ => {
-                            // norm(prev) < norm(curr) == norm(next) should never happen
-                            unreachable!(
-                                "norm(prev) < norm(curr) == norm(next) should never happen"
-                            );
-                        }
-                    }
-                }
-                _ => {
-                    match norm(curr).total_cmp(&norm(next)) {
-                        Ordering::Greater => {
-                            // norm(prev) == norm(curr) > norm(next) should never happen
-                            unreachable!(
-                                "norm(prev) == norm(curr) > norm(next) should never happen"
-                            );
-                        }
-                        _ => {
-                            // norm(prev) == norm(curr) < norm(next); norm(prev) == norm(curr) == norm(next) should never happen unless v1 == 0
-                            return curr;
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     #[test]
     fn test_monzo_macro() {

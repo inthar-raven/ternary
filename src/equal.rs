@@ -83,6 +83,7 @@ pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
 }
 
 /// Whether `test_value` in cents is in the tuning range of a given interval ax + by + cz in a ternary scale aL bm cs.
+#[allow(clippy::too_many_arguments)]
 pub fn is_in_tuning_range(
     test_value: f64,
     a: i32,
@@ -96,7 +97,7 @@ pub fn is_in_tuning_range(
     let value_1_0_0 = equave.cents() * x as f64 / a as f64;
     let value_1_1_0 = equave.cents() * (x + y) as f64 / (a + b) as f64;
     let value_1_1_1 = equave.cents() * (x + y + z) as f64 / (a + b + c) as f64;
-    let mut extreme_tunings = vec![value_1_0_0, value_1_1_0, value_1_1_1];
+    let mut extreme_tunings = [value_1_0_0, value_1_1_0, value_1_1_1];
     extreme_tunings.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let min_value = extreme_tunings[0];
     let max_value = extreme_tunings[2];
