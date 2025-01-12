@@ -10,6 +10,7 @@ pub mod ji_ratio;
 pub mod monzo;
 pub mod helpers;
 pub mod primes;
+#[macro_use]
 pub mod subgroup_monzo;
 pub mod words;
 
@@ -321,6 +322,209 @@ fn get_unimodular_basis(
     None
 }
 
+/*
+
+// Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
+function swapRows(arr, m, n, i1, i2) {
+  if (i1 < 0 || i1 >= m) {
+    throw new Error(
+      `switchRows(): matrix index out of bounds! i1: ${i1} but m: ${m}`,
+    );
+  }
+  if (i2 < 0 || i2 >= m) {
+    throw new Error(
+      `switchRows(): matrix index out of bounds! i2: ${i2} but m: ${m}`,
+    );
+  }
+  for (let j = 0; j < n; j++) {
+    const new1 = arr[n * i2 + j];
+    const new2 = arr[n * i1 + j];
+    [arr[n * i1 + j], arr[n * i2 + j]] = [new1, new2];
+  }
+}
+
+// Scales row `i` of a matrix by `coeff`.
+function multiplyRow(arr, m, n, i, coeff) {
+  for (let j = 0; j < n; j++) {
+    arr[n * i + j] *= coeff;
+  }
+}
+
+// Does the operation "[row i2 of arr] += coeff * [row i1 of arr]".
+function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
+  for (let j = 0; j < n; j++) {
+    arr[n * i2 + j] += coeff * arr[n * i1 + j];
+  }
+}
+*/
+
+// Mutates `v` a flat Vec matrix in row major order, swapping rows `i1` and `i2`.
+fn swap_rows(v: &mut Vec<f64>, m: usize, n: usize, i1: usize, i2: usize) {
+    if i1 > m {
+        console_log!("swap_rows(): matrix index i1 out of bounds");
+        panic!();
+    }
+    if i2 > m {
+        console_log!("swap_rows(): matrix index i2 out of bounds");
+        panic!();
+    }
+    for j in 0..n {
+        let new1 = v[n * i2 + j];
+        let new2 =  v[n * i1 + j];
+
+        v[n * i1 + j] = new1;
+        v[n * i2 + j] = new2;
+        console_log!("{:?}", v);
+    }
+    console_log!("{:?}", v);
+}
+
+// Scales row `i` of `v` a flat Vec matrix in row major order by `coeff`.
+fn multiply_row(v: &mut Vec<f64>, n: usize, i: usize, coeff: f64) {
+    for j in 0..n {
+        v[n * i + j] *= coeff;
+    }
+}
+
+// Does the operation "[row i2 of arr] += coeff * [row i1 of arr]".
+fn add_multiple_of_first_row_to_second(v: &mut Vec<f64>, n: usize, i1: usize, i2: usize, coeff: f64) {
+    for j in 0..n {
+        v[n * i2 + j] += coeff * v[n * i1 + j];
+    }
+}
+
+// Use Gaussian elimination to solve a linear system `left` * x = `right`.
+// Both `left` and `right` are assumed to have `m` rows;
+// `left` has `n1` columns, and `right` has `n2`.
+// The function returns the RHS after this process.
+/*
+
+// Use Gaussian elimination to solve a linear system `left` * x = `right`.
+// Both `left` and `right` are assumed to have `m` rows;
+// `left` has `n1` columns, and `right` has `n2`.
+// The function returns the RHS after this process.
+function gaussianElimination(left, right, m, n1, n2) {
+  // Don't mutate the input
+  let leftClone = structuredClone(left);
+  let rightClone = structuredClone(right);
+  // Iterating over columns, clear all entries below the pivot
+  for (let j = 0; j < Math.min(m, n1); ++j) {
+    let i = j + 1;
+    // Try to make the (j, j) entry nonzero by swapping rows
+    while (i < m && Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
+      swapRows(leftClone, m, n1, j, i);
+      swapRows(rightClone, m, n2, j, i);
+      i++;
+    }
+    // Return null to indicate a singular matrix
+    if (Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
+      return null;
+    }
+    // Clear lower triangle{
+    const pivot = leftClone[n1 * j + j];
+    for (let i2 = j + 1; i2 < m; ++i2) {
+      const target = leftClone[n1 * i2 + j];
+      if (Math.abs(target) >= Number.EPSILON) {
+        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
+        addMultipleOfFirstRowToSecond(
+          rightClone,
+          m,
+          n2,
+          j,
+          i2,
+          -target / pivot,
+        );
+      }
+    }
+  }
+  // Clear upper triangle
+  for (let j = Math.min(m, n1) - 1; j >= 0; --j) {
+    const pivot = leftClone[n1 * j + j];
+    for (let i2 = 0; i2 < j; ++i2) {
+      const target = leftClone[n1 * i2 + j];
+      if (Math.abs(target) >= Number.EPSILON) {
+        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
+        addMultipleOfFirstRowToSecond(
+          rightClone,
+          m,
+          n2,
+          j,
+          i2,
+          -target / pivot,
+        );
+      }
+    }
+    // Scale rows so LHS gets 1 on diag
+    // (Mutation can happen via another alias, though not via the `const` aliases we defined above.)
+    multiplyRow(leftClone, m, n1, j, 1 / pivot);
+    multiplyRow(rightClone, m, n2, j, 1 / pivot);
+  }
+  return rightClone;
+}
+ */
+fn gaussian_elimination(left: &[f64], right: &[f64], m: usize, n1: usize, n2: usize) -> Option<Vec<f64>> {
+    let mut left_clone = left.to_owned();
+    let mut right_clone = right.to_owned();
+    for j in 0..min(m, n1) {
+        console_log!("{:?}", j);
+        let mut i = j + 1;
+        // Try to make the (j, j) entry nonzero by swapping rows
+        console_log!("{:?}", i);
+        while i < m && f64::abs(left_clone[n1 * j + j]) < f64::EPSILON {
+            swap_rows(&mut left_clone, m, n1, j, i);
+            swap_rows(&mut right_clone, m, n2, j, i);
+            i += 1;
+        }
+        if i < m && f64::abs(left_clone[n1 * j + j]) < f64::EPSILON {
+            console_log!("Matrix {:?} not invertible", left);
+            return None; // singular matrix, no solution
+        }
+        // Clear lower triangle
+        let pivot = left_clone[n1 * j + j];
+        for i2 in (j + 1)..m {
+            let target = left_clone[n1 * i2 + j];
+            if f64::abs(target) >= f64::EPSILON {
+                add_multiple_of_first_row_to_second(
+                    &mut left_clone,
+                    n2,
+                    j,
+                    i2,
+                -target / pivot,
+                );
+                add_multiple_of_first_row_to_second(
+                    &mut right_clone,
+                    n2,
+                    j,
+                    i2,
+                    -target / pivot,
+                );
+            }
+        }
+    }
+    // Clear upper triangle
+    for j in (0..=(min(m, n1) - 1)).rev() {
+        let pivot = left_clone[n1 * j + j];
+        for i2 in 0..j {
+            let target = left_clone[n1 * i2 + j];
+            if f64::abs(target) >= f64::EPSILON {
+                add_multiple_of_first_row_to_second(&mut left_clone, n1, j, i2, -target / pivot);
+                add_multiple_of_first_row_to_second(
+                &mut right_clone,
+                n2,
+                j,
+                i2,
+                -target / pivot,
+                );
+            }
+        }
+        // Scale rows so LHS gets 1 on diag
+        // (Mutation can happen via another alias, though not via the `const` aliases we defined above.)
+        multiply_row(&mut left_clone, n1, j, 1.0 / pivot);
+        multiply_row(&mut right_clone, n2, j, 1.0 / pivot);
+    }
+    Some(right_clone)
+}
+
 pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let brightest = numbers_to_string(&least_mode(query));
     let lm = monotone_lm(query);
@@ -399,6 +603,7 @@ pub fn word_to_mv(query: String) -> u8 {
 }
 
 pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<String>> {
+    /*
     let (a, b, c) = (step_sig[0] as i32, step_sig[1] as i32, step_sig[2] as i32);
     let ji_tunings =
         {
@@ -424,39 +629,47 @@ pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<Stri
                                     let r_reduced = r.rd(equave_monzo);
                                     if is_in_tuning_range(r_reduced.cents(), &step_sig, &step_vector_2, equave) {
                                         let (x_, y_, z_) = (step_vector_2[0], step_vector_2[1], step_vector_2[2]);
-                                        let det = a*y*z_ + b*z*x_ + c*x*y_ - a*z*y_ - b*x*z_ - c*y*z_;
+                                        let det = a*y*z_ + b*z*x_ + c*x*y_ - a*z*y_ - b*x*z_ - c*y*x_;
                                         if det == 1 || det == -1 {
-                                            let one_zero_zero = Vector3::new(1.0, 0.0, 0.0);
-                                            let zero_one_zero = Vector3::new(0.0, 1.0, 0.0);
-                                            let zero_zero_one = Vector3::new(0.0, 0.0, 1.0);
-                                            let m = Matrix3::from_columns(
-                                                &[
-                                                    Vector3::new(a as f64, x as f64, x_ as f64),
-                                                    Vector3::new(b as f64, y as f64, y_ as f64),
-                                                    Vector3::new(c as f64, z as f64, z_ as f64),
-
-                                                ]
-                                            );
-                                            let lu: nalgebra::LU<f64, nalgebra::Const<3>, nalgebra::Const<3>> = m.lu();
-                                            let sol1: Vector3<_> = lu.solve(&one_zero_zero).expect("Linear resolution failed"); // equave component
-                                            let sol2: Vector3<_> = lu.solve(&zero_one_zero).expect("Linear resolution failed"); // q component
-                                            let sol3: Vector3<_> = lu.solve(&zero_zero_one).expect("Linear resolution failed"); // r component
-                                            let smonzo1: SubgroupMonzo = SubgroupMonzo::try_new(
+                                            let one_zero_zero = [1.0, 0.0, 0.0];
+                                            let zero_one_zero = [0.0, 1.0, 0.0];
+                                            let zero_zero_one = [0.0, 0.0, 1.0];
+                                            let m = [
+                                                    a as f64, b as f64, c as f64,
+                                                    x as f64, y as f64, z as f64,
+                                                    x_ as f64, y_ as f64, z_ as f64,
+                                                ];
+                                            console_log!("Getting sol1");
+                                            let sol1: Vec<f64> = gaussian_elimination(&m, &one_zero_zero, 3, 3, 1)
+                                                .expect("`m` should be invertible");
+                                            console_log!("Getting sol2");
+                                            let sol2: Vec<f64> = gaussian_elimination(&m, &zero_one_zero, 3, 3, 1)
+                                                .expect("`m` should be invertible");
+                                            console_log!("Getting sol3");
+                                            let sol3: Vec<f64> = gaussian_elimination(&m, &zero_zero_one, 3, 3, 1)
+                                                .expect("`m` should be invertible");
+                                            console_log!("Getting smonzo1");
+                                            let smonzo1 = SubgroupMonzo::try_new(
                                                 &[equave_monzo, q, r],
-                                                &[sol1.x as i32, sol1.y as i32, sol1.z as i32])
-                                                .unwrap();
-                                            let smonzo2: SubgroupMonzo = SubgroupMonzo::try_new(
+                                                &[f64::round(sol1[0]) as i32, f64::round(sol1[1]) as i32, f64::round(sol1[2]) as i32]);
+                                            console_log!("Getting smonzo2");
+                                            let smonzo2 = SubgroupMonzo::try_new(
                                                 &[equave_monzo, q, r],
-                                                &[sol2.x as i32, sol2.y as i32, sol2.z as i32])
-                                                .unwrap();
-                                            let smonzo3: SubgroupMonzo = SubgroupMonzo::try_new(
+                                                &[f64::round(sol2[0]) as i32, f64::round(sol2[1]) as i32, f64::round(sol2[2]) as i32]);
+                                            console_log!("Getting smonzo3");
+                                            let smonzo3 = SubgroupMonzo::try_new(
                                                 &[equave_monzo, q, r],
-                                                &[sol3.x as i32, sol3.y as i32, sol3.z as i32])
-                                                .unwrap();
-                                            Some(vec![smonzo1.to_monzo(), smonzo2.to_monzo(), smonzo3.to_monzo()])
+                                                &[f64::round(sol3[0]) as i32, f64::round(sol3[1]) as i32, f64::round(sol3[2]) as i32]);
+                                            console_log!("Returning Some(...)");
+                                            if let (Ok(sm1), Ok(sm2), Ok(sm3)) = (smonzo1, smonzo2, smonzo3) {
+                                                Some(vec![sm1.to_monzo(), sm2.to_monzo(), sm3.to_monzo()])
+                                            } else {
+                                                None
+                                            }
                                         } else {
                                             None
                                         }
+                                        None
                                     } else {
                                         None
                                     }
@@ -473,14 +686,19 @@ pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<Stri
                 vec![]
             }
         };
+    console_log!("Got all tunings in monzos");
     ji_tunings
         .into_iter()
         .map(|v| {
             v.into_iter()
-                .map(|monzo| format!("{}/{}", monzo.numer(), monzo.denom()))
+                .map(|monzo| {
+                    monzo.to_string()
+                })
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>()
+                                            */
+    vec![] // Return nothing until I figure out how to make this more efficient
 }
 
 pub fn sig_to_ed_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {

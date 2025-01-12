@@ -1,8 +1,24 @@
 use nalgebra::Const;
 use nalgebra::Matrix;
 use nalgebra::Vector3;
-
 use crate::monzo::Monzo;
+
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    fn alert(s: &str);
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+#[allow(unused_macros)]
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SubgroupMonzoErr {
@@ -19,6 +35,7 @@ impl SubgroupMonzo {
     pub fn try_new(basis: &[Monzo], vector: &[i32]) -> Result<Self, SubgroupMonzoErr> {
         // placeholder Err type
         if basis.len() < 3 || vector.len() < 3 {
+            console_log!("SubgroupMonzoErr::BadDim");
             Err(SubgroupMonzoErr::BadDim)
         } else {
             // convert entries to f64
@@ -32,6 +49,7 @@ impl SubgroupMonzo {
             // Check that `basis` is actually linearly independent
             let matrix = Matrix::<f64, Const<22>, Const<3>, _>::from_columns(&f64_basis);
             if matrix.rank(f64::EPSILON) < 3 {
+                console_log!("SubgroupMonzoErr::BadBasis");
                 Err(SubgroupMonzoErr::BadBasis)
             } else {
                 Ok(Self((
