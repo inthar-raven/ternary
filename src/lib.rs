@@ -14,12 +14,12 @@ pub mod primes;
 pub mod subgroup_monzo;
 pub mod words;
 
-use equal::is_in_tuning_range;
+// use equal::is_in_tuning_range;
 use itertools::Itertools;
 use ji_ratio::RawJiRatio;
-use monzo::Monzo;
-use nalgebra::{Matrix3, Vector3};
-use subgroup_monzo::SubgroupMonzo;
+// use monzo::Monzo;
+// use nalgebra::{Matrix3, Vector3};
+// use subgroup_monzo::SubgroupMonzo;
 use wasm_bindgen::prelude::*;
 use words::{chirality, is_mos_subst};
 use words::{Chirality, Letter};
@@ -63,7 +63,7 @@ use serde_wasm_bindgen::to_value;
 
 use guide::guide_frames;
 use guide::GuideFrame;
-use interval::{Dyad, JiRatio};
+// use interval::{Dyad, JiRatio};
 use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
 
 // for the edo search
@@ -356,7 +356,6 @@ function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
     arr[n * i2 + j] += coeff * arr[n * i1 + j];
   }
 }
-*/
 
 // Mutates `v` a flat Vec matrix in row major order, swapping rows `i1` and `i2`.
 fn swap_rows(v: &mut [f64], m: usize, n: usize, i1: usize, i2: usize) {
@@ -512,6 +511,7 @@ fn gaussian_elimination(
     }
     Some(right_clone)
 }
+*/
 
 pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let brightest = numbers_to_string(&least_mode(query));
@@ -590,6 +590,7 @@ pub fn word_to_mv(query: String) -> u8 {
     maximum_variety(&word_in_numbers) as u8
 }
 
+#[allow(unused_variables)]
 pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<String>> {
     /*
     let (a, b, c) = (step_sig[0] as i32, step_sig[1] as i32, step_sig[2] as i32);
