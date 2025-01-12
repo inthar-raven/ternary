@@ -83,24 +83,25 @@ pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
 }
 
 /// Whether `test_value` in cents is in the tuning range of a given interval ax + by + cz in a ternary scale aL bm cs.
-#[allow(clippy::too_many_arguments)]
+/// The tuning range of a given step vector xL + ym + zs is the convex hull of the three degenerate tunings for it, x\a, (x+y)\(a+b), (x+y+z)\(a+b+c),
+/// i.e. the closed interval \[min(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c)), max(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c))\].
+/// In short, this follows from observing that the tuning range of a ternary scale is the convex hull of the degenerate 1:0:0, 1:1:0, and 1:1:1 tunings
+/// and taking mediants for the tuning of a given interval in the ternary scale.
 pub fn is_in_tuning_range(
     test_value: f64,
-    a: i32,
-    b: i32,
-    c: i32,
-    x: i32,
-    y: i32,
-    z: i32,
+    step_sig: &[i32],
+    interval: &[i32],
     equave: RawJiRatio,
 ) -> bool {
+    let (a, b, c) = (step_sig[0], step_sig[1], step_sig[2]);
+    let (x, y, z) = (interval[0], interval[1], interval[2]);
     let value_1_0_0 = equave.cents() * x as f64 / a as f64;
     let value_1_1_0 = equave.cents() * (x + y) as f64 / (a + b) as f64;
     let value_1_1_1 = equave.cents() * (x + y + z) as f64 / (a + b + c) as f64;
-    let mut extreme_tunings = [value_1_0_0, value_1_1_0, value_1_1_1];
-    extreme_tunings.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let min_value = extreme_tunings[0];
-    let max_value = extreme_tunings[2];
+    let mut degenerate_tunings = [value_1_0_0, value_1_1_0, value_1_1_1];
+    degenerate_tunings.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let min_value = degenerate_tunings[0];
+    let max_value = degenerate_tunings[2];
     debug_assert!(min_value <= max_value);
     min_value <= test_value && test_value <= max_value
 }
@@ -185,92 +186,60 @@ mod tests {
         let seven_to_six = monzo![-1, -1, 0, 1].cents();
         assert!(is_in_tuning_range(
             seven_to_six,
-            5,
-            2,
-            2,
-            1,
-            1,
-            0,
+            &[5, 2, 2],
+            &[1, 1, 0],
             RawJiRatio::OCTAVE
         ));
 
         let eight_to_seven = monzo![3, 0, 0, -1].cents();
         assert!(is_in_tuning_range(
             eight_to_seven,
-            5,
-            2,
-            2,
-            1,
-            0,
-            1,
+            &[5, 2, 2],
+            &[1, 0, 1],
             RawJiRatio::OCTAVE
         ));
 
         let three_to_two = monzo![-1, 1].cents();
         assert!(is_in_tuning_range(
             three_to_two,
-            5,
-            2,
-            2,
-            3,
-            1,
-            1,
+            &[5, 2, 2],
+            &[3, 1, 1],
             RawJiRatio::OCTAVE
         ));
         assert!(is_in_tuning_range(
             three_to_two,
-            5,
-            2,
-            3,
-            3,
-            1,
-            2,
+            &[5, 2, 3],
+            &[3, 1, 2],
             RawJiRatio::OCTAVE
         ));
 
         let eleven_to_eight = monzo![-3, 0, 0, 0, 1].cents();
         assert!(!is_in_tuning_range(
             eleven_to_eight,
-            5,
-            2,
-            2,
-            2,
-            1,
-            1,
+            &[5, 2, 2],
+            &[2, 1, 1],
             RawJiRatio::OCTAVE
         ));
 
         let five_to_four = monzo![-2, 0, 1].cents();
         assert!(is_in_tuning_range(
             five_to_four,
-            5,
-            2,
-            3,
-            2,
-            0,
-            1,
+            &[5, 2, 3],
+            &[2, 0, 1],
             RawJiRatio::OCTAVE
         ));
 
         let six_six_six_cents = 666.;
         assert!(!is_in_tuning_range(
             six_six_six_cents,
-            5,
-            2,
-            3,
-            3,
-            1,
-            2,
+            &[5, 2, 3],
+            &[3, 1, 2],
             RawJiRatio::OCTAVE
         ));
         assert!(!is_in_tuning_range(
             six_six_six_cents,
-            5,
-            2,
-            2,
-            3,
-            1,
-            1,
+            &[5, 2, 2],
+            &[3, 1, 1],
             RawJiRatio::OCTAVE
         ));
     }
