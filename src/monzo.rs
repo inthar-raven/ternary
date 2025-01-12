@@ -1872,7 +1872,8 @@ impl Sum for Monzo {
 mod tests {
     #[allow(unused)]
     use super::*;
-    use crate::ji_ratio::RawJiRatio;/// Find the shortest lattice point on the line `dir`*t + `pt`.
+    use crate::ji_ratio::RawJiRatio;
+    /// Find the shortest lattice point on the line `dir`*t + `pt`.
     /// The result is meant to be an improved version of `pt` when rewriting the lattice with basis (`dir`, `pt`)
     /// in a different basis.
     /// `dir` should be shorter than `pt`.
@@ -1899,7 +1900,9 @@ mod tests {
                     match norm(curr).total_cmp(&norm(next)) {
                         Ordering::Greater => {
                             // norm(prev) < norm(curr) > norm(next) should never happen
-                            unreachable!("norm(prev) < norm(curr) > norm(next) should never happen");
+                            unreachable!(
+                                "norm(prev) < norm(curr) > norm(next) should never happen"
+                            );
                         }
                         Ordering::Less => {
                             // norm(prev) < norm(curr) < norm(next), move towards prev
@@ -1907,7 +1910,9 @@ mod tests {
                         }
                         _ => {
                             // norm(prev) < norm(curr) == norm(next) should never happen
-                            unreachable!("norm(prev) < norm(curr) == norm(next) should never happen");
+                            unreachable!(
+                                "norm(prev) < norm(curr) == norm(next) should never happen"
+                            );
                         }
                     }
                 }
@@ -1915,7 +1920,9 @@ mod tests {
                     match norm(curr).total_cmp(&norm(next)) {
                         Ordering::Greater => {
                             // norm(prev) == norm(curr) > norm(next) should never happen
-                            unreachable!("norm(prev) == norm(curr) > norm(next) should never happen");
+                            unreachable!(
+                                "norm(prev) == norm(curr) > norm(next) should never happen"
+                            );
                         }
                         _ => {
                             // norm(prev) == norm(curr) < norm(next); norm(prev) == norm(curr) == norm(next) should never happen unless v1 == 0

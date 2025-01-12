@@ -83,7 +83,16 @@ pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
 }
 
 /// Whether `test_value` in cents is in the tuning range of a given interval ax + by + cz in a ternary scale aL bm cs.
-pub fn is_in_tuning_range(test_value: f64, a: i32, b: i32, c: i32, x: i32, y: i32, z: i32, equave: RawJiRatio) -> bool {
+pub fn is_in_tuning_range(
+    test_value: f64,
+    a: i32,
+    b: i32,
+    c: i32,
+    x: i32,
+    y: i32,
+    z: i32,
+    equave: RawJiRatio,
+) -> bool {
     let value_1_0_0 = equave.cents() * x as f64 / a as f64;
     let value_1_1_0 = equave.cents() * (x + y) as f64 / (a + b) as f64;
     let value_1_1_1 = equave.cents() * (x + y + z) as f64 / (a + b + c) as f64;
@@ -173,24 +182,96 @@ mod tests {
     #[test]
     fn test_is_in_tuning_range() {
         let seven_to_six = monzo![-1, -1, 0, 1].cents();
-        assert!(is_in_tuning_range(seven_to_six, 5, 2, 2, 1, 1, 0, RawJiRatio::OCTAVE));
+        assert!(is_in_tuning_range(
+            seven_to_six,
+            5,
+            2,
+            2,
+            1,
+            1,
+            0,
+            RawJiRatio::OCTAVE
+        ));
 
         let eight_to_seven = monzo![3, 0, 0, -1].cents();
-        assert!(is_in_tuning_range(eight_to_seven, 5, 2, 2, 1, 0, 1, RawJiRatio::OCTAVE));
+        assert!(is_in_tuning_range(
+            eight_to_seven,
+            5,
+            2,
+            2,
+            1,
+            0,
+            1,
+            RawJiRatio::OCTAVE
+        ));
 
         let three_to_two = monzo![-1, 1].cents();
-        assert!(is_in_tuning_range(three_to_two, 5, 2, 2, 3, 1, 1, RawJiRatio::OCTAVE));
-        assert!(is_in_tuning_range(three_to_two, 5, 2, 3, 3, 1, 2, RawJiRatio::OCTAVE));
+        assert!(is_in_tuning_range(
+            three_to_two,
+            5,
+            2,
+            2,
+            3,
+            1,
+            1,
+            RawJiRatio::OCTAVE
+        ));
+        assert!(is_in_tuning_range(
+            three_to_two,
+            5,
+            2,
+            3,
+            3,
+            1,
+            2,
+            RawJiRatio::OCTAVE
+        ));
 
         let eleven_to_eight = monzo![-3, 0, 0, 0, 1].cents();
-        assert!(!is_in_tuning_range(eleven_to_eight, 5, 2, 2, 2, 1, 1, RawJiRatio::OCTAVE));
+        assert!(!is_in_tuning_range(
+            eleven_to_eight,
+            5,
+            2,
+            2,
+            2,
+            1,
+            1,
+            RawJiRatio::OCTAVE
+        ));
 
         let five_to_four = monzo![-2, 0, 1].cents();
-        assert!(is_in_tuning_range(five_to_four, 5, 2, 3, 2, 0, 1, RawJiRatio::OCTAVE));
+        assert!(is_in_tuning_range(
+            five_to_four,
+            5,
+            2,
+            3,
+            2,
+            0,
+            1,
+            RawJiRatio::OCTAVE
+        ));
 
         let six_six_six_cents = 666.;
-        assert!(!is_in_tuning_range(six_six_six_cents, 5, 2, 3, 3, 1, 2, RawJiRatio::OCTAVE));
-        assert!(!is_in_tuning_range(six_six_six_cents, 5, 2, 2, 3, 1, 1, RawJiRatio::OCTAVE));
+        assert!(!is_in_tuning_range(
+            six_six_six_cents,
+            5,
+            2,
+            3,
+            3,
+            1,
+            2,
+            RawJiRatio::OCTAVE
+        ));
+        assert!(!is_in_tuning_range(
+            six_six_six_cents,
+            5,
+            2,
+            2,
+            3,
+            1,
+            1,
+            RawJiRatio::OCTAVE
+        ));
     }
     #[test]
     fn test_rel_error() {
