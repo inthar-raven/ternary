@@ -13,7 +13,12 @@ pub mod primes;
 pub mod subgroup_monzo;
 pub mod words;
 
+use equal::is_in_tuning_range;
 use itertools::Itertools;
+use ji_ratio::RawJiRatio;
+use monzo::Monzo;
+use nalgebra::{Matrix3, Vector3};
+use subgroup_monzo::SubgroupMonzo;
 use wasm_bindgen::prelude::*;
 use words::{chirality, is_mos_subst};
 use words::{Chirality, Letter};
@@ -57,7 +62,7 @@ use serde_wasm_bindgen::to_value;
 
 use guide::guide_frames;
 use guide::GuideFrame;
-use interval::JiRatio;
+use interval::{Dyad, JiRatio};
 use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
 
 // for the edo search
@@ -375,7 +380,7 @@ pub fn word_result(query: String) -> Result<JsValue, JsValue> {
 
     Ok(to_value(&WordResult {
         profile: word_to_profile(&word_as_numbers),
-        ji_tunings: sig_to_ji_tunings(&step_sig),
+        ji_tunings: sig_to_ji_tunings(&step_sig, RawJiRatio::OCTAVE),
         ed_tunings: sig_to_ed_tunings(&step_sig),
     })?)
 }
@@ -393,9 +398,81 @@ pub fn word_to_mv(query: String) -> u8 {
     maximum_variety(&word_in_numbers) as u8
 }
 
-pub fn sig_to_ji_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {
+pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<String>> {
+    let (a, b, c) = (step_sig[0] as i32, step_sig[1] as i32, step_sig[2] as i32);
     let ji_tunings =
-        crate::ji::solve_step_sig_81_odd_limit(step_sig, crate::monzo::Monzo::OCTAVE, false);
+        {
+            let equave_monzo_result = Monzo::try_from_ratio(equave);
+            if let Ok(equave_monzo) = equave_monzo_result {
+                Monzo::EIGHTY_ONE_ODD_LIMIT
+                    .iter()
+                    .permutations(2)
+                    .flat_map(|v| {
+                        let step_sig = step_sig.into_iter().map(|x| *x as i32).collect::<Vec<_>>();
+                        let (q, r) = (*v[0], *v[1]); // for each ordered pair of distinct (q, r)
+                        let step_vectors = [(0..=a), (0..=b), (0..=c)]
+                            .into_iter()
+                            .multi_cartesian_product();
+                        step_vectors.flat_map(|step_vector| {
+                            let q_reduced = q.rd(equave_monzo);
+                            if is_in_tuning_range(q_reduced.cents(), &step_sig, &step_vector, equave) {
+                                let (x, y, z) = (step_vector[0], step_vector[1], step_vector[2]);
+                                let step_vectors_2 = [(0..=a), (0..=b), (0..=c)]
+                                    .into_iter()
+                                    .multi_cartesian_product();
+                                step_vectors_2.filter_map(|step_vector_2| {
+                                    let r_reduced = r.rd(equave_monzo);
+                                    if is_in_tuning_range(r_reduced.cents(), &step_sig, &step_vector_2, equave) {
+                                        let (x_, y_, z_) = (step_vector_2[0], step_vector_2[1], step_vector_2[2]);
+                                        let det = a*y*z_ + b*z*x_ + c*x*y_ - a*z*y_ - b*x*z_ - c*y*z_;
+                                        if det == 1 || det == -1 {
+                                            let one_zero_zero = Vector3::new(1.0, 0.0, 0.0);
+                                            let zero_one_zero = Vector3::new(0.0, 1.0, 0.0);
+                                            let zero_zero_one = Vector3::new(0.0, 0.0, 1.0);
+                                            let m = Matrix3::from_columns(
+                                                &[
+                                                    Vector3::new(a as f64, x as f64, x_ as f64),
+                                                    Vector3::new(b as f64, y as f64, y_ as f64),
+                                                    Vector3::new(c as f64, z as f64, z_ as f64),
+
+                                                ]
+                                            );
+                                            let lu: nalgebra::LU<f64, nalgebra::Const<3>, nalgebra::Const<3>> = m.lu();
+                                            let sol1: Vector3<_> = lu.solve(&one_zero_zero).expect("Linear resolution failed"); // equave component
+                                            let sol2: Vector3<_> = lu.solve(&zero_one_zero).expect("Linear resolution failed"); // q component
+                                            let sol3: Vector3<_> = lu.solve(&zero_zero_one).expect("Linear resolution failed"); // r component
+                                            let smonzo1: SubgroupMonzo = SubgroupMonzo::try_new(
+                                                &[equave_monzo, q, r],
+                                                &[sol1.x as i32, sol1.y as i32, sol1.z as i32])
+                                                .unwrap();
+                                            let smonzo2: SubgroupMonzo = SubgroupMonzo::try_new(
+                                                &[equave_monzo, q, r],
+                                                &[sol2.x as i32, sol2.y as i32, sol2.z as i32])
+                                                .unwrap();
+                                            let smonzo3: SubgroupMonzo = SubgroupMonzo::try_new(
+                                                &[equave_monzo, q, r],
+                                                &[sol3.x as i32, sol3.y as i32, sol3.z as i32])
+                                                .unwrap();
+                                            Some(vec![smonzo1.to_monzo(), smonzo2.to_monzo(), smonzo3.to_monzo()])
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec::<Vec::<Monzo>>>()
+                            } else {
+                                vec![]
+                            }
+                        })
+                        .collect::<Vec::<Vec::<Monzo>>>()
+                    })
+                    .collect::<Vec::<Vec::<Monzo>>>() // Each Vec<Monzo> is one solution
+            } else {
+                vec![]
+            }
+        };
     ji_tunings
         .into_iter()
         .map(|v| {
@@ -504,7 +581,7 @@ pub fn sig_result(
                 }
             })
             .collect(),
-        ji_tunings: sig_to_ji_tunings(&step_sig),
+        ji_tunings: sig_to_ji_tunings(&step_sig, RawJiRatio::OCTAVE),
         ed_tunings: sig_to_ed_tunings(&step_sig),
     })?)
 }
