@@ -359,7 +359,7 @@ function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
 */
 
 // Mutates `v` a flat Vec matrix in row major order, swapping rows `i1` and `i2`.
-fn swap_rows(v: &mut Vec<f64>, m: usize, n: usize, i1: usize, i2: usize) {
+fn swap_rows(v: &mut [f64], m: usize, n: usize, i1: usize, i2: usize) {
     if i1 > m {
         console_log!("swap_rows(): matrix index i1 out of bounds");
         panic!();
@@ -370,7 +370,7 @@ fn swap_rows(v: &mut Vec<f64>, m: usize, n: usize, i1: usize, i2: usize) {
     }
     for j in 0..n {
         let new1 = v[n * i2 + j];
-        let new2 =  v[n * i1 + j];
+        let new2 = v[n * i1 + j];
 
         v[n * i1 + j] = new1;
         v[n * i2 + j] = new2;
@@ -380,14 +380,14 @@ fn swap_rows(v: &mut Vec<f64>, m: usize, n: usize, i1: usize, i2: usize) {
 }
 
 // Scales row `i` of `v` a flat Vec matrix in row major order by `coeff`.
-fn multiply_row(v: &mut Vec<f64>, n: usize, i: usize, coeff: f64) {
+fn multiply_row(v: &mut [f64], n: usize, i: usize, coeff: f64) {
     for j in 0..n {
         v[n * i + j] *= coeff;
     }
 }
 
 // Does the operation "[row i2 of arr] += coeff * [row i1 of arr]".
-fn add_multiple_of_first_row_to_second(v: &mut Vec<f64>, n: usize, i1: usize, i2: usize, coeff: f64) {
+fn add_multiple_of_first_row_to_second(v: &mut [f64], n: usize, i1: usize, i2: usize, coeff: f64) {
     for j in 0..n {
         v[n * i2 + j] += coeff * v[n * i1 + j];
     }
@@ -462,7 +462,13 @@ function gaussianElimination(left, right, m, n1, n2) {
   return rightClone;
 }
  */
-fn gaussian_elimination(left: &[f64], right: &[f64], m: usize, n1: usize, n2: usize) -> Option<Vec<f64>> {
+fn gaussian_elimination(
+    left: &[f64],
+    right: &[f64],
+    m: usize,
+    n1: usize,
+    n2: usize,
+) -> Option<Vec<f64>> {
     let mut left_clone = left.to_owned();
     let mut right_clone = right.to_owned();
     for j in 0..min(m, n1) {
@@ -484,20 +490,8 @@ fn gaussian_elimination(left: &[f64], right: &[f64], m: usize, n1: usize, n2: us
         for i2 in (j + 1)..m {
             let target = left_clone[n1 * i2 + j];
             if f64::abs(target) >= f64::EPSILON {
-                add_multiple_of_first_row_to_second(
-                    &mut left_clone,
-                    n2,
-                    j,
-                    i2,
-                -target / pivot,
-                );
-                add_multiple_of_first_row_to_second(
-                    &mut right_clone,
-                    n2,
-                    j,
-                    i2,
-                    -target / pivot,
-                );
+                add_multiple_of_first_row_to_second(&mut left_clone, n2, j, i2, -target / pivot);
+                add_multiple_of_first_row_to_second(&mut right_clone, n2, j, i2, -target / pivot);
             }
         }
     }
@@ -508,13 +502,7 @@ fn gaussian_elimination(left: &[f64], right: &[f64], m: usize, n1: usize, n2: us
             let target = left_clone[n1 * i2 + j];
             if f64::abs(target) >= f64::EPSILON {
                 add_multiple_of_first_row_to_second(&mut left_clone, n1, j, i2, -target / pivot);
-                add_multiple_of_first_row_to_second(
-                &mut right_clone,
-                n2,
-                j,
-                i2,
-                -target / pivot,
-                );
+                add_multiple_of_first_row_to_second(&mut right_clone, n2, j, i2, -target / pivot);
             }
         }
         // Scale rows so LHS gets 1 on diag

@@ -1,7 +1,7 @@
+use crate::monzo::Monzo;
 use nalgebra::Const;
 use nalgebra::Matrix;
 use nalgebra::Vector3;
-use crate::monzo::Monzo;
 
 use wasm_bindgen::prelude::*;
 
