@@ -165,10 +165,10 @@ macro_rules! val {
     () => (
         $crate::equal::Val::ZERO
     );
-    ($elem:expr; $n:expr) => (
+    ($elem:expr_2021; $n:expr_2021) => (
         $crate::equal::Val(nalgebra::RowSVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_row_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
-    ($($x:expr),+ $(,)?) => (
+    ($($x:expr_2021),+ $(,)?) => (
         $crate::equal::Val::from_slice(&[$($x),+])
     );
 }
