@@ -174,10 +174,7 @@ fn numbers_to_string(word: &[usize]) -> String {
 }
 
 fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
-    let GuideFrame {
-        ref gs,
-        ref polyoffset,
-    } = structure;
+    let GuideFrame { gs, polyoffset } = structure;
     if structure.multiplicity() == 1 {
         GuideResult {
             gs: gs
