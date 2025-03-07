@@ -12,11 +12,10 @@ use crate::ji_ratio::RawJiRatio;
 use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
 
 // TODO: Change `fn` to `Fn`
-type Norm = fn(Monzo) -> f64;
 type Weighting = fn(Monzo) -> [f64; SMALL_PRIMES_COUNT];
 
 macro_rules! const_concat {
-    ($($s:expr),+) => {{
+    ($($s:expr_2021),+) => {{
         const LEN: usize = $( $s.len() + )* 0;
         {
             let mut arr = [0; LEN];
@@ -41,10 +40,10 @@ macro_rules! monzo {
     () => (
         $crate::monzo::Monzo::UNISON
     );
-    ($elem:expr; $n:expr) => (
+    ($elem:expr_2021; $n:expr_2021) => (
         $crate::monzo::Monzo(nalgebra::SVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_column_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
-    ($($x:expr),+ $(,)?) => (
+    ($($x:expr_2021),+ $(,)?) => (
         $crate::monzo::Monzo::from_slice(&[$($x),+])
     );
 }
@@ -55,7 +54,7 @@ macro_rules! const_monzo {
     () => (
         $crate::monzo::Monzo::UNISON
     );
-    ($($x:expr),+ $(,)?) => (
+    ($($x:expr_2021),+ $(,)?) => (
         $crate::monzo::Monzo::from_array([$($x),+])
     );
 
@@ -1743,74 +1742,6 @@ fn weil_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     m * unweighting(v)
 }
 
-/// Find the shortest lattice point on the line `dir`*t + `pt`.
-/// The result is meant to be an improved version of `pt` when rewriting the lattice with basis (`dir`, `pt`)
-/// in a different basis.
-/// `dir` should be shorter than `pt`.
-#[allow(unused)]
-fn find_shortest(norm: Norm, dir: Monzo, pt: Monzo) -> Monzo {
-    let mut prev = pt - dir;
-    let mut curr = pt;
-    let mut next = pt + dir;
-    loop {
-        match norm(prev).total_cmp(&norm(curr)) {
-            Ordering::Greater => {
-                match norm(curr).total_cmp(&norm(next)) {
-                    Ordering::Greater => {
-                        // norm(prev) > norm(curr) > norm(next), move towards next
-                        (prev, curr, next) = (prev + dir, curr + dir, next + dir);
-                    }
-                    _ => {
-                        // norm(prev) > norm(curr) =< norm(next)
-                        return curr;
-                    }
-                }
-            }
-            Ordering::Less => {
-                match norm(curr).total_cmp(&norm(next)) {
-                    Ordering::Greater => {
-                        // norm(prev) < norm(curr) > norm(next) should never happen
-                        unreachable!("norm(prev) < norm(curr) > norm(next) should never happen");
-                    }
-                    Ordering::Less => {
-                        // norm(prev) < norm(curr) < norm(next), move towards prev
-                        (prev, curr, next) = (prev - dir, curr - dir, next - dir);
-                    }
-                    _ => {
-                        // norm(prev) < norm(curr) == norm(next) should never happen
-                        unreachable!("norm(prev) < norm(curr) == norm(next) should never happen");
-                    }
-                }
-            }
-            _ => {
-                match norm(curr).total_cmp(&norm(next)) {
-                    Ordering::Greater => {
-                        // norm(prev) == norm(curr) > norm(next) should never happen
-                        unreachable!("norm(prev) == norm(curr) > norm(next) should never happen");
-                    }
-                    _ => {
-                        // norm(prev) == norm(curr) < norm(next); norm(prev) == norm(curr) == norm(next) should never happen unless v1 == 0
-                        return curr;
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[allow(unused)]
-fn shorten_basis(norm: Norm, basis: &[Monzo]) -> Vec<Monzo> {
-    let mut shortened_basis = basis.to_vec();
-    shortened_basis.sort_unstable_by(|v, w| norm(*v).total_cmp(&norm(*w)));
-    // shorten next using already shortened vectors
-    for i in 1..basis.len() {
-        for j in 0..i {
-            shortened_basis[i] = find_shortest(norm, shortened_basis[j], shortened_basis[i])
-        }
-    }
-    shortened_basis
-}
-
 fn solve_linear_diophantine_rec(coeffs: &[i32], constant: i32, bound: i32) -> Vec<Vec<i32>> {
     if coeffs.is_empty() {
         vec![]
@@ -1938,7 +1869,6 @@ impl Sum for Monzo {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused)]
     use super::*;
     use crate::ji_ratio::RawJiRatio;
 
@@ -1951,47 +1881,6 @@ mod tests {
         let jacobin = monzo![9, 0, -1, 0, -3, 1];
         assert_eq!(6656, jacobin.numer());
         assert_eq!(6655, jacobin.denom());
-    }
-    #[test]
-    fn test_shorten_2d() {
-        let vs = vec![monzo![1, 0], monzo![3, 1]];
-        let us = shorten_basis(l1_norm as fn(Monzo) -> f64, &vs);
-        // expect [1, 0] and [0, 1]
-        assert_eq!(monzo![1], us[0]);
-        assert_eq!(monzo![0, 1], us[1]);
-    }
-    // Shouldn't change already optimal bases
-    #[test]
-    fn test_shorten_fixed_points() {
-        let vs = vec![monzo![1, 0], monzo![0, 1]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        // expect [1, 0] and [0, 1]
-        assert_eq!(us, vs);
-        let vs = vec![monzo![0, 1], monzo![1, 0]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        // expect [1, 0] and [0, 1]
-        assert_eq!(us, vs);
-        let vs = vec![monzo![1, 1], monzo![1, -1]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        // expect [1, 1] and [1, -1]
-        assert_eq!(us, vs);
-        let vs = vec![monzo![0, 1], monzo![15, 0]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        // expect [0, 1] and [15, 0]
-        assert_eq!(us, vs);
-    }
-
-    #[test]
-    fn test_shorten() {
-        let vs = vec![monzo![1], monzo![0, 1], monzo![0, 0, 1]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        assert_eq!(us, vec![monzo![1], monzo![0, 1], monzo![0, 0, 1]]);
-        let vs = vec![monzo![1], monzo![1, 1], monzo![1, 1, 1]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        assert_eq!(us, vec![monzo![1], monzo![0, 1], monzo![0, 0, 1]]);
-        let vs = vec![monzo![1], monzo![3, 1], monzo![-4, -5, 1]];
-        let us = shorten_basis(l2_norm as fn(Monzo) -> f64, &vs);
-        assert_eq!(us, vec![monzo![1], monzo![0, 1], monzo![0, 0, 1]]);
     }
     #[test]
     fn test_diophantine_homogeneous() {

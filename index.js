@@ -12,12 +12,42 @@ const GROUND_INDIGO = "#6c00da";
 
 // global state (TODO: replace this with arguments for functions that show scale and tuning data)
 let currentWord = null;
+// let currentLCount = 0;
+// let currentMCount = 0;
+// let currentSCount = 0;
 let currentLatticeBasis = null;
 let currentTuning = null;
 let currentProfile = null;
 
 const statusElement = document.getElementById("status");
 
+function countL(st) {
+  let result = 0;
+  for (let i = 0; i < st.length; ++i) {
+    if (st[i] === 'L') {
+      ++result;
+    }
+  }
+  return result;
+}
+function countM(st) {
+  let result = 0;
+  for (let i = 0; i < st.length; ++i) {
+    if (st[i] === 'm') {
+      ++result;
+    }
+  }
+  return result;
+}
+function countS(st) {
+  let result = 0;
+  for (let i = 0; i < st.length; ++i) {
+    if (st[i] === 's') {
+      ++result;
+    }
+  }
+  return result;
+}
 function displayStepVector(vector) {
   const keys = [...Object.keys(vector)];
   const sizeIdentifiers = ["L", "m", "s"];
@@ -511,6 +541,16 @@ stack()`
           ) {
             el.innerHTML += `None<br/>`;
           }
+          el.innerHTML += `<br/>`;
+          const a = countL(currentWord);
+          const b = countM(currentWord);
+          const c = countS(currentWord);
+
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+          el.innerHTML += currentProfile["subst_l_ms"] ? `subst ${a}L(${b}m${c}s)<br/>` : "";
+          el.innerHTML += currentProfile["subst_m_ls"] ? `subst ${b}m(${a}L${c}s)<br/>` : "";
+          el.innerHTML += currentProfile["subst_s_lm"] ? `subst ${c}s(${a}L${b}m)<br/>` : "";
+
           if (currentProfile["chirality"] === "Achiral") {
             el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
           } else {

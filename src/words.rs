@@ -74,13 +74,16 @@ impl<T> CountVector<T> {
     {
         let mut result = self.0.clone();
         for (key, value) in w.0.iter() {
-            if let Some(update_this) = result.get_mut(key) {
-                *update_this += value;
-                if *update_this == 0 {
-                    result.remove(key);
+            match result.get_mut(key) {
+                Some(update_this) => {
+                    *update_this += value;
+                    if *update_this == 0 {
+                        result.remove(key);
+                    }
                 }
-            } else {
-                result.insert((*key).clone(), *value);
+                _ => {
+                    result.insert((*key).clone(), *value);
+                }
             }
         }
         Self(result)
@@ -113,10 +116,13 @@ impl<T> CountVector<T> {
     {
         let mut result = BTreeMap::new();
         for key in slice {
-            if let Some(update_this) = result.get_mut(key) {
-                *update_this += 1;
-            } else {
-                result.insert((*key).clone(), 1);
+            match result.get_mut(key) {
+                Some(update_this) => {
+                    *update_this += 1;
+                }
+                _ => {
+                    result.insert((*key).clone(), 1);
+                }
             }
         }
         Self(result)
@@ -155,10 +161,13 @@ impl<T> CountVector<T> {
         for key in (0..scale.len())
             .map(|degree| CountVector::from_slice(&word_on_degree(scale, degree, subword_length)))
         {
-            if let Some(update_this) = result.get_mut(&key) {
-                *update_this += 1;
-            } else {
-                result.insert(key, 1);
+            match result.get_mut(&key) {
+                Some(update_this) => {
+                    *update_this += 1;
+                }
+                _ => {
+                    result.insert(key, 1);
+                }
             }
         }
         CountVector(result)
@@ -383,8 +392,8 @@ pub fn darkest_mos_mode_and_gen_bresenham(
         let result_gen = CountVector::from_slice(&result_scale[0..count_gen_steps]);
         (result_scale, result_gen)
     } else {
-        let (prim_mos, gen) = darkest_mos_mode_and_gen_bresenham(a / d, b / d);
-        (prim_mos.repeat(d), gen)
+        let (prim_mos, r#gen) = darkest_mos_mode_and_gen_bresenham(a / d, b / d);
+        (prim_mos.repeat(d), r#gen)
     }
 }
 
@@ -434,7 +443,7 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
         // so first substitute 'z's for 'x's, and then
         // return (`first`)^`count_first` `second` (in standard mathematical word notation).
         // The dark generator is obtained by subtracting the Parikh vector of `first` form that of the MOS scale.
-        let gen = CountVector(BTreeMap::from_iter(
+        let r#gen = CountVector(BTreeMap::from_iter(
             [a as i32, b as i32].into_iter().enumerate(),
         ))
         .add(&CountVector::from_slice(&first).neg()); // Do this before consuming `first` in the next line.
@@ -442,10 +451,10 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
         scale.extend_from_slice(&second);
         // Reverse the scale word, since Bjorklund's algorithm has given us the brightest mode.
         scale.reverse();
-        (scale, gen)
+        (scale, r#gen)
     } else {
-        let (primitive_mos, gen) = darkest_mos_mode_and_gen_bjorklund(a / d, b / d);
-        (primitive_mos.repeat(d), gen)
+        let (primitive_mos, r#gen) = darkest_mos_mode_and_gen_bjorklund(a / d, b / d);
+        (primitive_mos.repeat(d), r#gen)
     }
 }
 
@@ -600,6 +609,13 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
         .sorted()
         .dedup()
         .collect()
+}
+
+/// Whether `scale` is a MOS substitution scale subst at(bf1 cf2).
+pub fn is_mos_subst(scale: &[Letter], t: Letter, f1: Letter, f2: Letter) -> bool {
+    step_variety(scale) == 3 // Is it ternary?
+        && maximum_variety(&delete(scale, t)) == 2 // Is the result of deleting t a MOS?
+        && maximum_variety(&replace(scale, f1, f2)) == 2 // Is the result of identifying letters of the filling MOS a MOS?
 }
 
 /// Return the number of distinct steps in `scale`.

@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 
 use itertools::Itertools;
-use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
