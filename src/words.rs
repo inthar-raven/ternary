@@ -74,14 +74,17 @@ impl<T> CountVector<T> {
     {
         let mut result = self.0.clone();
         for (key, value) in w.0.iter() {
-            match result.get_mut(key) { Some(update_this) => {
-                *update_this += value;
-                if *update_this == 0 {
-                    result.remove(key);
+            match result.get_mut(key) {
+                Some(update_this) => {
+                    *update_this += value;
+                    if *update_this == 0 {
+                        result.remove(key);
+                    }
                 }
-            } _ => {
-                result.insert((*key).clone(), *value);
-            }}
+                _ => {
+                    result.insert((*key).clone(), *value);
+                }
+            }
         }
         Self(result)
     }
@@ -113,11 +116,14 @@ impl<T> CountVector<T> {
     {
         let mut result = BTreeMap::new();
         for key in slice {
-            match result.get_mut(key) { Some(update_this) => {
-                *update_this += 1;
-            } _ => {
-                result.insert((*key).clone(), 1);
-            }}
+            match result.get_mut(key) {
+                Some(update_this) => {
+                    *update_this += 1;
+                }
+                _ => {
+                    result.insert((*key).clone(), 1);
+                }
+            }
         }
         Self(result)
     }
@@ -155,11 +161,14 @@ impl<T> CountVector<T> {
         for key in (0..scale.len())
             .map(|degree| CountVector::from_slice(&word_on_degree(scale, degree, subword_length)))
         {
-            match result.get_mut(&key) { Some(update_this) => {
-                *update_this += 1;
-            } _ => {
-                result.insert(key, 1);
-            }}
+            match result.get_mut(&key) {
+                Some(update_this) => {
+                    *update_this += 1;
+                }
+                _ => {
+                    result.insert(key, 1);
+                }
+            }
         }
         CountVector(result)
     }
