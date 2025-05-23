@@ -193,7 +193,7 @@ pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError
 
 /// Compute if `offset` is valid for an interleaved scale with strand `strand`.
 pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
-    (1..=(strand.len() - 1)).try_for_each(|i| {
+    let _ = (1..=(strand.len() - 1)).try_for_each(|i| {
         let i_steps = spectrum(strand, i);
         let min_i_step = *i_steps
             .into_inner()
