@@ -703,9 +703,7 @@ pub fn sig_to_ed_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {
                 .enumerate()
                 .map(|(i, steps)| step_sig[i] as i32 * steps)
                 .sum();
-            v.iter()
-                .map(|i| format!("{}\\{}", i, edo))
-                .collect::<Vec<_>>()
+            v.iter().map(|i| format!("{i}\\{edo}")).collect::<Vec<_>>()
         })
         .collect::<Vec<_>>()
 }

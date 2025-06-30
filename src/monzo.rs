@@ -1600,7 +1600,7 @@ impl std::fmt::Display for Monzo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
         for (i, &exp) in self.0.iter().enumerate() {
-            write!(f, "{}", exp)?;
+            write!(f, "{exp}")?;
             if i < SMALL_PRIMES_COUNT - 1 {
                 write!(f, ", ")?;
             }

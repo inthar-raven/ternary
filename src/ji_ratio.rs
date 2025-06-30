@@ -69,7 +69,7 @@ impl Eq for RawJiRatio {}
 
 impl PartialOrd for RawJiRatio {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some((self.numer * other.denom).cmp(&(self.denom * other.numer)))
+        Some(self.cmp(other))
     }
 }
 

@@ -249,7 +249,7 @@ mod tests {
         let rel_error_in_12edo = relative_error(five_to_four, 12.0);
         assert!(rel_error_in_12edo - 0.1369 < 0.005);
         let rel_error_in_31edo = relative_error(five_to_four, 31.0);
-        println!("{}", rel_error_in_31edo);
+        println!("{rel_error_in_31edo}");
         assert!(rel_error_in_31edo - 0.020 < 0.005);
     }
     /*

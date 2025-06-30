@@ -486,7 +486,7 @@ mod tests {
     fn test_lllmllms() {
         let bad_scale: [usize; 8] = [0, 0, 0, 1, 0, 0, 1, 2];
         let complexity_2_gses = GuideFrame::try_multiple(&bad_scale, 2, 2);
-        println!("{:?}", complexity_2_gses);
+        println!("{complexity_2_gses:?}");
         assert!(complexity_2_gses.is_empty());
     }
 

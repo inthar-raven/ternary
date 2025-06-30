@@ -108,7 +108,7 @@ pub fn spectrum(scale: &[RawJiRatio], subword_length: usize) -> CountVector<RawJ
 pub fn disp_ji_scale(scale: &[RawJiRatio]) -> String {
     let mut ret: String = String::from("");
     for item in scale {
-        ret.push_str(&format!("{}", item));
+        ret.push_str(&format!("{item}"));
         ret.push(' ');
     }
     ret
@@ -598,7 +598,7 @@ mod tests {
         let mut eighty_one_odd_limit = odd_limit(81);
         eighty_one_odd_limit.sort();
         eighty_one_odd_limit.dedup();
-        println!("{:?}", eighty_one_odd_limit);
+        println!("{eighty_one_odd_limit:?}");
     }
     #[test]
     fn test_cs() {

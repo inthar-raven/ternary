@@ -210,10 +210,10 @@ impl std::fmt::Display for PermutationError {
                 write!(f, "permutations must have matching lengths")
             }
             Self::IndexOutOfBounds(len, i) => {
-                write!(f, "permutation has length {} but the index is {}", len, i)
+                write!(f, "permutation has length {len} but the index is {i}")
             }
             Self::WrongImage(sl) => {
-                write!(f, "wrong image for `VecPerm`: {:?}", sl)
+                write!(f, "wrong image for `VecPerm`: {sl:?}")
             }
         }
     }
