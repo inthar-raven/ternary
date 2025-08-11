@@ -19,7 +19,7 @@ num-traits = "0.2.19"
 num-integer = "0.1.46"
 num-bigint = "0.4.5"
 
-nalgebra = { version = "0.33.0", features = ["serde-serialize"] }
+nalgebra = { version = "0.34.0", features = ["serde-serialize"] }
 
 thiserror = "2.0.3"
 
