@@ -78,7 +78,7 @@ pub fn log_primes() -> &'static [f64; SMALL_PRIMES_COUNT] {
 /// Primality test using naive trial division.
 pub fn is_prime(n: u64) -> bool {
     let floor_sqrt_n = (n as f64).sqrt().floor() as u64;
-    n >= 2 && (2..=floor_sqrt_n).all(|k| n % k != 0)
+    n >= 2 && (2..=floor_sqrt_n).all(|k| !n.is_multiple_of(k))
 }
 
 /// Use the Sieve of Eratosthenes to find all primes up to `n`.
@@ -181,7 +181,7 @@ pub fn factorize(n: u64) -> Vec<u64> {
         let small_primes = atkin(floor_sqrt_n);
         let mut n_ = n;
         for p in small_primes {
-            while n_ % p == 0 {
+            while n_.is_multiple_of(p) {
                 n_ /= p;
                 result.push(p);
             }

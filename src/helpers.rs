@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::iter::Iterator;
 use {std::cmp::Ord, std::cmp::Ordering};
 
-#[derive(Debug, PartialEq, Hash)]
+#[derive(Default, Debug, PartialEq, Hash)]
 /// "Top-level errors".
 pub enum ScaleError {
     /// When the required generator step class for an analysis is not coprime
@@ -12,13 +12,8 @@ pub enum ScaleError {
     /// When an offset fails to meet the interleavability condition, resulting in non-interleaved scales
     NotInterleavable,
     /// Default error value
+    #[default]
     CannotMakeScale,
-}
-
-impl Default for ScaleError {
-    fn default() -> Self {
-        Self::CannotMakeScale
-    }
 }
 
 impl std::fmt::Display for ScaleError {
@@ -89,7 +84,7 @@ where
 
 /// Given a `&[Vec]`, this adapter returns the corresponding `Vec<&[T]>`.
 pub fn slicify_each<T>(vecs: &[Vec<T>]) -> Vec<&[T]> {
-    vecs.iter().map(|x| (x.as_slice())).collect()
+    vecs.iter().map(|x| x.as_slice()).collect()
 }
 
 /// Given a `&[Vec]`, this adapter returns the corresponding `Vec<&[T]>`.
@@ -97,7 +92,7 @@ pub fn vectorize_each<T>(vecs: &[&[T]]) -> Vec<Vec<T>>
 where
     T: Clone,
 {
-    (vecs.iter().map(|x| ((*x).to_vec()))).collect::<Vec<_>>()
+    (vecs.iter().map(|x| (*x).to_vec())).collect::<Vec<_>>()
 }
 
 /// Given a descending sorted vector, get the first index i where v[i] == t.

@@ -1680,7 +1680,7 @@ pub fn l1_norm(v: Monzo) -> f64 {
 /// The unweighted L^2 norm of a monzo.
 pub fn l2_norm(v: Monzo) -> f64 {
     v.0.iter()
-        .map(|x| (*x as f64))
+        .map(|x| *x as f64)
         .map(|x| x * x)
         .sum::<f64>()
         .sqrt()
@@ -1689,7 +1689,7 @@ pub fn l2_norm(v: Monzo) -> f64 {
 /// The unweighted L^\infty norm of a monzo.
 pub fn linf_norm(v: Monzo) -> f64 {
     v.0.iter()
-        .map(|x| (*x as f64))
+        .map(|x| *x as f64)
         .map(|x| x.abs())
         .reduce(f64::max)
         .unwrap_or(0.0)

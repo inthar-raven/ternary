@@ -249,7 +249,7 @@ fn strand_on_degree<T>(
 where
     T: Ord + Clone + Send + Sync,
 {
-    if scale.len() % interval_class == 0 {
+    if scale.len().is_multiple_of(interval_class) {
         Ok((0..(scale.len() / interval_class))
             .map(|i| dyad_on_degree(scale, degree + i * interval_class, interval_class))
             .collect())

@@ -223,12 +223,12 @@ impl GuideFrame {
     }
     pub fn try_multiple(scale: &[usize], multiplicity: usize, k: usize) -> Vec<Self> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
-        if multiplicity == 1 || scale.is_empty() || scale.len() % multiplicity != 0 {
+        if multiplicity == 1 || scale.is_empty() || !scale.len().is_multiple_of(multiplicity) {
             vec![]
         } else {
             let d = gcd(k as u64, scale.len() as u64) as usize;
             let co_d = scale.len() / d;
-            if co_d % multiplicity != 0 {
+            if !co_d.is_multiple_of(multiplicity) {
                 if d == multiplicity {
                     // println!("interleaved");
                     // It's an interleaved scale.

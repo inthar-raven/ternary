@@ -133,7 +133,7 @@ fn sawada_mut(
     let arity = rem_content.len(); // TODO: Strip any suffix of 0's
     if rem_content[arity - 1] == scale_len - t {
         // if the only remaining letter is `arity - 1`
-        if (rem_content[arity - 1] == runs[t - p] && scale_len % p == 0)
+        if (rem_content[arity - 1] == runs[t - p] && scale_len.is_multiple_of(p))
             || rem_content[arity - 1] > runs[t - p]
         {
             let mut new_necklace: Vec<usize> = a.iter_mut().map(|x| *x).collect();
