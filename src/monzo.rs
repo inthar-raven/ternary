@@ -1855,7 +1855,7 @@ fn multi_zip<T>(vecs: &[Vec<T>]) -> Vec<Vec<T>>
 where
     T: Copy,
 {
-    let truncate_to_this_len = vecs.iter().map(|vec| vec.len()).min().unwrap();
+    let truncate_to_this_len = vecs.iter().map(|vec| vec.len()).min().unwrap_or(0);
     (0..truncate_to_this_len)
         .map(|i| vecs.iter().map(|vec| vec[i]).collect::<Vec<_>>())
         .collect()

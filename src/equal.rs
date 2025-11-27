@@ -99,7 +99,7 @@ pub fn is_in_tuning_range(
     let value_1_1_0 = equave.cents() * (x + y) as f64 / (a + b) as f64;
     let value_1_1_1 = equave.cents() * (x + y + z) as f64 / (a + b + c) as f64;
     let mut degenerate_tunings = [value_1_0_0, value_1_1_0, value_1_1_1];
-    degenerate_tunings.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    degenerate_tunings.sort_by(|a, b| a.total_cmp(b));
     let min_value = degenerate_tunings[0];
     let max_value = degenerate_tunings[2];
     debug_assert!(min_value <= max_value);
