@@ -1,8 +1,10 @@
 use std::sync::OnceLock;
 
+/// Number of small primes used for bounded prime-limit JI ratios.
 pub const SMALL_PRIMES_COUNT: usize = 22;
 
-/// The first SMALL_PRIMES_COUNT primes.
+/// The first SMALL_PRIMES_COUNT primes (up to the 22nd prime).
+/// Used as the basis for monzo exponent vectors.
 pub const SMALL_PRIMES: [u64; SMALL_PRIMES_COUNT] = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73,
     79, /*83, 89, 97,
@@ -69,6 +71,7 @@ pub const SMALL_PRIMES: [u64; SMALL_PRIMES_COUNT] = [
 ];
 
 /// ln(p) for the first SMALL_PRIMES_COUNT primes.
+/// Cached for performance (used frequently in logarithmic calculations).
 // DON'T CHANGE THE `OnceLock` TO `LazyLock`! (results in a perf regression as of July 29, 2024)
 pub fn log_primes() -> &'static [f64; SMALL_PRIMES_COUNT] {
     static LOCK: OnceLock<[f64; SMALL_PRIMES_COUNT]> = OnceLock::new();
@@ -76,12 +79,14 @@ pub fn log_primes() -> &'static [f64; SMALL_PRIMES_COUNT] {
 }
 
 /// Primality test using naive trial division.
+/// Tests divisibility up to sqrt(n).
 pub fn is_prime(n: u64) -> bool {
     let floor_sqrt_n = (n as f64).sqrt().floor() as u64;
     n >= 2 && (2..=floor_sqrt_n).all(|k| !n.is_multiple_of(k))
 }
 
-/// Use the Sieve of Eratosthenes to find all primes up to `n`.
+/// Use the Sieve of Eratosthenes to find all primes up to `n` (inclusive).
+/// More efficient than trial division for large ranges.
 pub fn eratosthenes(n: u64) -> Vec<u64> {
     let mut i: u64 = 2;
     let mut primes_so_far = vec![];
@@ -107,7 +112,8 @@ pub fn eratosthenes(n: u64) -> Vec<u64> {
     primes_so_far
 }
 
-/// Prime sieve of Atkin. Has linear time and space complexity; asymptotically faster than Eratosthenes.
+/// Prime sieve of Atkin. Has linear time and space complexity; asymptotically faster than Eratosthenes for large n.
+/// Uses quadratic forms to identify prime candidates.
 pub fn atkin(n: u64) -> Vec<u64> {
     match n {
         0 | 1 => vec![],
@@ -171,7 +177,8 @@ pub fn atkin(n: u64) -> Vec<u64> {
     }
 }
 
-/// Factorizes a nonzero number. Returns an empty vec if `n == 0`.
+/// Factorizes a nonzero number into prime factors. Returns an empty vec if `n == 0`.
+/// Returns factors in ascending order, possibly with repetition.
 pub fn factorize(n: u64) -> Vec<u64> {
     if n == 0 {
         vec![]

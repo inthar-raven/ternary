@@ -29,6 +29,7 @@ pub fn specified_odd_limit(odds: &[u64]) -> Vec<RawJiRatio> {
 }
 
 /// Returns the octave-reduced intervals of a specified odd limit, not including the unison.
+/// Generates all ratios with odd numerator and denominator up to the limit.
 pub fn odd_limit(limit: u64) -> Vec<RawJiRatio> {
     let odds = (0..=(limit - 1) / 2).map(|i| 2 * i + 1).collect::<Vec<_>>();
     pairs(&odds, &odds)
@@ -45,8 +46,8 @@ pub fn odd_limit(limit: u64) -> Vec<RawJiRatio> {
 }
 
 /// Solutions to a step signature (with decreasing step sizes).
-/// Steps are required to be smaller than 300c,
-/// and all but the smallest step are required to be in the `SMALL_PRIMES`-prime-limited 81-odd-limit.
+/// Steps are required to be smaller than 300 cents.
+/// All but the smallest step are required to be in the `SMALL_PRIMES`-prime-limited 81-odd-limit.
 /// If `allow_neg_aber` is `true`, then the smallest step size is allowed to be negative.
 pub fn solve_step_sig_81_odd_limit(
     step_sig: &[usize],
@@ -90,6 +91,7 @@ pub fn solve_step_sig_81_odd_limit(
 }
 
 /// Multiset of `subword_length`-step intervals in a JI scale.
+/// Counts the frequency of each interval subtype.
 pub fn spectrum(scale: &[RawJiRatio], subword_length: usize) -> CountVector<RawJiRatio> {
     let mut result = std::collections::BTreeMap::new();
     for interval in (0..scale.len()).map(|degree| {
@@ -115,6 +117,7 @@ pub fn disp_ji_scale(scale: &[RawJiRatio]) -> String {
 }
 
 /// Display a JI scale as a JI chord (ratio of two or more integers).
+/// Computes the LCM of denominators to express as a single chord.
 pub fn disp_ji_scale_as_enumerated_chord(scale: &[RawJiRatio]) -> String {
     let mut ell_cee_emm: u64 = 1;
     for item in scale {
@@ -134,6 +137,7 @@ pub fn disp_ji_scale_as_enumerated_chord(scale: &[RawJiRatio]) -> String {
 }
 
 /// Get a specific mode of a JI scale in cumulative form.
+/// Rotates by the given degree and returns the intervals from the new root.
 pub fn mode(scale: &[RawJiRatio], degree: usize) -> Vec<RawJiRatio> {
     let steps: Vec<_> = step_form(scale);
     // rotate() already does degree % scale.len()
@@ -142,6 +146,7 @@ pub fn mode(scale: &[RawJiRatio], degree: usize) -> Vec<RawJiRatio> {
 }
 
 /// Convert a cumulative form into a step form.
+/// Each step is the interval from one note to the next in the scale.
 pub fn step_form(cumul_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
     [
         &[cumul_form[0]],
@@ -154,6 +159,7 @@ pub fn step_form(cumul_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
 }
 
 /// Convert a step form into a cumulative form.
+/// Each note is the product of all steps up to that point.
 pub fn cumulative_form(step_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
     step_form
         .iter()
@@ -164,12 +170,13 @@ pub fn cumulative_form(step_form: &[RawJiRatio]) -> Vec<RawJiRatio> {
         .collect()
 }
 
-/// Modes of a JI scale written in cumulative form.
+/// All modes of a JI scale written in cumulative form.
 pub fn ji_scale_modes(scale: &[RawJiRatio]) -> Vec<Vec<RawJiRatio>> {
     (0..scale.len()).map(|degree| mode(scale, degree)).collect()
 }
 
-/// Returns the JI chord `mode_num`:...:`2*mode_num`.
+/// Returns the harmonic series mode `mode_num`: mode_num:...:(2*mode_num).
+/// Includes the octave duplication.
 pub fn harmonic_mode(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
     if mode_num < 1 {
         Err(ScaleError::CannotMakeScale)
@@ -180,7 +187,7 @@ pub fn harmonic_mode(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
     }
 }
 
-/// Returns the JI chord `mode_num`:...:`2*mode_num - 1`.
+/// Returns the harmonic series mode `mode_num` without octave: mode_num:...:(2*mode_num - 1).
 pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
     if mode_num < 1 {
         Err(ScaleError::CannotMakeScale)
@@ -192,6 +199,7 @@ pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError
 }
 
 /// Compute if `offset` is valid for an interleaved scale with strand `strand`.
+/// Validates that all strand rotations differ from the offset by intervals in the strand.
 pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
     let _ = (1..=(strand.len() - 1)).try_for_each(|i| {
         let i_steps = spectrum(strand, i);
@@ -217,6 +225,7 @@ pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
 
 /// Compute if `polyoffset` is valid for an interleaved scale with strand `strand`.
 /// The polyoffset is given as a Vec of offsets from the unison.
+/// Validates that all pairwise differences of offset notes are intervals in the strand.
 pub fn is_valid_polyoffset(strand: &[RawJiRatio], polyoffset: &[RawJiRatio]) -> bool {
     let mut offsets_with_unison: Vec<RawJiRatio> = polyoffset.to_vec();
     offsets_with_unison.push(RawJiRatio::UNISON);
@@ -265,6 +274,7 @@ pub fn maximal_valid_polyoffsets(
 /// Compute an interleaved scale with the given strand and polyoffset, if it is valid.
 /// A *strand* is a smaller scale that is duplicated and copies of it offset by the notes of the *polyoffset* chord.
 /// The resulting scale made of interleaved strands is *interleaved* if all the strands are actually interleaved.
+/// Returns error if the combination is not valid.
 pub fn interleaved_scale_ji(
     strand: &[RawJiRatio],
     polyoffset: &[RawJiRatio],
@@ -289,7 +299,7 @@ pub fn interleaved_scale_ji(
     }
 }
 
-/// Given `arr` a periodic JI scale given in JI ratios from the tonic, is `arr` CS?
+/// Given `arr` a periodic JI scale given in JI ratios from the tonic, is `arr` a CS (constant structure)?
 /// Assumes arr[0] = the 1-step from the tonic, ..., arr[n-1] == the equave;
 /// arr.len() == the scale size.
 pub fn is_cs_ji_scale(arr: &[RawJiRatio]) -> bool {
@@ -357,6 +367,7 @@ pub fn gs_scale(
 }
 
 /// Return a well-formed necklace of `gen_class`-steps in a given JI scale.
+/// A necklace is a rotationally-invariant way to arrange generators.
 pub fn well_formed_necklace_in_ji_scale(
     scale: &[RawJiRatio],
     gen_class: usize,

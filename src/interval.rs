@@ -1,7 +1,8 @@
 use std::cmp::Ordering;
 
 /// Trait for any type representing concrete interval sizes.
-/// The trait provides the abstraction of a `\mathbb{Z}`-module under stacking.
+/// The trait provides the abstraction of a ℤ-module (free module over integers) under interval stacking.
+/// Operations treat intervals as elements that can be combined additively.
 pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
     /// The result of stacking two intervals.
     fn stack(self, rhs: Self) -> Self
@@ -25,7 +26,8 @@ pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
         Self: Sized;
     /// Stacking n copies of an interval where n is an integer.
     fn pow(self, n: i32) -> Self;
-    /// The logarithmic size of `self` modulo `modulo`. Panics if `modulo == unison()`.
+    /// The logarithmic size of `self` modulo `modulo` (e.g., octave reduction).
+    /// Panics if `modulo == unison()`.
     fn rd(self, modulo: Self) -> Self
     where
         Self: Sized,
@@ -55,13 +57,13 @@ pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
             }
         }
     }
-    /// Comparison for dyad sizes.
+    /// Comparison for dyad sizes (based on logarithmic magnitude in cents).
     fn cmp_dyad(self, other: &Self) -> Ordering {
         self.cents().total_cmp(&other.cents())
     }
 }
 
-/// Trait for types representing JI ratios.
+/// Trait for types representing JI ratios (just intonation ratios).
 pub trait JiRatio: Dyad + Copy + Sync + Send {
     /// The numerator of a JI ratio
     fn numer(&self) -> u64;

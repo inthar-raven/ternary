@@ -329,7 +329,7 @@ where
     true
 }
 
-/// Return the block_balance of `s` = `s`(x, y, z), defined as max { | |w|_{x_i} - |w'|_{x_i} | : x_i is a letter of `s` and k = len(w) = len(w') }.
+/// Return the block balance of `s` = `s`(x, y, z), defined as max { | |w|_{x_i} - |w'|_{x_i} | : x_i is a letter of `s` and k = len(w) = len(w') }.
 pub fn block_balance<T>(scale: &[T]) -> usize
 where
     T: Hash + Ord + Clone + PartialEq + Send + Sync,

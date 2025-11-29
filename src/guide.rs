@@ -62,6 +62,7 @@ where
 
 /// TODO: To get all Guided GSes, we actually need to iterate through all the step classes, not just ones <= len / 2.
 /// All Guided GSes that generate a given abstract necklace.
+/// Guided GS: generator sequence using fixed k-steps where gcd(k, scale.len()) == 1.
 pub fn guided_gs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let len = neck.len();
     (2..=len - 2) // Don't include 1-step GSes
@@ -88,7 +89,7 @@ fn k_step_guided_gs_list_for_subscale(
     guided_gs_chains(&stacked_k_steps(k, subscale))
 }
 
-// Guided GS of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
+/// All Guided GSes of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
 fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<CountVector<usize>>> {
     if subscale.len() == 2 {
         vec![vec![subscale[0].clone()]]
@@ -101,87 +102,13 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
     }
 }
 
-/*
-/// This is [Ploidacot](https://en.xen.wiki/w/Ploidacot) but with possible "contorsion".
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-pub struct Ploidacot {
-    /// The number of parts the 2/1 is split into.
-    pub ploid: usize,
-    /// The number of parts the voicing of 3/2 is split into
-    /// If the 3/2 is comprised of several ploids, this is 0 ("acot").
-    pub cot: usize,
-    /// Determines the voicing of 3/2 used.
-    /// 0 indicates 3/2 is used; each increment elevates the voicing by a (2^(1/ploid)).
-    pub shear: usize,
-}
-
-impl Ploidacot {
-    pub fn try_get_ploidacot(scale: &[Letter]) -> Option<Self> {
-        println!("gf: {:?}", guide_frames(scale));
-        if let Some(gf) = guide_frames(scale).first() {
-            let n = scale.len();
-            println!("gf: {:?}", gf.clone());
-            let po = &gf.polyoffset;
-            let gs = &gf.gs;
-            let multigen_class = gs.len() * gs[0].len();
-            let patent_3_mapping =
-                f64::round(n as f64 * f64::log(3.0, std::f64::consts::E) / std::f64::consts::LN_2)
-                    as usize;
-            let ploid = if po.len() == 1 || gcd(patent_3_mapping as u64, n as u64) > 1 {
-                1 // do this instead of polyploid acot
-            } else {
-                n / po[1].len()
-            };
-            let patent_fifth_mapping = patent_3_mapping - n;
-            let patent_fourth_mapping = 2 * n - patent_3_mapping;
-            // Check if one generator in the GS can be interpreted as a fifth
-            if gs[0].len() == patent_fifth_mapping || gs[0].len() == patent_fourth_mapping {
-                Some(Self {
-                    ploid,
-                    cot: 1,
-                    shear: 0,
-                })
-            } else {
-                // Check if aggregate generator can be interpreted as a fifth
-                for i in 0..gs.len() {
-                    if patent_fifth_mapping + i * n / ploid == multigen_class {
-                        let cot = gs.len();
-                        let shear = i;
-                        return Some(Self { ploid, cot, shear });
-                    }
-                }
-                let patent_fourth_mapping = 2 * n - patent_3_mapping;
-                for i in 0..gs.len() {
-                    if patent_fourth_mapping + i * n / ploid == multigen_class {
-                        let cot = gs.len();
-                        let shear = (cot - ploid - i) % cot;
-                        return Some(Self { ploid, cot, shear });
-                    }
-                }
-                None
-            }
-        } else {
-            None
-        }
-    }
-}
-*/
-
 /// A guide frame structure for a scale word, consisting of a generator sequence together with a set of offsets or a multiplicity.
-/// Multiplicity greater than 1 is a generalization of diregular MV3s;
-/// scales of this type always have the number of notes divisible by the multiplicity.
-/// It consists of m copies of the same generator sequence offset by `scale.len()` / m steps,
-/// where `m` is called the *multiplicity*.
-///
-/// (Actually, diregular scales are also interleaved; the strand is a detempered 2edo and the polyoffset has a generator.
-/// Diachrome is currently considered to have multiplicity 2 rather than having a polyoffset of 6 notes.
-/// As ad-hoc as it may seem, this complexity measure rests on the "thin" generator-offset structure of nice ternary scales
-/// (i.e. one side is the generator which there is usually much more of than there are offsets)
-/// and yields reasonable complexities for quasi-diatonic aberrismic scales.
-/// I might rename what I call these guide frame structures in light of this.)
+/// Multiplicity > 1 is a generalization of [even-regular MV3 scales](https://en.xen.wiki/w/Even-regular_MV3_scale);
+/// scales of this type always have number of notes divisible by the multiplicity.
+/// Consists of m copies of same generator sequence offset by `scale.len()` / m steps (where m is the multiplicity).
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
-    /// Either Guided GS or multiple interleaved GSes that are Guided GSes when considered individually.
+    /// Either Guided GS or multiple interleaved GSes (Guided GSes when considered individually).
     /// `gs` generates a guided generator sequence (detempered single-period MOS) subscale.
     pub gs: Vec<CountVector<usize>>,
     /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
@@ -189,24 +116,26 @@ pub struct GuideFrame {
 }
 
 impl GuideFrame {
+    /// Create a simple guide frame (single generator sequence).
     pub fn new_simple(gs: Vec<CountVector<usize>>) -> Self {
         Self {
             gs,
             polyoffset: vec![CountVector::ZERO],
         }
     }
+    /// Create a multiple/interleaved guide frame (with polyoffset).
     pub fn new_multiple(gs: Vec<CountVector<usize>>, polyoffset: Vec<CountVector<usize>>) -> Self {
         Self { gs, polyoffset }
     }
-    // The comoplexity of a guide frame.
+    /// The complexity of a guide frame (size of generator sequence plus size of polyoffset).
     pub fn complexity(&self) -> usize {
         self.gs.len() * self.polyoffset.len()
     }
-    // The multiplicity
+    /// The multiplicity (number of times generator sequence is repeated with offsets).
     pub fn multiplicity(&self) -> usize {
         self.polyoffset.len()
     }
-    // Try to get simple or interleaved guide frames with k-step generators.
+    /// Try to get simple or interleaved guide frames with k-step generators.
     pub fn try_simple(scale: &[usize], k: usize) -> Vec<Self> {
         if scale.is_empty() || gcd(scale.len() as u64, k as u64) != 1 {
             vec![]
@@ -388,7 +317,7 @@ impl GuideFrame {
             }
         }
     }
-    // Get both Simple and Multiple guide frames.
+    /// Get both Simple and Multiple guide frames.
     fn try_all_variants(scale: &[usize], k: usize) -> Vec<Self> {
         // Let's just do primes for now.
         let prime_factors: Vec<usize> = factorize(scale.len() as u64)

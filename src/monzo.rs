@@ -11,6 +11,7 @@ use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::RawJiRatio;
 use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
 
+/// Function type for weighting monzo components (used in norm calculations).
 // TODO: Change `fn` to `Fn`
 type Weighting = fn(Monzo) -> [f64; SMALL_PRIMES_COUNT];
 
@@ -63,17 +64,19 @@ macro_rules! const_monzo {
 /// Error type for attempts to construct invalid monzos.
 #[derive(Debug, PartialEq)]
 pub enum CantMakeMonzo {
-    /// The numerator exceeded `SMALL_PRIMES`-prime limit.
+    /// The numerator exceeded `SMALL_PRIMES`-prime limit (contains a prime factor > largest SMALL_PRIME).
     NumerExceededPrimeLimit(Vec<u64>),
-    /// The denominator exceeded `SMALL_PRIMES`-prime limit.
+    /// The denominator exceeded `SMALL_PRIMES`-prime limit (contains a prime factor > largest SMALL_PRIME).
     DenomExceededPrimeLimit(Vec<u64>),
-    /// The numerator was 0.
+    /// The numerator was 0 (invalid for JI ratios).
     NumerCantBeZero,
-    /// The denominator was 0.
+    /// The denominator was 0 (invalid for JI ratios).
     DenomCantBeZero,
 }
 
 /// nalgebra Vector representation of a bounded-prime-limit JI ratio.
+/// Stores exponents of prime factors in order (2, 3, 5, 7, ...).
+/// E.g., 3/2 = 2^-1 * 3^1 is stored as [-1, 1, 0, 0, ...].
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Monzo(SVector<i32, SMALL_PRIMES_COUNT>);
 
@@ -102,11 +105,12 @@ impl Monzo {
             [const_concat!(&[2i32, -1i32], &[0i32; SMALL_PRIMES_COUNT - 2]); 1],
         )),
     );
-    /// Unwrap the newtype `Monzo`.
+    /// Unwrap the nalgebra SVector representation.
     pub fn into_inner(&self) -> SVector<i32, SMALL_PRIMES_COUNT> {
         self.0
     }
     /// Get the monzo for the `n`th prime. Panics if `n >= SMALL_PRIMES_COUNT`.
+    /// Returns a monzo with 1 at position n and 0 elsewhere (represents the nth prime).
     pub fn nth_prime(n: usize) -> Self {
         Self(
             nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_column_slice(
@@ -120,6 +124,7 @@ impl Monzo {
         )
     }
     /// Get a const monzo from a const array.
+    /// Array length must be exactly SMALL_PRIMES_COUNT.
     pub const fn from_array(arr: [i32; SMALL_PRIMES_COUNT]) -> Self {
         Self(
             nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
@@ -128,6 +133,7 @@ impl Monzo {
         )
     }
     /// Get a monzo from a slice. Panics if `slice.len() > SMALL_PRIMES_COUNT`.
+    /// Pads with zeros if slice is shorter than SMALL_PRIMES_COUNT.
     pub fn from_slice(slice: &[i32]) -> Self {
         Self(
             nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_column_slice(
@@ -135,11 +141,12 @@ impl Monzo {
             ),
         )
     }
-    /// Whether the monzo is an interval with positive logarithmic size.
+    /// Whether the monzo represents an interval with positive logarithmic size (ratio > 1/1).
     pub fn is_positive(self) -> bool {
         self.cents() > 0.0
     }
     /// Tries to convert the JI ratio `numer`/`denom` into monzo form.
+    /// Factorizes numerator and denominator, validates they fit within SMALL_PRIMES limit.
     pub fn try_new(numer: u64, denom: u64) -> Result<Monzo, CantMakeMonzo> {
         if numer == 0 {
             return Err(CantMakeMonzo::NumerCantBeZero);
@@ -221,6 +228,7 @@ impl Monzo {
         RawJiRatio::try_new(numer, denom).ok()
     }
     /// Whether all entries of a monzo are divisible by `rhs`.
+    /// Used for checking if a monzo represents an integer power of another.
     pub fn is_divisible_by(&self, rhs: i32) -> bool {
         self.0.iter().all(|ex| ex % rhs == 0)
     }
@@ -1548,6 +1556,7 @@ impl Monzo {
 
 impl Index<usize> for Monzo {
     type Output = i32;
+    /// Index into the monzo to get the exponent of the nth prime.
     fn index(&self, idx: usize) -> &Self::Output {
         &self.0[idx]
     }
@@ -1672,12 +1681,12 @@ impl JiRatio for Monzo {
     }
 }
 
-/// The unweighted L^1 norm of a monzo.
+/// The unweighted L^1 norm of a monzo (sum of absolute exponents).
 pub fn l1_norm(v: Monzo) -> f64 {
     v.0.iter().map(|x| (*x as f64).abs()).sum()
 }
 
-/// The unweighted L^2 norm of a monzo.
+/// The unweighted L^2 norm of a monzo (Euclidean distance).
 pub fn l2_norm(v: Monzo) -> f64 {
     v.0.iter()
         .map(|x| *x as f64)
@@ -1686,7 +1695,7 @@ pub fn l2_norm(v: Monzo) -> f64 {
         .sqrt()
 }
 
-/// The unweighted L^\infty norm of a monzo.
+/// The unweighted L^∞ norm of a monzo (maximum absolute exponent).
 pub fn linf_norm(v: Monzo) -> f64 {
     v.0.iter()
         .map(|x| *x as f64)
@@ -1695,17 +1704,20 @@ pub fn linf_norm(v: Monzo) -> f64 {
         .unwrap_or(0.0)
 }
 
-/// The weighted $L^1$ norm of a monzo.
+/// The weighted L^1 norm of a monzo.
+/// Applies a weighting function to scale the contribution of each prime.
 pub fn weighted_l1_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
     weighting(v).into_iter().map(|x| x.abs()).sum()
 }
 
-/// The weighted $L^2$ norm of a monzo.
+/// The weighted L^2 norm of a monzo.
+/// Applies a weighting function before computing Euclidean distance.
 pub fn weighted_l2_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
     weighting(v).into_iter().map(|x| x * x).sum::<f64>().sqrt()
 }
 
-/// The weighted $L^\infty$ norm of a monzo.
+/// The weighted L^∞ norm of a monzo.
+/// Applies a weighting function before computing maximum absolute value.
 pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
     weighting(v)
         .map(|x| x.abs())
@@ -1714,6 +1726,8 @@ pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
         .unwrap_or(0.0)
 }
 
+/// Tenney weighting: weights each prime by its logarithm.
+/// Used for complexity-aware distance metrics.
 #[allow(unused)]
 fn tenney_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     let vec = (0..SMALL_PRIMES_COUNT)
@@ -1722,12 +1736,14 @@ fn tenney_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     SVector::from_vec(vec)
 }
 
-// Does nothing, just converts entries to `f64`
+/// No weighting: just converts entries to f64.
 #[allow(unused)]
 fn unweighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     SVector::from_vec(v.0.iter().map(|x| *x as f64).collect())
 }
 
+/// Weil weighting: weights each prime by its logarithm squared.
+/// Used for complexity metrics that penalize large prime factors more heavily.
 #[allow(unused)]
 fn weil_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     let diagonal: &[f64] = &log_primes()[0..SMALL_PRIMES_COUNT];
@@ -1742,6 +1758,8 @@ fn weil_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
     m * unweighting(v)
 }
 
+/// Recursively solve linear Diophantine equation with bounds on exponents.
+/// Explores solutions by trying different values for coefficients.
 fn solve_linear_diophantine_rec(coeffs: &[i32], constant: i32, bound: i32) -> Vec<Vec<i32>> {
     if coeffs.is_empty() {
         vec![]
@@ -1778,6 +1796,8 @@ fn solve_linear_diophantine_rec(coeffs: &[i32], constant: i32, bound: i32) -> Ve
     }
 }
 
+/// Solve homogeneous linear Diophantine equation with bounded exponents.
+/// Finds integer solutions where the linear combination equals zero.
 fn solve_linear_diophantine_homogeneous(coeffs: &[i32], bound: i32) -> Vec<Vec<i32>> {
     if coeffs.is_empty() {
         vec![]
@@ -1805,6 +1825,7 @@ fn solve_linear_diophantine_homogeneous(coeffs: &[i32], bound: i32) -> Vec<Vec<i
     }
 }
 
+/// Solve general linear Diophantine equation with bounded exponents.
 fn solve_linear_diophantine(coeffs: &[i32], constant: i32, exponent_bound: i32) -> Vec<Vec<i32>> {
     let mut solns = solve_linear_diophantine_rec(coeffs, constant, exponent_bound);
     solns.sort();
@@ -1814,7 +1835,8 @@ fn solve_linear_diophantine(coeffs: &[i32], constant: i32, exponent_bound: i32) 
 /// Get a set of solutions `x_i` of bounded complexity to
 /// the equation `step_sig[0] x_0 + step_sig[1] x_1 + ... + step_sig[len - 1] x_{len-1} == equave`,
 /// where `x_i` are JI ratios > 1.
-/// All solutions satisfy `max(abs((x_i)_j)) == 10` for any step size `x_i` and for any monzo component `(x_i)_j` of `x_i`.
+/// All solutions satisfy `max(abs((x_i)_j)) <= 10` for any step size `x_i` and for any monzo component `(x_i)_j` of `x_i`.
+/// Used for finding equal-tempered approximations of JI scales.
 // TODO: ISSUES: (1) doesn't find all solutions with exponent bound (2) perf
 pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) -> Vec<Vec<Monzo>> {
     // Given the equation `a_1 v_1 + ... a_n v_n == equave` in monzos
@@ -1851,6 +1873,8 @@ pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) ->
         .collect::<Vec<_>>()
 }
 
+/// Take a list of vectors and produce all combinations (cartesian product).
+/// Used for combining solution sets from multiple linear Diophantine equations.
 fn multi_zip<T>(vecs: &[Vec<T>]) -> Vec<Vec<T>>
 where
     T: Copy,

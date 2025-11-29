@@ -61,6 +61,7 @@ pub struct RawJiRatio {
 
 impl PartialEq for RawJiRatio {
     fn eq(&self, other: &Self) -> bool {
+        // Compare ratios by cross-multiplication to avoid floating point
         self.numer * other.denom == other.numer * self.denom
     }
 }
@@ -69,18 +70,21 @@ impl Eq for RawJiRatio {}
 
 impl PartialOrd for RawJiRatio {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // Delegate to Ord impl which handles all cases
         Some(self.cmp(other))
     }
 }
 
 impl std::iter::Product for RawJiRatio {
     fn product<I: Iterator<Item = RawJiRatio>>(iter: I) -> Self {
+        // Multiply all ratios in iterator, starting from unison (1/1)
         iter.fold(RawJiRatio::UNISON, |x, y| x * y)
     }
 }
 
 impl Ord for RawJiRatio {
     fn cmp(&self, other: &Self) -> Ordering {
+        // Compare ratios by cross-multiplication: a/b < c/d iff a*d < b*c
         (self.numer * other.denom).cmp(&(other.numer * self.denom))
     }
 }
@@ -252,12 +256,15 @@ impl RawJiRatio {
         RawJiRatio::OCTAVE,
     ];
 
+    /// Multiply all ratios in iterator, returning None if any multiplication overflows.
     pub fn checked_product<I: Iterator<Item = RawJiRatio>>(iter: &mut I) -> Option<Self> {
         iter.try_fold(RawJiRatio::UNISON, |x, y| x.checked_mul(&y))
     }
 
+    /// Raise the ratio to an integer power, returning None if any operation overflows.
     pub fn checked_pow(&self, n: i32) -> Option<Self> {
         if n >= 0 {
+            // Positive exponent: multiply self n times
             let mut result = Some(Self::UNISON);
             for _ in 0..n {
                 result = result?.checked_mul(self);
@@ -265,6 +272,7 @@ impl RawJiRatio {
             }
             result
         } else {
+            // Negative exponent: divide by self |n| times
             let mut result = Some(Self::UNISON);
             for _ in 0..-n {
                 result = result?.checked_div(self);
@@ -275,11 +283,15 @@ impl RawJiRatio {
     }
 
     /// Check the input for validity before creating a new `RawJiRatio`.
+    /// Returns an error if numerator or denominator is zero.
+    /// Automatically reduces the ratio to lowest terms using GCD.
     #[inline(always)]
     pub fn try_new(numer: u64, denom: u64) -> Result<RawJiRatio, IllegalJiRatio> {
         if (denom == 0) || (numer == 0) {
+            // Reject non-positive ratios
             Err(IllegalJiRatio { numer, denom })
         } else {
+            // Reduce to canonical form by dividing both by their GCD
             let d = gcd(numer, denom);
             Ok(RawJiRatio {
                 numer: numer / d,
@@ -325,33 +337,38 @@ impl RawJiRatio {
         denom: 8,
     };
 
-    /// Get the nth harmonic.
+    /// Get the nth harmonic (ratio n/1).
     pub fn harm(n: u64) -> Result<Self, IllegalJiRatio> {
         if n == 0 {
+            // Zero is not a valid harmonic
             Err(IllegalJiRatio { numer: 0, denom: 1 })
         } else {
-            // SAFETY: gcd(n, 1) == 1
+            // SAFETY: gcd(n, 1) == 1, so ratio is already in lowest terms
             Ok(RawJiRatio { numer: n, denom: 1 })
         }
     }
 
-    /// Reduce the ratio r modulo the logarithmic absolute value of m.
+    /// Reduce the ratio r modulo the logarithmic absolute value of m (equivalent to reduction modulo an octave).
     pub fn checked_rd(self, equave: Self) -> Result<Self, BadJiArith> {
         if equave.numer() == equave.denom() {
+            // Cannot reduce modulo unison
             Err(BadJiArith::LogDivByUnison)
         } else {
+            // Ensure equave is >= unison for consistent comparison
             let equave = if equave.numer() < equave.denom() {
                 equave.reciprocal()
             } else {
                 equave
             };
-            let mut ret = self; // Cloning is not necessary since we made `RawJiRatio` `Copy`.
+            let mut ret = self;
             if ret >= RawJiRatio::UNISON {
+                // Ratios >= 1/1: keep dividing by equave until below it
                 while ret >= equave {
                     ret /= equave;
                 }
                 Ok(ret)
             } else {
+                // Ratios < 1/1: keep multiplying by equave until >= 1/1
                 while ret < RawJiRatio::UNISON {
                     ret *= equave;
                 }
@@ -359,43 +376,55 @@ impl RawJiRatio {
             }
         }
     }
-    /// Logarithmic absolute value of a JI ratio (if m > n, m/n; otherwise n/m).
+    /// Logarithmic absolute value of a JI ratio (always >= 1/1, so intervals are always upward).
+    /// Returns reciprocal if ratio < 1/1, otherwise returns the ratio itself.
     pub fn magnitude(self) -> Self {
         if self < Self::UNISON {
+            // Ratio < 1/1: flip it to get magnitude
             self.reciprocal()
         } else {
+            // Ratio >= 1/1: already in magnitude form
             self
         }
     }
 }
 
 impl Dyad for RawJiRatio {
+    /// Stack two intervals (multiply ratios).
     fn stack(self, rhs: Self) -> Self {
         self * rhs
     }
+    /// Unstack rhs from self (divide ratios).
     fn unstack(self, rhs: Self) -> Self {
         self / rhs
     }
+    /// Logarithmic inverse (reciprocal).
     fn log_inv(self) -> Self {
         self.reciprocal()
     }
+    /// Size of interval in cents (log base 2 * 1200).
     fn cents(self) -> f64 {
         ((self.numer as f64) / (self.denom as f64)).log2() * 1200.0
     }
+    /// Natural logarithm of the ratio.
     fn ln(self) -> f64 {
         ((self.numer as f64) / (self.denom as f64)).ln()
     }
+    /// Return the unison (identity element).
     fn unison() -> Self {
         Self::UNISON
     }
+    /// Raise interval to integer power (stack n copies).
     fn pow(self, n: i32) -> Self {
         (0..n).fold(Self::UNISON, |acc, _| self * acc)
     }
 
+    /// Reduce interval modulo an equave (e.g., octave reduction).
     fn rd(self, modulo: Self) -> Self {
         if modulo == RawJiRatio::UNISON {
             panic!("division by zero (log division by unison)")
         } else {
+            // Ensure modulo >= 1/1 for consistent reduction
             let modulo = if modulo.numer() < modulo.denom() {
                 modulo.reciprocal()
             } else {
@@ -403,11 +432,13 @@ impl Dyad for RawJiRatio {
             };
             let mut ret = self;
             if ret >= Self::UNISON {
+                // Intervals >= 1/1: keep dividing by modulo until below it
                 while ret >= modulo {
                     ret /= modulo;
                 }
                 ret
             } else {
+                // Intervals < 1/1: keep multiplying by modulo until >= 1/1
                 while ret < Self::UNISON {
                     ret *= modulo;
                 }
@@ -426,6 +457,7 @@ impl fmt::Display for RawJiRatio {
 impl Mul for RawJiRatio {
     type Output = Self;
     fn mul(self, other: Self) -> Self {
+        // Multiply: (a/b) * (c/d) = (a*c)/(b*d), then reduce to lowest terms
         let d = gcd(self.numer * other.numer, self.denom * other.denom);
         RawJiRatio {
             numer: self.numer * other.numer / d,
@@ -435,6 +467,7 @@ impl Mul for RawJiRatio {
 }
 impl MulAssign for RawJiRatio {
     fn mul_assign(&mut self, other: Self) {
+        // In-place multiplication with reduction
         let d = gcd(self.numer * other.numer, self.denom * other.denom);
         self.numer *= other.numer;
         self.numer /= d;
@@ -445,6 +478,7 @@ impl MulAssign for RawJiRatio {
 
 impl CheckedMul for RawJiRatio {
     fn checked_mul(&self, other: &Self) -> Option<Self> {
+        // Multiplication with overflow checking
         let d = gcd(self.numer * other.numer, self.denom * other.denom);
         Some(RawJiRatio {
             numer: self.numer.checked_mul(other.numer)? / d,
@@ -456,6 +490,7 @@ impl CheckedMul for RawJiRatio {
 impl Div for RawJiRatio {
     type Output = Self;
     fn div(self, other: Self) -> Self {
+        // Divide: (a/b) / (c/d) = (a*d)/(b*c), then reduce to lowest terms
         let d = gcd(self.numer * other.denom, self.denom * other.numer);
         RawJiRatio {
             numer: self.numer * other.denom / d,
@@ -466,6 +501,7 @@ impl Div for RawJiRatio {
 
 impl DivAssign for RawJiRatio {
     fn div_assign(&mut self, other: Self) {
+        // In-place division with reduction
         let d = gcd(self.numer * other.denom, self.denom * other.numer);
         self.numer *= other.denom;
         self.numer /= d;
@@ -476,6 +512,7 @@ impl DivAssign for RawJiRatio {
 
 impl CheckedDiv for RawJiRatio {
     fn checked_div(&self, other: &Self) -> Option<Self> {
+        // Division with overflow checking
         let d = gcd(self.numer * other.denom, self.denom * other.numer);
         Some(RawJiRatio {
             numer: self.numer.checked_mul(other.denom)? / d,

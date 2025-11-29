@@ -14,7 +14,8 @@ use crate::{
 /// In regular temperament theory, a [*val*](https://en.xen.wiki/w/Val) is a covector,
 /// i.e. an element of the [dual module](https://en.wikipedia.org/wiki/Dual_module) of
 /// interval vectors.
-/// (the space of linear maps from the abelian group of intervals to `\mathbb{Z}`).
+/// (the space of linear maps from the abelian group of intervals to ℤ).
+/// Represents the steps in an equal temperament for each prime.
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
 pub struct Val(RowSVector<i32, SMALL_PRIMES_COUNT>);
 
@@ -25,11 +26,11 @@ impl Val {
             [[0i32; 1]; SMALL_PRIMES_COUNT],
         )),
     );
-    /// Unwrap the nalgebra row vector.
+    /// Unwrap the nalgebra row vector inner representation.
     pub fn into_inner(&self) -> RowSVector<i32, SMALL_PRIMES_COUNT> {
         self.0
     }
-    /// Get a monzo from a slice. Panics if `slice.len() > SMALL_PRIMES_COUNT`.
+    /// Create a Val from a slice. Pads with zeros up to SMALL_PRIMES_COUNT.
     pub fn from_slice(slice: &[i32]) -> Self {
         Self(
             nalgebra::RowSVector::<i32, SMALL_PRIMES_COUNT>::from_row_slice(
@@ -38,6 +39,7 @@ impl Val {
         )
     }
     /// Find how many steps a given val maps a monzo (a prime-factorized JI ratio) to.
+    /// Computes the dot product of the val with the monzo.
     pub fn evaluate(&self, monzo: Monzo) -> i32 {
         (self.0 * monzo.into_inner())[0]
     }
@@ -45,19 +47,21 @@ impl Val {
 
 impl Add for Val {
     type Output = Self;
-
+    /// Add two vals (combine their step mappings).
     fn add(self, rhs: Self) -> Self::Output {
         Val(self.0 + rhs.0)
     }
 }
 
 impl AddAssign for Val {
+    /// In-place addition of vals.
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0
     }
 }
 
 /// The [generalized patent val](https://en.xen.wiki/w/Generalized_patent_val) of x-edo where x is any positive real.
+/// Computes the step mapping for each prime in x-tone equal division of the octave.
 pub fn gpval(edo: f64) -> Val {
     Val(RowSVector::from_iterator(SMALL_PRIMES.into_iter().map(
         |p| {
@@ -68,6 +72,7 @@ pub fn gpval(edo: f64) -> Val {
 }
 
 /// The best approximation of `ratio` in steps of `ed`ed<`equave`>.
+/// Returns the integer number of steps that best approximates the given JI ratio.
 pub fn direct_approx<J: JiRatio>(ratio: J, ed: f64, equave: J) -> i32 {
     f64::round(
         ed * (f64::log(ratio.numer() as f64, std::f64::consts::E)
@@ -77,14 +82,16 @@ pub fn direct_approx<J: JiRatio>(ratio: J, ed: f64, equave: J) -> i32 {
     ) as i32
 }
 
-/// `steps`\`ed`<`equave`> in cents.
+/// `steps` in `ed`<`equave`> converted to cents.
+/// Scales the step count to the full size of the equave in cents.
 pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
     (steps as f64) / ed * equave.cents()
 }
 
 /// Whether `test_value` in cents is in the tuning range of a given interval ax + by + cz in a ternary scale aL bm cs.
-/// The tuning range of a given step vector xL + ym + zs is the convex hull of the three degenerate tunings for it, x\a, (x+y)\(a+b), (x+y+z)\(a+b+c),
-/// i.e. the closed interval \[min(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c)), max(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c))\].
+/// The tuning range of a given step vector xL + ym + zs is the convex hull of the three degenerate tunings for it:
+/// x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c), i.e. the closed interval
+/// [min(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c)), max(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c))].
 /// In short, this follows from observing that the tuning range of a ternary scale is the convex hull of the degenerate 1:0:0, 1:1:0, and 1:1:1 tunings
 /// and taking mediants for the tuning of a given interval in the ternary scale.
 pub fn is_in_tuning_range(

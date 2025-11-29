@@ -3,16 +3,19 @@ use std::collections::BTreeSet;
 use crate::helpers::{first_index_desc, first_index_smaller};
 use crate::words::Letter;
 
+/// Recursive helper for computing partitions with exact part count.
+/// Generates all partitions of `n` using parts <= `m` with exactly `parts` parts.
 fn partitions_exact_part_count_rec(n: usize, m: usize, parts: usize) -> Vec<Vec<usize>> {
     match (n, m, parts) {
-        (0, 0, 0) => vec![vec![]],
-        (0, m, _) if m > 0 => vec![],
-        (0, _, k) if k > 0 => vec![],
-        (n, m, _) if n > 0 && m > n => vec![],
-        (n, _, k) if n > 0 && k > n => vec![],
-        (n, 0, _) if n > 0 => vec![],
-        (n, _, 0) if n > 0 => vec![],
+        (0, 0, 0) => vec![vec![]], // Base case: empty partition
+        (0, m, _) if m > 0 => vec![], // Invalid: sum is 0 but m > 0
+        (0, _, k) if k > 0 => vec![], // Invalid: sum is 0 but need k parts
+        (n, m, _) if n > 0 && m > n => vec![], // Invalid: max part > sum
+        (n, _, k) if n > 0 && k > n => vec![], // Invalid: more parts than sum
+        (n, 0, _) if n > 0 => vec![], // Invalid: no parts available
+        (n, _, 0) if n > 0 => vec![], // Invalid: need parts but none allowed
         _ => (0..=m)
+            // Try each possible value for the first part
             .flat_map(|l| {
                 partitions_exact_part_count_rec(n - m, l, parts - 1)
                     .into_iter()
@@ -34,21 +37,24 @@ pub fn partitions(n: usize) -> Vec<Vec<usize>> {
     (1usize..=n).flat_map(|m| partitions_rec(n, m)).collect()
 }
 
+/// Recursive helper for computing all partitions of n.
+/// Generates partitions using parts of size m or smaller in descending order.
 fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
     match (n, m) {
         (0, 0) => {
-            vec![vec![]]
-        } // only the empty partition
+            vec![vec![]] // Base case: only the empty partition
+        }
         (0, _) => {
-            vec![]
-        } // no valid partitions
+            vec![] // No valid partitions when sum is 0 but m > 0
+        }
         (n, 0) if n > 0 => {
-            vec![]
+            vec![] // No valid partitions with no parts available
         }
         (n, m) if m > n => {
-            vec![]
+            vec![] // No valid partitions if max part size exceeds sum
         }
         _ => (0..=m)
+            // Try each part size from m down to 0
             .flat_map(|k| {
                 partitions_rec(n - m, k)
                     .into_iter()
@@ -193,11 +199,11 @@ fn sawada_mut(
 #[derive(PartialEq, Hash, Debug, Clone)]
 /// Error types for invalid `VecPerm` construction
 pub enum PermutationError {
-    /// Whewn two perms are composed, their lengths must match
+    /// When two perms are composed, their lengths must match
     DiffLengths,
-    /// Index out of bounds
+    /// Index out of bounds for permutation domain
     IndexOutOfBounds(usize, usize),
-    /// The image is not {0, ..., n - 1}
+    /// The image is not {0, ..., n - 1} (not a valid permutation)
     WrongImage(Vec<usize>),
 }
 
@@ -218,6 +224,7 @@ impl std::fmt::Display for PermutationError {
 }
 
 /// Encodes how the entries of a `Vec` was permuted.
+/// `pi[x]` stores where the permutation sends element `x`.
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub struct VecPerm {
     pi: Vec<usize>, // `pi[x]` is where the permutation sends `x`
@@ -239,10 +246,12 @@ impl VecPerm {
             Err(PermutationError::IndexOutOfBounds(self.len(), index))
         }
     }
+    /// Check if permutation is empty (domain size 0).
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    /// Tries to create a new `VecPerm`.
+    /// Tries to create a new `VecPerm` from a slice.
+    /// Validates that the image equals {0, ..., n-1}.
     pub fn try_new(slice: &[usize]) -> Result<VecPerm, PermutationError> {
         let domain = (0..slice.len()).collect::<BTreeSet<_>>();
         let image = slice.iter().cloned().collect::<BTreeSet<_>>();
@@ -268,7 +277,7 @@ impl VecPerm {
     pub fn len(&self) -> usize {
         self.pi.len()
     }
-    /// The identity element of $S_{`len`}$.
+    /// The identity element of S_n (permutation that maps each element to itself).
     #[inline]
     pub fn id(len: usize) -> VecPerm {
         VecPerm {
@@ -276,6 +285,7 @@ impl VecPerm {
         }
     }
     /// The permutation `(i j)` in cycle notation (the identity if `i == j`).
+    /// Swaps elements at positions i and j.
     pub fn transposition(len: usize, i: usize, j: usize) -> Self {
         if i > len {
             return Self::id(len);
@@ -291,7 +301,7 @@ impl VecPerm {
             },
         }
     }
-    /// Returns the composite `self \circ other`, the permutation mapping each `k` to `self`(`other`(`k`)).
+    /// Returns the composite `self \circ other`, mapping each `k` to `self`(`other`(`k`)).
     /// `self` and `other` must have the same domain, or this will return a `PermutationError`.
     pub fn o(&self, other: &Self) -> Result<Self, PermutationError> {
         if self.len() == other.len() {
@@ -302,7 +312,7 @@ impl VecPerm {
             Err(PermutationError::DiffLengths)
         }
     }
-    /// The inverse of a permutation.
+    /// The inverse of a permutation (the permutation pi^-1 such that pi ∘ pi^-1 = id).
     #[allow(clippy::needless_range_loop)]
     pub fn inv(&self) -> Self {
         let mut pi = vec![usize::MAX; self.len()];
@@ -321,11 +331,13 @@ impl VecPerm {
     /// which is a permutation that "permutes the elements like `g` does, but as remapped by `h`".
     /// For example, if `g` acts on `0, 1, 2` by cycling through them,
     /// `g.conj(&h)` acts on `h(0)`, `h(1)`, and `h(2)` in the same way.
+    /// Conjugation preserves the cycle structure of the permutation.
     pub fn conj(&self, other: &Self) -> Result<Self, PermutationError> {
         other.o(self)?.o(&other.inv())
     }
 
-    /// Replaces elements of `self` starting from `index` with `other` if possible.
+    /// Replaces elements of vector `v` starting from `index` with elements from `other` if possible.
+    /// Helper function for necklace generation algorithm.
     fn nest_replacing(v: &[usize], other: &[usize], index: usize) -> Result<Vec<usize>, String> {
         if other.is_empty() {
             Ok(v.to_owned())
@@ -341,6 +353,7 @@ impl VecPerm {
     }
     /// Permute all the 0's in the input to the end of the vector,
     /// and return the modified vector and the overall permutation used.
+    /// Used to normalize content vectors by removing trailing zeros.
     pub fn sift_zeros(slice: &[usize]) -> (Vec<usize>, VecPerm) {
         match slice.len() {
             0 | 1 => (slice.to_vec(), VecPerm::id(slice.len())), // A slice of length 0 or 1 is always valid.

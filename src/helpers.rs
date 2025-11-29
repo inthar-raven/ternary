@@ -3,15 +3,15 @@ use std::iter::Iterator;
 use {std::cmp::Ord, std::cmp::Ordering};
 
 #[derive(Default, Debug, PartialEq, Hash)]
-/// "Top-level errors".
+/// "Top-level errors" for scale construction and analysis.
 pub enum ScaleError {
-    /// When the required generator step class for an analysis is not coprime
+    /// When the required generator step class for an analysis is not coprime with scale length
     NonCoprimeGenError,
     /// When a subset's size is required to divide the size of the whole scale but does not
     NonDivisibleSubsetError,
     /// When an offset fails to meet the interleavability condition, resulting in non-interleaved scales
     NotInterleavable,
-    /// Default error value
+    /// Default error value for generic scale construction failures
     #[default]
     CannotMakeScale,
 }
@@ -39,7 +39,8 @@ impl std::fmt::Display for ScaleError {
 }
 impl std::error::Error for ScaleError {}
 
-/// The vector of pairs with the components taken from the two `Vec`s.
+/// The vector of all pairs with the first component from `v1` and second from `v2`.
+/// Produces the Cartesian product v1 × v2.
 pub fn pairs<T, U>(v1: &[T], v2: &[U]) -> Vec<(T, U)>
 where
     T: Clone,
@@ -51,6 +52,7 @@ where
 }
 
 /// The powerset of the given collection.
+/// Returns all 2^n possible subsets (including empty set and full set).
 pub fn powerset<T>(s: &[T]) -> Vec<Vec<T>>
 where
     T: Clone,
@@ -66,7 +68,7 @@ where
         .collect()
 }
 
-/// Check if given subset is a maximal set in the collection.
+/// Check if given subset is a maximal set in the collection (not properly contained in any other set).
 pub fn is_maximal_in<T>(set: Vec<T>, sets: &Vec<Vec<T>>) -> bool
 where
     T: Clone + Eq + Ord,
@@ -82,12 +84,12 @@ where
     true
 }
 
-/// Given a `&[Vec]`, this adapter returns the corresponding `Vec<&[T]>`.
+/// Given a `&[Vec]`, convert to borrowed slice references `Vec<&[T]>`.
 pub fn slicify_each<T>(vecs: &[Vec<T>]) -> Vec<&[T]> {
     vecs.iter().map(|x| x.as_slice()).collect()
 }
 
-/// Given a `&[Vec]`, this adapter returns the corresponding `Vec<&[T]>`.
+/// Given a `&[&[T]]`, convert to owned vectors `Vec<Vec<T>>`.
 pub fn vectorize_each<T>(vecs: &[&[T]]) -> Vec<Vec<T>>
 where
     T: Clone,
@@ -96,7 +98,7 @@ where
 }
 
 /// Given a descending sorted vector, get the first index i where v[i] == t.
-/// If there is no such index, return None.
+/// Returns None if not found or if earlier elements are smaller (due to sorting).
 pub fn first_index_desc<T>(v: &[T], t: T) -> Option<usize>
 where
     T: PartialEq + Ord,
@@ -111,7 +113,7 @@ where
     None
 }
 
-/// Get the first index i where v[i] < t. If there is no such index, return None.
+/// Get the first index i where v[i] < t. Returns None if no such index exists.
 pub fn first_index_smaller<T>(v: &[T], t: T) -> Option<usize>
 where
     T: PartialEq + Ord,
@@ -124,11 +126,11 @@ where
     None
 }
 
-/// Newtype for relations.
+/// Type alias for a binary relation (predicate function on pairs).
 pub type Relation<T> = fn(&T, &T) -> bool;
 
-/// Assuming that "`equiv` : T x T -> bool" is an equivalence relation,
-/// return the equivalence class representatives of `set` under `equiv`.
+/// Assuming that `equiv` is an equivalence relation,
+/// return one representative from each equivalence class in the set under `equiv`.
 pub fn equivalence_class_representatives<T>(set: &[T], equiv: Relation<T>) -> Vec<T>
 where
     T: Clone + PartialEq,
@@ -151,7 +153,7 @@ where
     result
 }
 
-/// Whether `a` is between `b` and `c` (both ends inclusive; regardless of whether `b > c`, `b == c`, or `b < c`).
+/// Whether `a` is between `b` and `c` (both ends inclusive; works regardless of whether `b > c`, `b == c`, or `b < c`).
 pub fn is_between<T>(a: T, b: T, c: T) -> bool
 where
     T: Ord,
@@ -163,12 +165,13 @@ where
     }
 }
 
-// Compute `n % abs(m)`
+/// Compute `n % abs(m)` (modulo with absolute value).
 fn modulo(n: i64, m: i64) -> i64 {
     ((n % m) + m) % m
 }
 
-/// Return *x* such that (*xa*) mod *b* = 1.
+/// Return modular inverse: find x such that (x*a) mod b = 1.
+/// Returns error if a and b are not coprime.
 pub fn modinv(a: i64, b: i64) -> Result<i64, String> {
     let (gcd, x, _) = extended_gcd(a, b);
     if gcd == 1 {
@@ -178,7 +181,8 @@ pub fn modinv(a: i64, b: i64) -> Result<i64, String> {
     }
 }
 
-/// Return gcd(a, b) and the Bezout coefficients: (g, x, y).
+/// Return gcd(a, b) and the Bézout coefficients: (g, x, y) such that ax + by = g.
+/// Uses the extended Euclidean algorithm.
 pub fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
     let (mut r, mut old_r) = (a, b);
     let (mut s, mut old_s) = (1, 0);
@@ -192,8 +196,8 @@ pub fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
     (old_r, old_s, old_t)
 }
 
-/// Gives the greatest common denominator of the two inputs, unless that's 2^127.
-/// 2^127 doesn't fit in an `u64`, so it returns -2^127, which does.
+/// Gives the greatest common divisor of the two inputs.
+/// Uses the binary GCD algorithm (Stein's algorithm) for efficiency.
 pub fn gcd(mut u: u64, mut v: u64) -> u64 {
     // Base cases: gcd(n, 0) = gcd(0, n) = n
     if u == 0 {
@@ -233,15 +237,14 @@ pub fn gcd(mut u: u64, mut v: u64) -> u64 {
     }
 }
 
-/// Find the lcm of two `i64`s.
+/// Find the lcm (least common multiple) of two numbers.
 pub fn lcm(m: u64, n: u64) -> u64 {
     m * n / gcd(m, n)
 }
 
-/// Finds a Bezout solution for a Diophantine linear equation with arbitrarily many coefficients.
-/// The first member returned is the GCD of `coeffs`, and the second member is a vec of Bezout solutions
-/// `x_0, x_1, ..., x_n`
-/// to `coeffs[0] x_0 + coeffs[1] x_1 + ... + coeffs[n] x_n = gcd(coeffs)`.
+/// Finds a Bézout solution for a linear Diophantine equation with multiple coefficients.
+/// Returns (gcd, solutions) where gcd is gcd(coeffs) and solutions satisfies:
+/// `coeffs[0]*solutions[0] + coeffs[1]*solutions[1] + ... = gcd(coeffs)`
 pub fn bezout(coeffs: &[i32]) -> (i32, Vec<i32>) {
     debug_assert!(!coeffs.is_empty(), "`coeffs` should not be empty");
     if coeffs.len() == 1 {
@@ -261,7 +264,7 @@ pub fn bezout(coeffs: &[i32]) -> (i32, Vec<i32>) {
     }
 }
 
-/// Whether a slice is strictly descending.
+/// Whether a slice is in strictly descending order.
 pub fn is_sorted_strictly_desc<T>(ts: &[T]) -> bool
 where
     T: Ord + Copy,

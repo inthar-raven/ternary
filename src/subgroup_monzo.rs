@@ -21,8 +21,11 @@ macro_rules! console_log {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// Error types for invalid `SubgroupMonzo` construction
 pub enum SubgroupMonzoErr {
+    /// Dimension mismatch (need at least 3 elements)
     BadDim,
+    /// Basis vectors are not linearly independent
     BadBasis,
 }
 
@@ -31,6 +34,7 @@ pub struct SubgroupMonzo(((Monzo, i32), (Monzo, i32), (Monzo, i32))); // Using j
 
 impl SubgroupMonzo {
     /// Tries to create a new `SubgroupMonzo` with length 3 enforced.
+    /// Validates that basis vectors are linearly independent.
     pub fn try_new(basis: &[Monzo], vector: &[i32]) -> Result<Self, SubgroupMonzoErr> {
         // placeholder Err type
         if basis.len() < 3 || vector.len() < 3 {
@@ -65,6 +69,7 @@ impl SubgroupMonzo {
         Vector3::new(v1, v2, v3)
     }
     /// Convert the `SubgroupMonzo` to a 79-limit `Monzo` representation
+    /// by combining the basis vectors with the subgroup vector.
     pub fn to_monzo(&self) -> Monzo {
         let (v1, v2, v3) = (self.0 .0 .0, self.0 .1 .0, self.0 .2 .0);
         let (a1, a2, a3) = (self.0 .0 .1, self.0 .1 .1, self.0 .2 .1);
