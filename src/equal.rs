@@ -1,6 +1,5 @@
 use std::ops::{Add, AddAssign};
 
-use nalgebra::{ArrayStorage, RowSVector};
 use num_traits::Pow;
 
 use crate::{
@@ -9,6 +8,7 @@ use crate::{
     ji_ratio::RawJiRatio,
     monzo::Monzo,
     primes::{SMALL_PRIMES, SMALL_PRIMES_COUNT},
+    vector::RowVector,
 };
 
 /// In regular temperament theory, a [*val*](https://en.xen.wiki/w/Val) is a covector,
@@ -17,31 +17,23 @@ use crate::{
 /// (the space of linear maps from the abelian group of intervals to ℤ).
 /// Represents the steps in an equal temperament for each prime.
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
-pub struct Val(RowSVector<i32, SMALL_PRIMES_COUNT>);
+pub struct Val(RowVector);
 
 impl Val {
     /// The zero map.
-    pub const ZERO: Self = Self(
-        nalgebra::RowSVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-            [[0i32; 1]; SMALL_PRIMES_COUNT],
-        )),
-    );
-    /// Unwrap the nalgebra row vector inner representation.
-    pub fn into_inner(&self) -> RowSVector<i32, SMALL_PRIMES_COUNT> {
+    pub const ZERO: Self = Self(RowVector::new([0i32; SMALL_PRIMES_COUNT]));
+    /// Unwrap the RowVector inner representation.
+    pub fn into_inner(&self) -> RowVector {
         self.0
     }
     /// Create a Val from a slice. Pads with zeros up to SMALL_PRIMES_COUNT.
     pub fn from_slice(slice: &[i32]) -> Self {
-        Self(
-            nalgebra::RowSVector::<i32, SMALL_PRIMES_COUNT>::from_row_slice(
-                &[slice, &vec![0i32; SMALL_PRIMES_COUNT - slice.len()]].concat(),
-            ),
-        )
+        Self(RowVector::from_slice(slice))
     }
     /// Find how many steps a given val maps a monzo (a prime-factorized JI ratio) to.
     /// Computes the dot product of the val with the monzo.
     pub fn evaluate(&self, monzo: Monzo) -> i32 {
-        (self.0 * monzo.into_inner())[0]
+        (self.0.dot(&monzo.into_inner())) as i32
     }
 }
 
@@ -63,12 +55,12 @@ impl AddAssign for Val {
 /// The [generalized patent val](https://en.xen.wiki/w/Generalized_patent_val) of x-edo where x is any positive real.
 /// Computes the step mapping for each prime in x-tone equal division of the octave.
 pub fn gpval(edo: f64) -> Val {
-    Val(RowSVector::from_iterator(SMALL_PRIMES.into_iter().map(
-        |p| {
-            f64::round(edo * f64::log(p as f64, std::f64::consts::E) / std::f64::consts::LN_2)
-                as i32
-        },
-    )))
+    let mut arr = [0i32; SMALL_PRIMES_COUNT];
+    for (i, &p) in SMALL_PRIMES.iter().enumerate() {
+        arr[i] = f64::round(edo * f64::log(p as f64, std::f64::consts::E) / std::f64::consts::LN_2)
+            as i32;
+    }
+    Val(RowVector::new(arr))
 }
 
 /// The best approximation of `ratio` in steps of `ed`ed<`equave`>.

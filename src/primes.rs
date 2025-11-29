@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 /// Number of small primes used for bounded prime-limit JI ratios.
 pub const SMALL_PRIMES_COUNT: usize = 22;
 
-/// The first SMALL_PRIMES_COUNT primes (up to the 22nd prime).
+/// The first SMALL_PRIMES_COUNT primes.
 /// Used as the basis for monzo exponent vectors.
 pub const SMALL_PRIMES: [u64; SMALL_PRIMES_COUNT] = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73,

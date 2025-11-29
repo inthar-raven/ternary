@@ -10,6 +10,7 @@ pub mod ji_ratio;
 pub mod monzo;
 pub mod helpers;
 pub mod primes;
+pub mod vector;
 #[macro_use]
 pub mod subgroup_monzo;
 pub mod words;

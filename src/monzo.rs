@@ -4,36 +4,16 @@ use std::iter::Sum;
 use std::ops::Index;
 
 use itertools::Itertools;
-use nalgebra::{ArrayStorage, SMatrix, SVector};
 
 use crate::helpers::{bezout, is_sorted_strictly_desc};
 use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::RawJiRatio;
 use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
+use crate::vector::{Vector, Vectorf64};
 
 /// Function type for weighting monzo components (used in norm calculations).
 // TODO: Change `fn` to `Fn`
-type Weighting = fn(Monzo) -> [f64; SMALL_PRIMES_COUNT];
-
-macro_rules! const_concat {
-    ($($s:expr),+) => {{
-        const LEN: usize = $( $s.len() + )* 0;
-        {
-            let mut arr = [0; LEN];
-            let mut base: usize = 0;
-            $({
-                let mut i = 0;
-                while i < $s.len() {
-                    arr[base + i] = $s[i];
-                    i += 1;
-                }
-                base += $s.len();
-            })*
-            if base != LEN { panic!("invalid length"); }
-            arr
-        }
-    }}
-}
+type Weighting = fn(Monzo) -> Vectorf64;
 
 #[macro_export]
 /// Creates a `Monzo` dynamically.
@@ -74,72 +54,47 @@ pub enum CantMakeMonzo {
     DenomCantBeZero,
 }
 
-/// nalgebra Vector representation of a bounded-prime-limit JI ratio.
+/// Vector representation of a bounded-prime-limit JI ratio.
 /// Stores exponents of prime factors in order (2, 3, 5, 7, ...).
 /// E.g., 3/2 = 2^-1 * 3^1 is stored as [-1, 1, 0, 0, ...].
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct Monzo(SVector<i32, SMALL_PRIMES_COUNT>);
+pub struct Monzo(Vector);
 
 impl Monzo {
     /// 1/1 in monzo form.
-    pub const UNISON: Self = Self(
-        nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-            [[0i32; SMALL_PRIMES_COUNT]; 1],
-        )),
-    );
+    pub const UNISON: Self = Self(Vector::new([0; SMALL_PRIMES_COUNT]));
     /// 2/1 in monzo form.
-    pub const OCTAVE: Self = Self(
-        nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-            [const_concat!(&[1i32], &[0i32; SMALL_PRIMES_COUNT - 1]); 1],
-        )),
-    );
+    pub const OCTAVE: Self = Self(Vector::new([
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]));
     /// 3/2 in monzo form.
-    pub const PYTH_5TH: Self = Self(
-        nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-            [const_concat!(&[-1i32, 1i32], &[0i32; SMALL_PRIMES_COUNT - 2]); 1],
-        )),
-    );
+    pub const PYTH_5TH: Self = Self(Vector::new([
+        -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]));
     /// 4/3 in monzo form.
-    pub const PYTH_4TH: Self = Self(
-        nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-            [const_concat!(&[2i32, -1i32], &[0i32; SMALL_PRIMES_COUNT - 2]); 1],
-        )),
-    );
-    /// Unwrap the nalgebra SVector representation.
-    pub fn into_inner(&self) -> SVector<i32, SMALL_PRIMES_COUNT> {
+    pub const PYTH_4TH: Self = Self(Vector::new([
+        2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]));
+    /// Unwrap the Vector representation.
+    pub fn into_inner(&self) -> Vector {
         self.0
     }
     /// Get the monzo for the `n`th prime. Panics if `n >= SMALL_PRIMES_COUNT`.
     /// Returns a monzo with 1 at position n and 0 elsewhere (represents the nth prime).
     pub fn nth_prime(n: usize) -> Self {
-        Self(
-            nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_column_slice(
-                &[
-                    vec![0i32; n].as_slice(),
-                    &[1i32],
-                    vec![0i32; SMALL_PRIMES_COUNT - n].as_slice(),
-                ]
-                .concat(),
-            ),
-        )
+        let mut arr = [0i32; SMALL_PRIMES_COUNT];
+        arr[n] = 1;
+        Self(Vector::new(arr))
     }
     /// Get a const monzo from a const array.
     /// Array length must be exactly SMALL_PRIMES_COUNT.
     pub const fn from_array(arr: [i32; SMALL_PRIMES_COUNT]) -> Self {
-        Self(
-            nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_array_storage(ArrayStorage(
-                [arr; 1],
-            )),
-        )
+        Self(Vector::new(arr))
     }
     /// Get a monzo from a slice. Panics if `slice.len() > SMALL_PRIMES_COUNT`.
     /// Pads with zeros if slice is shorter than SMALL_PRIMES_COUNT.
     pub fn from_slice(slice: &[i32]) -> Self {
-        Self(
-            nalgebra::SVector::<i32, SMALL_PRIMES_COUNT>::from_column_slice(
-                &[slice, &vec![0i32; SMALL_PRIMES_COUNT - slice.len()]].concat(),
-            ),
-        )
+        Self(Vector::from_slice(slice))
     }
     /// Whether the monzo represents an interval with positive logarithmic size (ratio > 1/1).
     pub fn is_positive(self) -> bool {
@@ -1667,16 +1622,16 @@ impl JiRatio for Monzo {
         self.0
             .into_iter()
             .enumerate()
-            .filter(|(_, exp)| **exp > 0i32)
-            .map(|(i, exp)| SMALL_PRIMES[i].pow(*exp as u32))
+            .filter(|(_, exp)| *exp > 0i32)
+            .map(|(i, exp)| SMALL_PRIMES[i].pow(exp as u32))
             .product()
     }
     fn denom(&self) -> u64 {
         self.0
             .into_iter()
             .enumerate()
-            .filter(|(_, exp)| **exp < 0i32)
-            .map(|(i, exp)| SMALL_PRIMES[i].pow(-(*exp) as u32))
+            .filter(|(_, exp)| *exp < 0i32)
+            .map(|(i, exp)| SMALL_PRIMES[i].pow(-exp as u32))
             .product()
     }
 }
@@ -1720,8 +1675,8 @@ pub fn weighted_l2_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
 /// Applies a weighting function before computing maximum absolute value.
 pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
     weighting(v)
-        .map(|x| x.abs())
         .into_iter()
+        .map(|x| x.abs())
         .reduce(f64::max)
         .unwrap_or(0.0)
 }
@@ -1729,33 +1684,29 @@ pub fn weighted_linf_norm(weighting: Box<Weighting>, v: Monzo) -> f64 {
 /// Tenney weighting: weights each prime by its logarithm.
 /// Used for complexity-aware distance metrics.
 #[allow(unused)]
-fn tenney_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
+fn tenney_weighting(v: Monzo) -> Vectorf64 {
     let vec = (0..SMALL_PRIMES_COUNT)
         .map(|i| log_primes()[i] * (v[i] as f64))
         .collect();
-    SVector::from_vec(vec)
+    Vectorf64::from_vec(vec)
 }
 
 /// No weighting: just converts entries to f64.
 #[allow(unused)]
-fn unweighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
-    SVector::from_vec(v.0.iter().map(|x| *x as f64).collect())
+fn unweighting(v: Monzo) -> Vectorf64 {
+    Vectorf64::from_vec(v.0.iter().map(|x| *x as f64).collect())
 }
 
 /// Weil weighting: weights each prime by its logarithm squared.
 /// Used for complexity metrics that penalize large prime factors more heavily.
 #[allow(unused)]
-fn weil_weighting(v: Monzo) -> SVector<f64, { SMALL_PRIMES_COUNT }> {
-    let diagonal: &[f64] = &log_primes()[0..SMALL_PRIMES_COUNT];
-    let m: SMatrix<f64, { SMALL_PRIMES_COUNT }, { SMALL_PRIMES_COUNT }> =
-        SMatrix::from_fn(|r, c| {
-            if r == c || r == v.0.len() {
-                diagonal[c]
-            } else {
-                0f64
-            }
-        });
-    m * unweighting(v)
+fn weil_weighting(v: Monzo) -> Vectorf64 {
+    let diagonal = log_primes();
+    let mut result = [0.0f64; SMALL_PRIMES_COUNT];
+    for i in 0..SMALL_PRIMES_COUNT {
+        result[i] = diagonal[i] * diagonal[i] * (v.0[i] as f64);
+    }
+    Vectorf64::new(result)
 }
 
 /// Recursively solve linear Diophantine equation with bounds on exponents.
@@ -1851,7 +1802,7 @@ pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) ->
     let iter_of_iters = equave
         .0
         .into_iter()
-        .map(|&expon| solve_linear_diophantine(&step_sig, expon, exponent_bound).into_iter());
+        .map(|expon| solve_linear_diophantine(&step_sig, expon, exponent_bound).into_iter());
     let prod = iter_of_iters.multi_cartesian_product();
     let zipped: Vec<Vec<Vec<i32>>> = prod.map(|step_soln| multi_zip(&step_soln)).collect();
     let result: Vec<Vec<Vec<i32>>> = zipped
