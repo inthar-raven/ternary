@@ -1,3 +1,6 @@
+// Import the ternary library
+import TernaryLib from "./ternary.js";
+
 // consts for the lattice view
 const LATTICE_SVG_WIDTH = 600;
 const LATTICE_SVG_HEIGHT = 600;
@@ -279,7 +282,8 @@ function tableHead(data, header = "") {
   return table;
 }
 
-import("./pkg").then((wasm) => {
+// Main application code (using TernaryLib imported at top)
+(function initApp() {
   // New approach:
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
@@ -316,6 +320,8 @@ import("./pkg").then((wasm) => {
           if (currentLatticeBasis) {
             let g = currentLatticeBasis[0];
             let h = currentLatticeBasis[1];
+            // Helper to get value from array or object with string keys
+            const getVal = (v, i) => Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
             let sig = [0, 0, 0];
             let n = currentWord.length;
             for (let i = 0; i < n; ++i) {
@@ -335,7 +341,7 @@ import("./pkg").then((wasm) => {
             }
             [A, B, C, D] = [1, 0, 0, 1];
             let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
-              [g[0], g[1], g[2], h[0], h[1], h[2], sig[0], sig[1], sig[2]],
+              [getVal(g, 0), getVal(g, 1), getVal(g, 2), getVal(h, 0), getVal(h, 1), getVal(h, 2), sig[0], sig[1], sig[2]],
               [A, B, C, D, 0, 0],
               3,
               3,
@@ -745,8 +751,8 @@ stack()`
   const RANK_LIMIT = 3;
   const NO_HIGH_RANK_SCALES = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
 
-  btnSig = document.getElementById("btn-sig");
-  btnWord = document.getElementById("btn-word");
+  const btnSig = document.getElementById("btn-sig");
+  const btnWord = document.getElementById("btn-word");
 
   btnSig.addEventListener("click", () => {
     const sigQuery = document.getElementById("input-step-sig").value;
@@ -815,30 +821,29 @@ stack()`
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edoTuningTable = document.getElementById("table-ed-tunings");
-          const sigResult = wasm.sig_result(
+          const sigResultData = TernaryLib.sigResult(
             sig,
-            document.getElementById("monotone-lm").checked,
-            document.getElementById("monotone-ms").checked,
-            document.getElementById("monotone-s0").checked,
-            Number(document.getElementById("ggs-len").value),
-            document.querySelector('input[name="ggs-len-constraint"]:checked')
-              .value,
-            Number(document.getElementById("complexity").value),
-            document.querySelector(
-              'input[name="complexity-constraint"]:checked',
-            ).value,
-            Number(document.getElementById("mv").value),
-            document.querySelector('input[name="mv-constraint"]:checked').value,
-            document.querySelector('input[name="mos-subst"]:checked').value,
+            {
+              lm: document.getElementById("monotone-lm").checked,
+              ms: document.getElementById("monotone-ms").checked,
+              s0: document.getElementById("monotone-s0").checked,
+              ggsLen: Number(document.getElementById("ggs-len").value),
+              ggsLenConstraint: document.querySelector('input[name="ggs-len-constraint"]:checked').value,
+              complexity: Number(document.getElementById("complexity").value),
+              complexityConstraint: document.querySelector('input[name="complexity-constraint"]:checked').value,
+              mv: Number(document.getElementById("mv").value),
+              mvConstraint: document.querySelector('input[name="mv-constraint"]:checked').value,
+              mosSubst: document.querySelector('input[name="mos-subst"]:checked').value
+            }
           );
-          const scales = sigResult["profiles"].map((j) => j["word"]);
-          const latticeBases = sigResult["profiles"].map(
+          const scales = sigResultData["profiles"].map((j) => j["word"]);
+          const latticeBases = sigResultData["profiles"].map(
             (j) => j["lattice_basis"],
           );
-          const profiles = sigResult["profiles"];
+          const profiles = sigResultData["profiles"];
 
-          const jiTunings = sigResult["ji_tunings"];
-          const edoTunings = sigResult["ed_tunings"];
+          const jiTunings = sigResultData["ji_tunings"];
+          const edoTunings = sigResultData["ed_tunings"];
           let letters;
           if (arity === 3) {
             letters = ["L", "m", "s"];
@@ -958,11 +963,11 @@ stack()`
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
-    const wordResult = wasm.word_result(query);
-    const profile = wordResult["profile"];
-    const brightestMode = wordResult["profile"]["word"];
-    const jiTunings = wordResult["ji_tunings"];
-    const edoTunings = wordResult["ed_tunings"];
+    const wordResultData = TernaryLib.wordResult(query);
+    const profile = wordResultData["profile"];
+    const brightestMode = wordResultData["profile"]["word"];
+    const jiTunings = wordResultData["ji_tunings"];
+    const edoTunings = wordResultData["ed_tunings"];
     document.getElementById("tables").innerHTML = `
                 <td>
                   JI tunings
@@ -1073,4 +1078,4 @@ stack()`
       statusElement.innerText = err;
     }
   });
-});
+})();
