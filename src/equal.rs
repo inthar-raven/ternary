@@ -90,8 +90,8 @@ pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
 
 /// Whether `test_value` in cents is in the tuning range of a given interval ax + by + cz in a ternary scale aL bm cs.
 /// The tuning range of a given step vector xL + ym + zs is the convex hull of the three degenerate tunings for it:
-/// x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c), i.e. the closed interval
-/// [min(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c)), max(x\\a, (x+y)\\(a+b), (x+y+z)\\(a+b+c))].
+/// x\\a, (x+y) \\ (a+b), (x+y+z) \\ (a+b+c), i.e. the closed interval
+/// [min(x\\a, (x+y) \\ (a+b), (x+y+z) \\ (a+b+c)), max(x\\a, (x+y) \\ (a+b), (x+y+z) \\ (a+b+c))].
 /// In short, this follows from observing that the tuning range of a ternary scale is the convex hull of the degenerate 1:0:0, 1:1:0, and 1:1:1 tunings
 /// and taking mediants for the tuning of a given interval in the ternary scale.
 pub fn is_in_tuning_range(
