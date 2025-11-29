@@ -59,17 +59,17 @@ function modinv(a, b) {
  * Extended Euclidean algorithm: returns [gcd, x, y] such that ax + by = gcd
  */
 function extendedGcd(a, b) {
-  let [oldR, r] = [a, b];
-  let [oldS, s] = [1, 0];
-  let [oldT, t] = [0, 1];
+  let [rOld, r] = [a, b];
+  let [sOld, s] = [1, 0];
+  let [tOld, t] = [0, 1];
 
   while (r !== 0) {
-    const quotient = Math.floor(oldR / r);
-    [oldR, r] = [r, oldR - quotient * r];
-    [oldS, s] = [s, oldS - quotient * s];
-    [oldT, t] = [t, oldT - quotient * t];
+    const quotient = Math.floor(rOld / r);
+    [rOld, r] = [r, rOld - quotient * r];
+    [sOld, s] = [s, sOld - quotient * s];
+    [tOld, t] = [t, tOld - quotient * t];
   }
-  return [oldR, oldS, oldT];
+  return [rOld, sOld, tOld];
 }
 
 /**
