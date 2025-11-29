@@ -389,13 +389,14 @@ function tableHead(data, header = "") {
             cy="${currentY}"
             r="${UNOCCUPIED_DOT_RADIUS}"
             color="white"
-            stroke="black"
+            fill="white"
+            stroke="white"
             stroke-width="1"
           />
           <text
             x="${currentX - 3}"
             y="${currentY + 3}"
-            fill="white"
+            fill="black"
             font-size="0.5em"
           >${modulo(deg, n)}</text>`;
               switch (currentWord[deg]) {
