@@ -24,7 +24,7 @@ const statusElement = document.getElementById("status");
 function countL(st) {
   let result = 0;
   for (let i = 0; i < st.length; ++i) {
-    if (st[i] === 'L') {
+    if (st[i] === "L") {
       ++result;
     }
   }
@@ -33,7 +33,7 @@ function countL(st) {
 function countM(st) {
   let result = 0;
   for (let i = 0; i < st.length; ++i) {
-    if (st[i] === 'm') {
+    if (st[i] === "m") {
       ++result;
     }
   }
@@ -42,7 +42,7 @@ function countM(st) {
 function countS(st) {
   let result = 0;
   for (let i = 0; i < st.length; ++i) {
-    if (st[i] === 's') {
+    if (st[i] === "s") {
       ++result;
     }
   }
@@ -416,8 +416,7 @@ import("./pkg").then((wasm) => {
             );
             latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
             // Add zoom buttons
-            latticeElement.innerHTML += 
-    `<div class="controls">
+            latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
         <button id="zoom-out">Zoom Out (-)</button>
         <button id="reset-view">Reset View</button>
@@ -426,118 +425,121 @@ import("./pkg").then((wasm) => {
             latticeElement.appendChild(svgTag);
 
             // Zoom functionality
-            const zoomInButton = document.getElementById('zoom-in');
-            const zoomOutButton = document.getElementById('zoom-out');
-            const resetViewButton = document.getElementById('reset-view');
-            let currentZoom = 1.0;  // Initial zoom level
-            const zoomLevelDisplay = document.getElementById('zoom-level');
+            const zoomInButton = document.getElementById("zoom-in");
+            const zoomOutButton = document.getElementById("zoom-out");
+            const resetViewButton = document.getElementById("reset-view");
+            let currentZoom = 1.0; // Initial zoom level
+            const zoomLevelDisplay = document.getElementById("zoom-level");
             let viewBox = {
               x: 0,
               y: 0,
               width: 800,
-              height: 600
+              height: 600,
             };
-            
+
             let isPanning = false;
             let startPoint = { x: 0, y: 0 };
             let scale = 1.0;
 
             // Update viewBox attribute
             function updateViewBox() {
-                svgTag.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
-                zoomLevelDisplay.textContent = Math.round(scale * 100) + '%';
+              svgTag.setAttribute(
+                "viewBox",
+                `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`,
+              );
+              zoomLevelDisplay.textContent = Math.round(scale * 100) + "%";
             }
 
             // Convert screen coordinates to SVG coordinates
             function getPointInSVG(e) {
-                const CTM = svgTag.getScreenCTM();
-                return {
-                    x: (e.clientX - CTM.e) / CTM.a,
-                    y: (e.clientY - CTM.f) / CTM.d
-                };
+              const CTM = svgTag.getScreenCTM();
+              return {
+                x: (e.clientX - CTM.e) / CTM.a,
+                y: (e.clientY - CTM.f) / CTM.d,
+              };
             }
-            
+
             // Mouse down - start panning
-            svgTag.addEventListener('mousedown', (e) => {
-                isPanning = true;
-                startPoint = getPointInSVG(e);
+            svgTag.addEventListener("mousedown", (e) => {
+              isPanning = true;
+              startPoint = getPointInSVG(e);
             });
-            
+
             // Mouse move - pan
-            svgTag.addEventListener('mousemove', (e) => {
-                if (!isPanning) return;
-                
-                e.preventDefault();
-                const currentPoint = getPointInSVG(e);
-                const dx = currentPoint.x - startPoint.x;
-                const dy = currentPoint.y - startPoint.y;
-                
-                viewBox.x -= dx;
-                viewBox.y -= dy;
-                
-                updateViewBox();
+            svgTag.addEventListener("mousemove", (e) => {
+              if (!isPanning) return;
+
+              e.preventDefault();
+              const currentPoint = getPointInSVG(e);
+              const dx = currentPoint.x - startPoint.x;
+              const dy = currentPoint.y - startPoint.y;
+
+              viewBox.x -= dx;
+              viewBox.y -= dy;
+
+              updateViewBox();
             });
-            
+
             // Mouse up - stop panning
-            svgTag.addEventListener('mouseup', () => {
-                isPanning = false;
+            svgTag.addEventListener("mouseup", () => {
+              isPanning = false;
             });
-            
-            svgTag.addEventListener('mouseleave', () => {
-                isPanning = false;
+
+            svgTag.addEventListener("mouseleave", () => {
+              isPanning = false;
             });
-            
+
             // Wheel - zoom
-            svgTag.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                
-                const point = getPointInSVG(e);
-                const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
-                
-                // Calculate new dimensions
-                const newWidth = viewBox.width * zoomFactor;
-                const newHeight = viewBox.height * zoomFactor;
-                
-                // Adjust position to zoom towards mouse cursor
-                viewBox.x += (point.x - viewBox.x) * (1 - zoomFactor);
-                viewBox.y += (point.y - viewBox.y) * (1 - zoomFactor);
-                
-                viewBox.width = newWidth;
-                viewBox.height = newHeight;
-                
-                scale = 800 / viewBox.width;
-                
-                updateViewBox();
+            svgTag.addEventListener("wheel", (e) => {
+              e.preventDefault();
+
+              const point = getPointInSVG(e);
+              const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
+
+              // Calculate new dimensions
+              const newWidth = viewBox.width * zoomFactor;
+              const newHeight = viewBox.height * zoomFactor;
+
+              // Adjust position to zoom towards mouse cursor
+              viewBox.x += (point.x - viewBox.x) * (1 - zoomFactor);
+              viewBox.y += (point.y - viewBox.y) * (1 - zoomFactor);
+
+              viewBox.width = newWidth;
+              viewBox.height = newHeight;
+
+              scale = 800 / viewBox.width;
+
+              updateViewBox();
             });
 
             // Button functions
-            zoomInButton.addEventListener('click', () => {
+            zoomInButton.addEventListener("click", () => {
               const centerX = viewBox.x + viewBox.width / 2;
               const centerY = viewBox.y + viewBox.height / 2;
-              
+
               viewBox.width *= 0.8;
               viewBox.height *= 0.8;
-              
+
               viewBox.x = centerX - viewBox.width / 2;
               viewBox.y = centerY - viewBox.height / 2;
-              
+
               scale = 800 / viewBox.width;
               updateViewBox();
             });
-            zoomOutButton.addEventListener('click', () => {
+            zoomOutButton.addEventListener("click", () => {
               const centerX = viewBox.x + viewBox.width / 2;
               const centerY = viewBox.y + viewBox.height / 2;
-              
+
               viewBox.width *= 1.25;
               viewBox.height *= 1.25;
-              
+
               viewBox.x = centerX - viewBox.width / 2;
               viewBox.y = centerY - viewBox.height / 2;
-              
+
               scale = 800 / viewBox.width;
               updateViewBox();
             });
-            resetViewButton.addEventListener('click', () => {
+            resetViewButton.addEventListener("click", () => {
               viewBox = { x: 0, y: 0, width: 800, height: 600 };
               scale = 1;
               updateViewBox();
@@ -675,9 +677,15 @@ stack()`
           const c = countS(currentWord);
 
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
-          el.innerHTML += currentProfile["subst_l_ms"] ? `subst ${a}L(${b}m${c}s)<br/>` : "";
-          el.innerHTML += currentProfile["subst_m_ls"] ? `subst ${b}m(${a}L${c}s)<br/>` : "";
-          el.innerHTML += currentProfile["subst_s_lm"] ? `subst ${c}s(${a}L${b}m)<br/>` : "";
+          el.innerHTML += currentProfile["subst_l_ms"]
+            ? `subst ${a}L(${b}m${c}s)<br/>`
+            : "";
+          el.innerHTML += currentProfile["subst_m_ls"]
+            ? `subst ${b}m(${a}L${c}s)<br/>`
+            : "";
+          el.innerHTML += currentProfile["subst_s_lm"]
+            ? `subst ${c}s(${a}L${b}m)<br/>`
+            : "";
 
           if (currentProfile["chirality"] === "Achiral") {
             el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
