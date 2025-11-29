@@ -218,7 +218,7 @@ impl Monzo {
     }
     /// Attempt to convert a JI ratio into a monzo.
     pub fn try_from_ratio(r: RawJiRatio) -> Result<Monzo, CantMakeMonzo> {
-        // SAFETY: A `RawJiRatio` will never have zero numerator or denominator.
+        // A `RawJiRatio` will never have zero numerator or denominator.
         Monzo::try_new(r.numer(), r.denom())
     }
     /// Attempt to convert a monzo into a JI ratio.
@@ -1873,8 +1873,6 @@ pub fn solve_step_sig(step_sig: &[usize], equave: Monzo, exponent_bound: i32) ->
         .collect::<Vec<_>>()
 }
 
-/// Take a list of vectors and produce all combinations (cartesian product).
-/// Used for combining solution sets from multiple linear Diophantine equations.
 fn multi_zip<T>(vecs: &[Vec<T>]) -> Vec<Vec<T>>
 where
     T: Copy,
