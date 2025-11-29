@@ -61,8 +61,6 @@ fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
 /// Sawada (2003)'s algorithm for enumerating necklaces with a given step signature ("content"),
 /// where `content[i]` = the number of occurrences of the letter `i`.
 /// Assumes that `content` does not have any `0` entries.
-///
-/// (We're deliberately making this computation async, as it is expensive for large inputs and may need to be timed out by the caller.)
 pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
     if content.is_empty() {
         vec![]
@@ -277,7 +275,7 @@ impl VecPerm {
             pi: (0..len).collect::<Vec<_>>(),
         }
     }
-    /// The permutation `(i j)` in cycle notation (the identity if `i == j`). Returns a `PermutationError` if either argument is out of bounds.
+    /// The permutation `(i j)` in cycle notation (the identity if `i == j`).
     pub fn transposition(len: usize, i: usize, j: usize) -> Self {
         if i > len {
             return Self::id(len);

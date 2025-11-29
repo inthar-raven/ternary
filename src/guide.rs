@@ -177,7 +177,8 @@ impl Ploidacot {
 /// Diachrome is currently considered to have multiplicity 2 rather than having a polyoffset of 6 notes.
 /// As ad-hoc as it may seem, this complexity measure rests on the "thin" generator-offset structure of nice ternary scales
 /// (i.e. one side is the generator which there is usually much more of than there are offsets)
-/// and yields reasonable complexities for quasi-diatonic aberrismic scales. I might rename what I call these guide frame structures in light of this.)
+/// and yields reasonable complexities for quasi-diatonic aberrismic scales.
+/// I might rename what I call these guide frame structures in light of this.)
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
     /// Either Guided GS or multiple interleaved GSes that are Guided GSes when considered individually.

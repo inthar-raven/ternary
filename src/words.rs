@@ -370,7 +370,7 @@ pub fn darkest_mos_mode_and_gen_bresenham(
 ) -> (Vec<Letter>, CountVector<Letter>) {
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
-        let count_gen_steps = modinv(a as i64, a as i64 + b as i64)
+        let count_gener_steps = modinv(a as i64, a as i64 + b as i64)
                 .expect("The dark generator is a (|L|⁻¹ mod |scale|)-step, since stacking it |L| times results in the s step (mod period).")
                 as usize;
         let mut result_scale: Vec<usize> = vec![];
@@ -389,11 +389,11 @@ pub fn darkest_mos_mode_and_gen_bresenham(
         }
         // Get the dark generator. We know how many steps and that this will give the perfect generator, not the
         // augmented one, since we just got the darkest mode.
-        let result_gen = CountVector::from_slice(&result_scale[0..count_gen_steps]);
-        (result_scale, result_gen)
+        let result_gener = CountVector::from_slice(&result_scale[0..count_gener_steps]);
+        (result_scale, result_gener)
     } else {
-        let (prim_mos, r#gen) = darkest_mos_mode_and_gen_bresenham(a / d, b / d);
-        (prim_mos.repeat(d), r#gen)
+        let (prim_mos, gener) = darkest_mos_mode_and_gen_bresenham(a / d, b / d);
+        (prim_mos.repeat(d), gener)
     }
 }
 
@@ -443,7 +443,7 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
         // so first substitute 'z's for 'x's, and then
         // return (`first`)^`count_first` `second` (in standard mathematical word notation).
         // The dark generator is obtained by subtracting the Parikh vector of `first` form that of the MOS scale.
-        let r#gen = CountVector(BTreeMap::from_iter(
+        let gener = CountVector(BTreeMap::from_iter(
             [a as i32, b as i32].into_iter().enumerate(),
         ))
         .add(&CountVector::from_slice(&first).neg()); // Do this before consuming `first` in the next line.
@@ -451,10 +451,10 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
         scale.extend_from_slice(&second);
         // Reverse the scale word, since Bjorklund's algorithm has given us the brightest mode.
         scale.reverse();
-        (scale, r#gen)
+        (scale, gener)
     } else {
-        let (primitive_mos, r#gen) = darkest_mos_mode_and_gen_bjorklund(a / d, b / d);
-        (primitive_mos.repeat(d), r#gen)
+        let (primitive_mos, gener) = darkest_mos_mode_and_gen_bjorklund(a / d, b / d);
+        (primitive_mos.repeat(d), gener)
     }
 }
 

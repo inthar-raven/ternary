@@ -15,7 +15,7 @@ use crate::primes::{factorize, log_primes, SMALL_PRIMES, SMALL_PRIMES_COUNT};
 type Weighting = fn(Monzo) -> [f64; SMALL_PRIMES_COUNT];
 
 macro_rules! const_concat {
-    ($($s:expr_2021),+) => {{
+    ($($s:expr),+) => {{
         const LEN: usize = $( $s.len() + )* 0;
         {
             let mut arr = [0; LEN];
@@ -40,10 +40,10 @@ macro_rules! monzo {
     () => (
         $crate::monzo::Monzo::UNISON
     );
-    ($elem:expr_2021; $n:expr_2021) => (
+    ($elem:expr; $n:expr) => (
         $crate::monzo::Monzo(nalgebra::SVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_column_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
-    ($($x:expr_2021),+ $(,)?) => (
+    ($($x:expr),+ $(,)?) => (
         $crate::monzo::Monzo::from_slice(&[$($x),+])
     );
 }
@@ -54,7 +54,7 @@ macro_rules! const_monzo {
     () => (
         $crate::monzo::Monzo::UNISON
     );
-    ($($x:expr_2021),+ $(,)?) => (
+    ($($x:expr),+ $(,)?) => (
         $crate::monzo::Monzo::from_array([$($x),+])
     );
 

@@ -37,7 +37,7 @@ impl Val {
             ),
         )
     }
-    /// Find how many steps a given val maps a monzo (a prime-factorized JI ratio).
+    /// Find how many steps a given val maps a monzo (a prime-factorized JI ratio) to.
     pub fn evaluate(&self, monzo: Monzo) -> i32 {
         (self.0 * monzo.into_inner())[0]
     }
@@ -148,7 +148,7 @@ pub fn odd_limit_l1_error(odd: u64, edo: f64) -> f64 {
         .sum()
 }
 
-/// L^1 error on a specified odd limit.
+/// L^2 error on a specified odd limit.
 pub fn odd_limit_l2_error(odd: u64, edo: f64) -> f64 {
     odd_limit(odd)
         .into_iter()
@@ -165,10 +165,10 @@ macro_rules! val {
     () => (
         $crate::equal::Val::ZERO
     );
-    ($elem:expr_2021; $n:expr_2021) => (
+    ($elem:expr; $n:expr) => (
         $crate::equal::Val(nalgebra::RowSVector::<i32, {$crate::primes::SMALL_PRIMES_COUNT}>::from_row_slice(&[$elem; $crate::primes::SMALL_PRIMES_COUNT]))
     );
-    ($($x:expr_2021),+ $(,)?) => (
+    ($($x:expr),+ $(,)?) => (
         $crate::equal::Val::from_slice(&[$($x),+])
     );
 }
