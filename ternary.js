@@ -1,6 +1,6 @@
 /**
  * Ternary Scale Analysis Library
- * 
+ *
  * Provides scale analysis, guide frame detection, and tuning computations
  * for ternary scales.
  */
@@ -14,17 +14,17 @@ const S_LOWER_BOUND = 20.0;
 const S_UPPER_BOUND = 200.0;
 
 const STEP_LETTERS = [
-  "",                                                     // 0
-  "X",                                                    // 1
-  "Ls",                                                   // 2
-  "Lms",                                                  // 3
-  "Lmns",                                                 // 4
-  "HLmns",                                                // 5
-  "HLmnst",                                               // 6
-  "BHLmnst",                                              // 7
-  "BHLmnstw",                                             // 8
-  "BCHLmnstw",                                            // 9
-  "BCHLmnpstw",                                           // 10
+  "", // 0
+  "X", // 1
+  "Ls", // 2
+  "Lms", // 3
+  "Lmns", // 4
+  "HLmns", // 5
+  "HLmnst", // 6
+  "BHLmnst", // 7
+  "BHLmnstw", // 8
+  "BCHLmnstw", // 9
+  "BCHLmnpstw", // 10
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", // >= 11
 ];
 
@@ -69,7 +69,7 @@ function extendedGcd(a, b) {
   let [oldR, r] = [a, b];
   let [oldS, s] = [1, 0];
   let [oldT, t] = [0, 1];
-  
+
   while (r !== 0) {
     const quotient = Math.floor(oldR / r);
     [oldR, r] = [r, oldR - quotient * r];
@@ -135,7 +135,7 @@ function booth(scale) {
   const n = scale.length;
   const f = new Array(2 * n).fill(-1);
   let k = 0;
-  
+
   for (let j = 1; j < 2 * n; j++) {
     let i = f[j - k - 1];
     while (i !== -1 && scale[j % n] !== scale[(k + i + 1) % n]) {
@@ -174,9 +174,9 @@ class CountVector {
   constructor(map = new Map()) {
     this.map = new Map(map);
   }
-  
+
   static ZERO = new CountVector();
-  
+
   static fromSlice(arr) {
     const map = new Map();
     for (const elem of arr) {
@@ -184,11 +184,13 @@ class CountVector {
     }
     return new CountVector(map);
   }
-  
+
   static fromObject(obj) {
-    return new CountVector(new Map(Object.entries(obj).map(([k, v]) => [parseInt(k), v])));
+    return new CountVector(
+      new Map(Object.entries(obj).map(([k, v]) => [parseInt(k), v])),
+    );
   }
-  
+
   add(other) {
     const result = new Map(this.map);
     for (const [key, value] of other.map) {
@@ -201,7 +203,7 @@ class CountVector {
     }
     return new CountVector(result);
   }
-  
+
   neg() {
     const result = new Map();
     for (const [key, value] of this.map) {
@@ -209,7 +211,7 @@ class CountVector {
     }
     return new CountVector(result);
   }
-  
+
   scalarMul(lambda) {
     const result = new Map();
     for (const [key, value] of this.map) {
@@ -217,11 +219,11 @@ class CountVector {
     }
     return new CountVector(result);
   }
-  
+
   get(key) {
     return this.map.get(key) || 0;
   }
-  
+
   len() {
     let sum = 0;
     for (const value of this.map.values()) {
@@ -229,15 +231,15 @@ class CountVector {
     }
     return sum;
   }
-  
+
   isEmpty() {
     return this.len() === 0;
   }
-  
+
   keys() {
     return [...this.map.keys()].sort((a, b) => a - b);
   }
-  
+
   toObject() {
     const obj = {};
     for (const [key, value] of this.map) {
@@ -245,7 +247,7 @@ class CountVector {
     }
     return obj;
   }
-  
+
   toArray() {
     const maxKey = Math.max(...this.keys(), 0);
     const arr = new Array(maxKey + 1).fill(0);
@@ -254,7 +256,7 @@ class CountVector {
     }
     return arr;
   }
-  
+
   equals(other) {
     if (this.map.size !== other.map.size) return false;
     for (const [key, value] of this.map) {
@@ -262,7 +264,7 @@ class CountVector {
     }
     return true;
   }
-  
+
   toString() {
     return JSON.stringify(this.toObject());
   }
@@ -338,7 +340,7 @@ function darkestMosModeAndGenBresenham(a, b) {
     const countGenerSteps = modinv(a, a + b);
     const resultScale = [];
     let [currentX, currentY] = [0, 0];
-    
+
     while (currentX !== a || currentY !== b) {
       if (a * currentY >= b * (currentX + 1)) {
         currentX += 1;
@@ -348,8 +350,10 @@ function darkestMosModeAndGenBresenham(a, b) {
         resultScale.push(1);
       }
     }
-    
-    const resultGener = CountVector.fromSlice(resultScale.slice(0, countGenerSteps));
+
+    const resultGener = CountVector.fromSlice(
+      resultScale.slice(0, countGenerSteps),
+    );
     return [resultScale, resultGener];
   } else {
     const [primMos, gener] = darkestMosModeAndGenBresenham(a / d, b / d);
@@ -388,14 +392,14 @@ function stepVariety(scale) {
  * Replace all instances of one letter with another
  */
 function replace(scale, from, to) {
-  return scale.map(x => x === from ? to : x);
+  return scale.map((x) => (x === from ? to : x));
 }
 
 /**
  * Delete all instances of a letter
  */
 function deleteStep(scale, letter) {
-  return scale.filter(x => x !== letter);
+  return scale.filter((x) => x !== letter);
 }
 
 /**
@@ -424,9 +428,9 @@ function monotoneS0(scale) {
  */
 function subst(template, x, filler) {
   if (filler.length === 0) {
-    return template.filter(letter => letter !== x);
+    return template.filter((letter) => letter !== x);
   }
-  
+
   const result = [];
   let i = 0;
   for (const letter of template) {
@@ -446,12 +450,15 @@ function subst(template, x, filler) {
 function mosSubstitutionScalesOnePerm(n0, n1, n2) {
   const [template, _] = darkestMosModeAndGenBresenham(n0, n1 + n2);
   const [filler, gener] = darkestMosModeAndGenBresenham(n1, n2);
-  const fillerShifted = filler.map(x => x + 1);
+  const fillerShifted = filler.map((x) => x + 1);
   const generSize = gener.len();
-  
+
   const results = [];
   for (let i = 0; i < n1 + n2; i++) {
-    const rotatedFiller = rotate(fillerShifted, (i * generSize) % fillerShifted.length);
+    const rotatedFiller = rotate(
+      fillerShifted,
+      (i * generSize) % fillerShifted.length,
+    );
     results.push(subst(template, 1, rotatedFiller));
   }
   return results;
@@ -462,32 +469,34 @@ function mosSubstitutionScalesOnePerm(n0, n1, n2) {
  */
 function mosSubstitutionScales(sig) {
   const [n0, n1, n2] = sig;
-  
+
   // n0L (n1m n2s)
   const scales1 = mosSubstitutionScalesOnePerm(n0, n1, n2);
-  
+
   // n1m (n0L n2s) -> map letters
-  const scales2 = mosSubstitutionScalesOnePerm(n1, n2, n0)
-    .map(scale => scale.map(x => (x + 1) % 3));
-  
+  const scales2 = mosSubstitutionScalesOnePerm(n1, n2, n0).map((scale) =>
+    scale.map((x) => (x + 1) % 3),
+  );
+
   // n2s (n0L n1m) -> map letters
-  const scales3 = mosSubstitutionScalesOnePerm(n2, n0, n1)
-    .map(scale => scale.map(x => x === 0 ? 2 : (x - 1) % 3));
-  
+  const scales3 = mosSubstitutionScalesOnePerm(n2, n0, n1).map((scale) =>
+    scale.map((x) => (x === 0 ? 2 : (x - 1) % 3)),
+  );
+
   const allScales = [...scales1, ...scales2, ...scales3];
-  
+
   // Canonicalize and deduplicate
   const seen = new Set();
   const unique = [];
   for (const scale of allScales) {
     const canonical = leastMode(scale);
-    const key = canonical.join(',');
+    const key = canonical.join(",");
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(canonical);
     }
   }
-  
+
   return unique.sort((a, b) => compareArrays(a, b));
 }
 
@@ -495,9 +504,11 @@ function mosSubstitutionScales(sig) {
  * Check if scale is a MOS substitution scale
  */
 function isMosSubst(scale, t, f1, f2) {
-  return stepVariety(scale) === 3 &&
-         maximumVariety(deleteStep(scale, t)) === 2 &&
-         maximumVariety(replace(scale, f1, f2)) === 2;
+  return (
+    stepVariety(scale) === 3 &&
+    maximumVariety(deleteStep(scale, t)) === 2 &&
+    maximumVariety(replace(scale, f1, f2)) === 2
+  );
 }
 
 /**
@@ -507,7 +518,7 @@ function chirality(word) {
   const leastModeWord = leastMode(word);
   const wordRev = [...word].reverse();
   const leastModeWordRev = leastMode(wordRev);
-  
+
   const cmp = compareArrays(leastModeWord, leastModeWordRev);
   if (cmp < 0) return "Right";
   if (cmp > 0) return "Left";
@@ -551,12 +562,12 @@ function stackedKSteps(k, neck) {
 function guidedGsChains(chain) {
   const len = chain.length;
   const results = [];
-  
+
   for (const rotation of rotations(chain)) {
     // Check if the last element is different from all previous elements
     const last = rotation[len - 1];
     const prefix = rotation.slice(0, len - 1);
-    
+
     let foundDuplicate = false;
     for (const cv of prefix) {
       if (cv.equals(last)) {
@@ -564,12 +575,12 @@ function guidedGsChains(chain) {
         break;
       }
     }
-    
+
     if (!foundDuplicate) {
       results.push(weakPeriodCountVector(prefix));
     }
   }
-  
+
   return results;
 }
 
@@ -606,13 +617,13 @@ function kStepGuidedGsList(k, neck) {
 function guidedGsList(neck) {
   const len = neck.length;
   const results = [];
-  
+
   for (let k = 2; k <= len - 2; k++) {
     if (gcd(k, len) === 1) {
       results.push(...kStepGuidedGsList(k, neck));
     }
   }
-  
+
   return results;
 }
 
@@ -621,7 +632,7 @@ function guidedGsList(neck) {
  */
 function offsetVec(vec1, vec2) {
   if (vec1.length !== vec2.length) return null;
-  
+
   for (let i = 0; i < vec1.length; i++) {
     const rotated = rotate(vec2, i);
     let matches = true;
@@ -646,32 +657,37 @@ class GuideFrame {
     this.gs = gs;
     this.polyoffset = polyoffset;
   }
-  
+
   complexity() {
     return this.gs.length * this.polyoffset.length;
   }
-  
+
   multiplicity() {
     return this.polyoffset.length;
   }
-  
+
   static trySimple(scale, k) {
     if (scale.length === 0 || gcd(scale.length, k) !== 1) {
       return [];
     }
-    
-    return kStepGuidedGsList(k, scale)
-      .map(gs => new GuideFrame(gs, [CountVector.ZERO]));
+
+    return kStepGuidedGsList(k, scale).map(
+      (gs) => new GuideFrame(gs, [CountVector.ZERO]),
+    );
   }
-  
+
   static tryMultiple(scale, multiplicity, k) {
-    if (multiplicity === 1 || scale.length === 0 || scale.length % multiplicity !== 0) {
+    if (
+      multiplicity === 1 ||
+      scale.length === 0 ||
+      scale.length % multiplicity !== 0
+    ) {
       return [];
     }
-    
+
     const d = gcd(k, scale.length);
     const coD = scale.length / d;
-    
+
     if (coD % multiplicity !== 0) {
       if (d === multiplicity) {
         // Interleaved scale
@@ -681,28 +697,30 @@ class GuideFrame {
           const stacked = stackedKSteps(d, rotation);
           subscales.push(stacked.slice(0, scale.length / d));
         }
-        
+
         const subscaleOnRoot = subscales[0];
         const offsets = [];
-        
+
         for (let i = 0; i < subscales.length; i++) {
           const offset = offsetVec(subscaleOnRoot, subscales[i]);
           if (offset === null) return [];
-          offsets.push(CountVector.fromSlice(wordOnDegree(scale, 0, offset * d + i)));
+          offsets.push(
+            CountVector.fromSlice(wordOnDegree(scale, 0, offset * d + i)),
+          );
         }
-        
+
         offsets.sort((a, b) => a.len() - b.len());
-        
+
         if (offsets.length === 1 && offsets[0].equals(CountVector.ZERO)) {
           const gsList = guidedGsListForSubscale(subscaleOnRoot);
-          return gsList.map(gs => new GuideFrame(gs, [CountVector.ZERO]));
+          return gsList.map((gs) => new GuideFrame(gs, [CountVector.ZERO]));
         }
-        
+
         const gsList = guidedGsListForSubscale(subscaleOnRoot);
-        return gsList.map(gs => new GuideFrame(gs, offsets));
+        return gsList.map((gs) => new GuideFrame(gs, offsets));
       }
     }
-    
+
     return [];
   }
 }
@@ -714,10 +732,10 @@ function guidedGsListForSubscale(subscale) {
   if (subscale.length === 2) {
     return [[subscale[0]]];
   }
-  
+
   const len = subscale.length;
   const results = [];
-  
+
   for (let k = 2; k <= len / 2; k++) {
     if (gcd(k, len) === 1) {
       const stacked = [];
@@ -732,7 +750,7 @@ function guidedGsListForSubscale(subscale) {
       results.push(...guidedGsChains(stacked));
     }
   }
-  
+
   return results;
 }
 
@@ -742,14 +760,14 @@ function guidedGsListForSubscale(subscale) {
 function guideFrames(scale) {
   const results = [];
   const len = scale.length;
-  
+
   // Simple guide frames
   for (let k = 2; k <= len - 2; k++) {
     if (gcd(k, len) === 1) {
       results.push(...GuideFrame.trySimple(scale, k));
     }
   }
-  
+
   // Multiple/interleaved guide frames
   const factors = [];
   for (let m = 2; m <= Math.sqrt(len); m++) {
@@ -760,30 +778,30 @@ function guideFrames(scale) {
       }
     }
   }
-  
+
   for (const m of factors) {
     for (let k = 2; k <= len - 2; k++) {
       results.push(...GuideFrame.tryMultiple(scale, m, k));
     }
   }
-  
+
   // Sort by complexity
   results.sort((a, b) => a.complexity() - b.complexity());
-  
+
   // Remove duplicates
   const seen = new Set();
   const unique = [];
   for (const frame of results) {
     const key = JSON.stringify({
-      gs: frame.gs.map(cv => cv.toString()),
-      polyoffset: frame.polyoffset.map(cv => cv.toString())
+      gs: frame.gs.map((cv) => cv.toString()),
+      polyoffset: frame.polyoffset.map((cv) => cv.toString()),
     });
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(frame);
     }
   }
-  
+
   return unique;
 }
 
@@ -793,27 +811,27 @@ function guideFrames(scale) {
  */
 function guideFrameToResult(structure) {
   const { gs, polyoffset } = structure;
-  
+
   // Convert CountVector to object format with string keys
   const cvToObj = (cv) => ({
-    "0": cv.get(0) || 0,
-    "1": cv.get(1) || 0,
-    "2": cv.get(2) || 0
+    0: cv.get(0) || 0,
+    1: cv.get(1) || 0,
+    2: cv.get(2) || 0,
   });
-  
+
   const gsObjects = gs.map(cvToObj);
-  
+
   const aggregate = gs.reduce((acc, cv) => acc.add(cv), CountVector.ZERO);
   const aggregateObj = cvToObj(aggregate);
-  
+
   const polyoffsetObjects = polyoffset.map(cvToObj);
-  
+
   return {
     gs: gsObjects,
     aggregate: aggregateObj,
     polyoffset: polyoffsetObjects,
     multiplicity: structure.multiplicity(),
-    complexity: structure.complexity()
+    complexity: structure.complexity(),
   };
 }
 
@@ -823,14 +841,16 @@ function guideFrameToResult(structure) {
  */
 function det3(v0, v1, v2) {
   // Handle both array format and object format
-  const get = (v, i) => Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
-  
-  return get(v0, 0) * get(v1, 1) * get(v2, 2)
-       + get(v0, 1) * get(v1, 2) * get(v2, 0)
-       + get(v0, 2) * get(v1, 0) * get(v2, 1)
-       - get(v0, 2) * get(v1, 1) * get(v2, 0)
-       - get(v0, 1) * get(v1, 0) * get(v2, 2)
-       - get(v0, 0) * get(v1, 2) * get(v2, 1);
+  const get = (v, i) => (Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0));
+
+  return (
+    get(v0, 0) * get(v1, 1) * get(v2, 2) +
+    get(v0, 1) * get(v1, 2) * get(v2, 0) +
+    get(v0, 2) * get(v1, 0) * get(v2, 1) -
+    get(v0, 2) * get(v1, 1) * get(v2, 0) -
+    get(v0, 1) * get(v1, 0) * get(v2, 2) -
+    get(v0, 0) * get(v1, 2) * get(v2, 1)
+  );
 }
 
 /**
@@ -838,9 +858,9 @@ function det3(v0, v1, v2) {
  */
 function toStepVectorObj(v) {
   if (Array.isArray(v)) {
-    return { "0": v[0] || 0, "1": v[1] || 0, "2": v[2] || 0 };
+    return { 0: v[0] || 0, 1: v[1] || 0, 2: v[2] || 0 };
   }
-  return { "0": v["0"] || 0, "1": v["1"] || 0, "2": v["2"] || 0 };
+  return { 0: v["0"] || 0, 1: v["1"] || 0, 2: v["2"] || 0 };
 }
 
 /**
@@ -851,7 +871,7 @@ function getUnimodularBasis(structures, stepSig) {
     if (structure.multiplicity() === 1) {
       const result = guideFrameToResult(structure);
       const gs = result.gs;
-      
+
       // Check pairs from gs
       for (let i = 0; i < gs.length; i++) {
         for (let j = i; j < gs.length; j++) {
@@ -860,7 +880,7 @@ function getUnimodularBasis(structures, stepSig) {
           }
         }
       }
-      
+
       // Check polyoffset with gs
       const polyoffset = result.polyoffset;
       for (const v of polyoffset) {
@@ -877,7 +897,11 @@ function getUnimodularBasis(structures, stepSig) {
       if (polyoffset.length > 0) {
         const vecForOffset = polyoffset[polyoffset.length - 1];
         if (Math.abs(det3(stepSig, vecForGsElement, vecForOffset)) === 1) {
-          return [toStepVectorObj(vecForGsElement), toStepVectorObj(vecForOffset), result];
+          return [
+            toStepVectorObj(vecForGsElement),
+            toStepVectorObj(vecForOffset),
+            result,
+          ];
         }
       }
     }
@@ -895,7 +919,7 @@ function getUnimodularBasis(structures, stepSig) {
  */
 function necklacesFixedContent(content) {
   if (content.length === 0) return [];
-  
+
   // Filter out zeros and track the permutation
   const nonZeroContent = [];
   const letterMap = [];
@@ -905,55 +929,79 @@ function necklacesFixedContent(content) {
       nonZeroContent.push(content[i]);
     }
   }
-  
+
   if (nonZeroContent.length === 0) return [];
-  
+
   const arity = nonZeroContent.length;
   const scaleLen = nonZeroContent.reduce((a, b) => a + b, 0);
-  
+
   // Initialize
   const remContent = [...nonZeroContent];
   remContent[0] -= 1;
-  
+
   const word = [0];
   for (let i = 1; i < scaleLen; i++) {
     word.push(arity - 1);
   }
-  
+
   const availLetters = [];
   for (let i = arity - 1; i >= 0; i--) {
     if (i === 0 && remContent[0] === 0) continue;
     availLetters.push(i);
   }
-  
+
   const runs = new Array(scaleLen).fill(0);
   const collection = [];
-  
-  sawadaMut(remContent, runs, availLetters, word, 1, 1, 1, collection, arity, scaleLen);
-  
+
+  sawadaMut(
+    remContent,
+    runs,
+    availLetters,
+    word,
+    1,
+    1,
+    1,
+    collection,
+    arity,
+    scaleLen,
+  );
+
   // Map back to original letters
-  return collection.map(necklace => 
-    necklace.map(letter => letterMap[letter])
+  return collection.map((necklace) =>
+    necklace.map((letter) => letterMap[letter]),
   );
 }
 
 /**
  * Recursive Sawada algorithm implementation
  */
-function sawadaMut(remContent, runs, availLetters, a, t, p, s, currColl, arity, scaleLen) {
+function sawadaMut(
+  remContent,
+  runs,
+  availLetters,
+  a,
+  t,
+  p,
+  s,
+  currColl,
+  arity,
+  scaleLen,
+) {
   if (remContent[arity - 1] === scaleLen - t) {
-    if ((remContent[arity - 1] === runs[t - p] && scaleLen % p === 0) ||
-        remContent[arity - 1] > runs[t - p]) {
+    if (
+      (remContent[arity - 1] === runs[t - p] && scaleLen % p === 0) ||
+      remContent[arity - 1] > runs[t - p]
+    ) {
       currColl.push([...a]);
     }
   } else if (remContent[0] !== scaleLen - t) {
     if (availLetters.length > 0) {
       let jIdx = 0;
       let j = availLetters[jIdx];
-      
+
       while (j >= a[t - p]) {
         runs[s] = t - s;
-        
+
         const wasLastOfKind = remContent[j] === 1;
         if (wasLastOfKind) {
           const idx = availLetters.indexOf(j);
@@ -961,25 +1009,33 @@ function sawadaMut(remContent, runs, availLetters, a, t, p, s, currColl, arity, 
         }
         remContent[j] -= 1;
         a[t] = j;
-        
+
         sawadaMut(
-          remContent, runs, availLetters, a,
+          remContent,
+          runs,
+          availLetters,
+          a,
           t + 1,
           j === a[t - p] ? p : t + 1,
           j === arity - 1 ? s : t + 1,
-          currColl, arity, scaleLen
+          currColl,
+          arity,
+          scaleLen,
         );
-        
+
         if (wasLastOfKind) {
           // Find where to insert j back (maintaining descending order)
           let insertIdx = 0;
-          while (insertIdx < availLetters.length && availLetters[insertIdx] > j) {
+          while (
+            insertIdx < availLetters.length &&
+            availLetters[insertIdx] > j
+          ) {
             insertIdx++;
           }
           availLetters.splice(insertIdx, 0, j);
         }
         remContent[j] += 1;
-        
+
         // Find next smaller available letter
         jIdx++;
         while (jIdx < availLetters.length && availLetters[jIdx] >= j) {
@@ -1005,7 +1061,7 @@ function stringToNumbers(word) {
   const distinctChars = new Set(word);
   const arity = distinctChars.size;
   const letters = STEP_LETTERS[Math.min(arity, 11)];
-  
+
   for (const c of word) {
     const idx = letters.indexOf(c);
     if (idx !== -1) {
@@ -1022,7 +1078,7 @@ function numbersToString(word) {
   const distinctNums = new Set(word);
   const arity = distinctNums.size;
   const letters = STEP_LETTERS[Math.min(arity, 11)];
-  
+
   let result = "";
   for (const i of word) {
     if (i < letters.length) {
@@ -1062,11 +1118,11 @@ function stepsAsCents(steps, ed, equaveCents = 1200) {
 function isInTuningRange(testValue, stepSig, interval, equaveCents = 1200) {
   const [a, b, c] = stepSig;
   const [x, y, z] = interval;
-  
-  const value100 = equaveCents * x / a;
-  const value110 = equaveCents * (x + y) / (a + b);
-  const value111 = equaveCents * (x + y + z) / (a + b + c);
-  
+
+  const value100 = (equaveCents * x) / a;
+  const value110 = (equaveCents * (x + y)) / (a + b);
+  const value111 = (equaveCents * (x + y + z)) / (a + b + c);
+
   const values = [value100, value110, value111].sort((a, b) => a - b);
   return values[0] <= testValue && testValue <= values[2];
 }
@@ -1074,9 +1130,15 @@ function isInTuningRange(testValue, stepSig, interval, equaveCents = 1200) {
 /**
  * Find all ED tunings for a ternary step signature
  */
-function edTuningsForTernary(stepSig, edBound = EDO_BOUND, aberLower = S_LOWER_BOUND, aberUpper = S_UPPER_BOUND, equaveCents = 1200) {
+function edTuningsForTernary(
+  stepSig,
+  edBound = EDO_BOUND,
+  aberLower = S_LOWER_BOUND,
+  aberUpper = S_UPPER_BOUND,
+  equaveCents = 1200,
+) {
   const results = [];
-  
+
   for (let l = 3; l < edBound; l++) {
     for (let m = 2; m < l; m++) {
       for (let s = 1; s < m; s++) {
@@ -1090,7 +1152,7 @@ function edTuningsForTernary(stepSig, edBound = EDO_BOUND, aberLower = S_LOWER_B
       }
     }
   }
-  
+
   return results;
 }
 
@@ -1113,10 +1175,10 @@ function wordToProfile(query) {
   const substLMs = isMosSubst(query, 0, 1, 2);
   const substMLs = isMosSubst(query, 1, 0, 2);
   const substSLm = isMosSubst(query, 2, 0, 1);
-  
+
   const frames = guideFrames(query);
   const basisResult = getUnimodularBasis(frames, stepSig);
-  
+
   if (basisResult) {
     const [basis1, basis2, structure] = basisResult;
     return {
@@ -1131,7 +1193,7 @@ function wordToProfile(query) {
       subst_l_ms: substLMs,
       subst_m_ls: substMLs,
       subst_s_lm: substSLm,
-      mv: mv
+      mv: mv,
     };
   } else {
     return {
@@ -1146,7 +1208,7 @@ function wordToProfile(query) {
       subst_l_ms: substLMs,
       subst_m_ls: substMLs,
       subst_s_lm: substSLm,
-      mv: mv
+      mv: mv,
     };
   }
 }
@@ -1156,29 +1218,32 @@ function wordToProfile(query) {
  */
 function sigToEdTunings(stepSig) {
   const edTunings = edTuningsForTernary(stepSig);
-  return edTunings.map(v => {
+  return edTunings.map((v) => {
     const edo = v[0] * stepSig[0] + v[1] * stepSig[1] + v[2] * stepSig[2];
-    return v.map(i => `${i}\\${edo}`);
+    return v.map((i) => `${i}\\${edo}`);
   });
 }
 
 /**
  * Process a step signature query (main API function)
  */
-function sigResult(query, {
-  lm = false,
-  ms = false,
-  s0 = false,
-  ggsLen = 0,
-  ggsLenConstraint = "at most",
-  complexity = 0,
-  complexityConstraint = "at most",
-  mv = 0,
-  mvConstraint = "at most",
-  mosSubst = "off"
-} = {}) {
+function sigResult(
+  query,
+  {
+    lm = false,
+    ms = false,
+    s0 = false,
+    ggsLen = 0,
+    ggsLenConstraint = "at most",
+    complexity = 0,
+    complexityConstraint = "at most",
+    mv = 0,
+    mvConstraint = "at most",
+    mosSubst = "off",
+  } = {},
+) {
   const stepSig = query;
-  
+
   // Get all scales with this signature
   let scales;
   if (mosSubst === "on") {
@@ -1186,13 +1251,13 @@ function sigResult(query, {
   } else {
     scales = necklacesFixedContent(stepSig);
   }
-  
+
   // Apply filters
   const filteringCond = (scale) => {
     if (lm && !monotoneLm(scale)) return false;
     if (ms && !monotoneMs(scale)) return false;
     if (s0 && !monotoneS0(scale)) return false;
-    
+
     if (ggsLen > 0) {
       const frames = guideFrames(scale);
       if (frames.length === 0) return false;
@@ -1202,7 +1267,7 @@ function sigResult(query, {
         if (frames[0].gs.length > ggsLen) return false;
       }
     }
-    
+
     if (mv > 0) {
       const scaleMaxVar = maximumVariety(scale);
       if (mvConstraint === "exactly") {
@@ -1211,7 +1276,7 @@ function sigResult(query, {
         if (scaleMaxVar > mv) return false;
       }
     }
-    
+
     if (complexity > 0) {
       const frames = guideFrames(scale);
       if (frames.length === 0) return false;
@@ -1221,26 +1286,26 @@ function sigResult(query, {
         if (frames[0].complexity() > complexity) return false;
       }
     }
-    
+
     return true;
   };
-  
+
   scales = scales.filter(filteringCond);
-  
+
   // Generate profiles
-  const profiles = scales.map(scale => wordToProfile(scale));
-  
+  const profiles = scales.map((scale) => wordToProfile(scale));
+
   // Sort by complexity
   profiles.sort((a, b) => {
     const complexityA = a.structure ? a.structure.complexity : 255;
     const complexityB = b.structure ? b.structure.complexity : 255;
     return complexityA - complexityB;
   });
-  
+
   return {
     profiles: profiles,
     ji_tunings: [], // JI tunings are disabled for now (would require more complex computation)
-    ed_tunings: sigToEdTunings(stepSig)
+    ed_tunings: sigToEdTunings(stepSig),
   };
 }
 
@@ -1250,11 +1315,11 @@ function sigResult(query, {
 function wordResult(query) {
   const wordAsNumbers = stringToNumbers(query);
   const stepSig = wordToSig(wordAsNumbers);
-  
+
   return {
     profile: wordToProfile(wordAsNumbers),
     ji_tunings: [],
-    ed_tunings: sigToEdTunings(stepSig)
+    ed_tunings: sigToEdTunings(stepSig),
   };
 }
 
@@ -1286,7 +1351,7 @@ const TernaryLib = {
   S_LOWER_BOUND,
   S_UPPER_BOUND,
   STEP_LETTERS,
-  
+
   // Utility functions
   gcd,
   lcm,
@@ -1299,20 +1364,20 @@ const TernaryLib = {
   rotations,
   booth,
   leastMode,
-  
+
   // CountVector class
   CountVector,
-  
+
   // Word operations
   wordOnDegree,
   dyadOnDegree,
   distinctSpectrum,
   maximumVariety,
-  
+
   // MOS generation
   darkestMosModeAndGenBresenham,
   mosMode,
-  
+
   // Scale properties
   stepVariety,
   replace,
@@ -1325,7 +1390,7 @@ const TernaryLib = {
   isMosSubst,
   chirality,
   weakPeriod,
-  
+
   // Guide frames
   stackedKSteps,
   guidedGsChains,
@@ -1337,34 +1402,34 @@ const TernaryLib = {
   det3,
   toStepVectorObj,
   getUnimodularBasis,
-  
+
   // Necklace enumeration
   necklacesFixedContent,
-  
+
   // Conversion utilities
   stringToNumbers,
   numbersToString,
   wordToSig,
-  
+
   // ED tunings
   stepsAsCents,
   isInTuningRange,
   edTuningsForTernary,
-  
+
   // Main API
   wordToProfile,
   sigToEdTunings,
   sigResult,
   wordResult,
   wordToBrightest,
-  wordToMv
+  wordToMv,
 };
 
 // Export for different module systems
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = TernaryLib;
 }
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.TernaryLib = TernaryLib;
 }
 

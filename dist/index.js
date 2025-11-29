@@ -1,1 +1,1424 @@
-(()=>{"use strict";var e={250:(e,t,n)=>{n.d(t,{A:()=>Q}),e=n.hmd(e);const r=["","X","Ls","Lms","Lmns","HLmns","HLmnst","BHLmnst","BHLmnstw","BCHLmnstw","BCHLmnpstw","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"];function o(e,t){for(e=Math.abs(e),t=Math.abs(t);0!==t;)[e,t]=[t,e%t];return e}function s(e,t){const[n,r,o]=l(e,t);if(1!==n)throw new Error("Non-coprime generator error");return(r%t+t)%t}function l(e,t){let[n,r]=[e,t],[o,s]=[1,0],[l,i]=[0,1];for(;0!==r;){const e=Math.floor(n/r);[n,r]=[r,n-e*r],[o,s]=[s,o-e*s],[l,i]=[i,l-e*i]}return[n,o,l]}function i(e,t){return(e%t+t)%t}function c(e,t){if(0===e.length)return[...e];const n=i(t,e.length);return 0===n?[...e]:[...e.slice(n),...e.slice(0,n)]}function a(e,t){if(e.length!==t.length)return!1;for(let n=0;n<e.length;n++)if(e[n]!==t[n])return!1;return!0}function u(e,t){const n=Math.min(e.length,t.length);for(let r=0;r<n;r++){if(e[r]<t[r])return-1;if(e[r]>t[r])return 1}return e.length-t.length}function d(e){return Array.from({length:e.length},(t,n)=>c(e,n))}function f(e){const t=e.length,n=new Array(2*t).fill(-1);let r=0;for(let o=1;o<2*t;o++){let s=n[o-r-1];for(;-1!==s&&e[o%t]!==e[(r+s+1)%t];)e[o%t]<e[(r+s+1)%t]&&(r=o-s-1),s=n[s];-1===s&&e[o%t]!==e[(r+s+1)%t]?(e[o%t]<e[(r+s+1)%t]&&(r=o),n[o-r]=-1):n[o-r]=s+1}return r}function m(e){return c(e,f(e))}class h{constructor(e=new Map){this.map=new Map(e)}static ZERO=new h;static fromSlice(e){const t=new Map;for(const n of e)t.set(n,(t.get(n)||0)+1);return new h(t)}static fromObject(e){return new h(new Map(Object.entries(e).map(([e,t])=>[parseInt(e),t])))}add(e){const t=new Map(this.map);for(const[n,r]of e.map){const e=(t.get(n)||0)+r;0===e?t.delete(n):t.set(n,e)}return new h(t)}neg(){const e=new Map;for(const[t,n]of this.map)e.set(t,-n);return new h(e)}scalarMul(e){const t=new Map;for(const[n,r]of this.map)t.set(n,e*r);return new h(t)}get(e){return this.map.get(e)||0}len(){let e=0;for(const t of this.map.values())e+=Math.abs(t);return e}isEmpty(){return 0===this.len()}keys(){return[...this.map.keys()].sort((e,t)=>e-t)}toObject(){const e={};for(const[t,n]of this.map)e[t]=n;return e}toArray(){const e=Math.max(...this.keys(),0),t=new Array(e+1).fill(0);for(const[e,n]of this.map)t[e]=n;return t}equals(e){if(this.map.size!==e.map.size)return!1;for(const[t,n]of this.map)if(e.get(t)!==n)return!1;return!0}toString(){return JSON.stringify(this.toObject())}}function p(e,t,n){const r=c(e,t);if(n<=e.length)return r.slice(0,n);{const t=Math.floor(n/e.length),o=n%e.length;let s=[];for(let e=0;e<t;e++)s=s.concat(r);return s.concat(r.slice(0,o))}}function g(e,t,n){return h.fromSlice(p(e,t,n))}function y(e,t){const n=new Set,r=[];for(let o=0;o<e.length;o++){const s=g(e,o,t),l=s.toString();n.has(l)||(n.add(l),r.push(s))}return r}function b(e){if(0===e.length)return 0;let t=0;const n=Math.floor(e.length/2);for(let r=1;r<=n;r++){const n=y(e,r);t=Math.max(t,n.length)}return t}function w(e,t){const n=o(e,t);if(1===n){const n=s(e,e+t),r=[];let[o,l]=[0,0];for(;o!==e||l!==t;)e*l>=t*(o+1)?(o+=1,r.push(0)):(l+=1,r.push(1));const i=h.fromSlice(r.slice(0,n));return[r,i]}{const[r,o]=w(e/n,t/n),s=[];for(let e=0;e<n;e++)s.push(...r);return[s,o]}}function x(e){return new Set(e).size}function v(e,t,n){return e.map(e=>e===t?n:e)}function L(e,t){return e.filter(e=>e!==t)}function M(e){return 2===b(v(e,1,0))}function E(e){return 2===b(v(e,2,1))}function S(e){return 2===b(L(e,2))}function T(e,t,n){if(0===n.length)return e.filter(e=>e!==t);const r=[];let o=0;for(const s of e)s===t?(r.push(n[o%n.length]),o++):r.push(s);return r}function k(e,t,n){const[r,o]=w(e,t+n),[s,l]=w(t,n),i=s.map(e=>e+1),a=l.len(),u=[];for(let e=0;e<t+n;e++){const t=c(i,e*a%i.length);u.push(T(r,1,t))}return u}function $(e){const[t,n,r]=e,o=[...k(t,n,r),...k(n,r,t).map(e=>e.map(e=>(e+1)%3)),...k(r,t,n).map(e=>e.map(e=>0===e?2:(e-1)%3))],s=new Set,l=[];for(const e of o){const t=m(e),n=t.join(",");s.has(n)||(s.add(n),l.push(t))}return l.sort((e,t)=>u(e,t))}function C(e,t,n,r){return 3===x(e)&&2===b(L(e,t))&&2===b(v(e,n,r))}function N(e){const t=u(m(e),m([...e].reverse()));return t<0?"Right":t>0?"Left":"Achiral"}function _(e,t){return Array.from({length:t.length},(n,r)=>{const o=p(t,e*r,e);return h.fromSlice(o)})}function B(e){const t=e.length,n=[];for(const r of d(e)){const e=r[t-1],o=r.slice(0,t-1);let s=!1;for(const t of o)if(t.equals(e)){s=!0;break}s||n.push(O(o))}return n}function O(e){for(let t=1;t<=e.length;t++){const n=e.slice(0,t);let r=!0;for(let o=0;o<e.length;o++)if(!e[o].equals(n[o%t])){r=!1;break}if(r)return n}return e}function H(e,t){return B(_(e,t))}function A(e,t){if(e.length!==t.length)return null;for(let n=0;n<e.length;n++){const r=c(t,n);let o=!0;for(let t=0;t<e.length;t++)if(!e[t].equals(r[t])){o=!1;break}if(o)return n}return null}class I{constructor(e,t=[h.ZERO]){this.gs=e,this.polyoffset=t}complexity(){return this.gs.length*this.polyoffset.length}multiplicity(){return this.polyoffset.length}static trySimple(e,t){return 0===e.length||1!==o(e.length,t)?[]:H(t,e).map(e=>new I(e,[h.ZERO]))}static tryMultiple(e,t,n){if(1===t||0===e.length||e.length%t!==0)return[];const r=o(n,e.length);if(e.length/r%t!==0&&r===t){const t=[];for(let n=0;n<r;n++){const o=_(r,c(e,n));t.push(o.slice(0,e.length/r))}const n=t[0],o=[];for(let s=0;s<t.length;s++){const l=A(n,t[s]);if(null===l)return[];o.push(h.fromSlice(p(e,0,l*r+s)))}return o.sort((e,t)=>e.len()-t.len()),1===o.length&&o[0].equals(h.ZERO)?q(n).map(e=>new I(e,[h.ZERO])):q(n).map(e=>new I(e,o))}return[]}}function q(e){if(2===e.length)return[[e[0]]];const t=e.length,n=[];for(let r=2;r<=t/2;r++)if(1===o(r,t)){const o=[];for(let n=0;n<t;n++){let s=h.ZERO;for(let o=0;o<r;o++)s=s.add(e[(n*r+o)%t]);o.push(s)}n.push(...B(o))}return n}function j(e){const t=[],n=e.length;for(let r=2;r<=n-2;r++)1===o(r,n)&&t.push(...I.trySimple(e,r));const r=[];for(let e=2;e<=Math.sqrt(n);e++)n%e===0&&(r.push(e),e!==n/e&&r.push(n/e));for(const o of r)for(let r=2;r<=n-2;r++)t.push(...I.tryMultiple(e,o,r));t.sort((e,t)=>e.complexity()-t.complexity());const s=new Set,l=[];for(const e of t){const t=JSON.stringify({gs:e.gs.map(e=>e.toString()),polyoffset:e.polyoffset.map(e=>e.toString())});s.has(t)||(s.add(t),l.push(e))}return l}function R(e){const{gs:t,polyoffset:n}=e,r=e=>({0:e.get(0)||0,1:e.get(1)||0,2:e.get(2)||0});return{gs:t.map(r),aggregate:r(t.reduce((e,t)=>e.add(t),h.ZERO)),polyoffset:n.map(r),multiplicity:e.multiplicity(),complexity:e.complexity()}}function z(e,t,n){const r=(e,t)=>Array.isArray(e)?e[t]:e[String(t)]??e[t]??0;return r(e,0)*r(t,1)*r(n,2)+r(e,1)*r(t,2)*r(n,0)+r(e,2)*r(t,0)*r(n,1)-r(e,2)*r(t,1)*r(n,0)-r(e,1)*r(t,0)*r(n,2)-r(e,0)*r(t,2)*r(n,1)}function G(e){return Array.isArray(e),{0:e[0]||0,1:e[1]||0,2:e[2]||0}}function P(e,t){for(const n of e)if(1===n.multiplicity()){const e=R(n),r=e.gs;for(let n=0;n<r.length;n++)for(let o=n;o<r.length;o++)if(1===Math.abs(z(t,r[n],r[o])))return[G(r[n]),G(r[o]),e];const o=e.polyoffset;for(const n of o)for(const o of r)if(1===Math.abs(z(t,n,o)))return[G(n),G(o),e]}else{const e=R(n),r=e.gs[0],o=e.polyoffset;if(o.length>0){const n=o[o.length-1];if(1===Math.abs(z(t,r,n)))return[G(r),G(n),e]}}return null}function Z(e){if(0===e.length)return[];const t=[],n=[];for(let r=0;r<e.length;r++)e[r]>0&&(n.push(r),t.push(e[r]));if(0===t.length)return[];const r=t.length,o=t.reduce((e,t)=>e+t,0),s=[...t];s[0]-=1;const l=[0];for(let e=1;e<o;e++)l.push(r-1);const i=[];for(let e=r-1;e>=0;e--)0===e&&0===s[0]||i.push(e);const c=[];return D(s,new Array(o).fill(0),i,l,1,1,1,c,r,o),c.map(e=>e.map(e=>n[e]))}function D(e,t,n,r,o,s,l,i,c,a){if(e[c-1]===a-o)(e[c-1]===t[o-s]&&a%s===0||e[c-1]>t[o-s])&&i.push([...r]);else if(e[0]!==a-o){if(n.length>0){let u=0,d=n[u];for(;d>=r[o-s];){t[l]=o-l;const f=1===e[d];if(f){const e=n.indexOf(d);-1!==e&&n.splice(e,1)}if(e[d]-=1,r[o]=d,D(e,t,n,r,o+1,d===r[o-s]?s:o+1,d===c-1?l:o+1,i,c,a),f){let e=0;for(;e<n.length&&n[e]>d;)e++;n.splice(e,0,d)}for(e[d]+=1,u++;u<n.length&&n[u]>=d;)u++;if(u>=n.length)break;d=n[u]}}r[o]=c-1}}function J(e){const t=[],n=new Set(e).size,o=r[Math.min(n,11)];for(const n of e){const e=o.indexOf(n);-1!==e&&t.push(e)}return t}function U(e){const t=new Set(e).size,n=r[Math.min(t,11)];let o="";for(const t of e)t<n.length&&(o+=n[t]);return o}function F(e){const t=[0,0,0];for(const n of e)n<3&&t[n]++;return t}function V(e,t,n=1200){return e/t*n}function X(e,t=111,n=20,r=200,o=1200){const s=[];for(let l=3;l<t;l++)for(let i=2;i<l;i++)for(let c=1;c<i;c++){const a=l*e[0]+i*e[1]+c*e[2];if(a<=t){const e=V(c,a,o);n<=e&&e<=r&&s.push([l,i,c])}}return s}function W(e){const t=U(m(e)),n=M(e),r=E(e),o=S(e),s=N(e),l=U(m([...e].reverse())),i=b(e),c=F(e),a=C(e,0,1,2),u=C(e,1,0,2),d=C(e,2,0,1),f=P(j(e),c);if(f){const[e,c,m]=f;return{word:t,lattice_basis:[e,c],chirality:s,reversed:l,structure:m,lm:n,ms:r,s0:o,subst_l_ms:a,subst_m_ls:u,subst_s_lm:d,mv:i}}return{word:t,lattice_basis:null,chirality:s,reversed:l,structure:null,lm:n,ms:r,s0:o,subst_l_ms:a,subst_m_ls:u,subst_s_lm:d,mv:i}}function Y(e){return X(e).map(t=>{const n=t[0]*e[0]+t[1]*e[1]+t[2]*e[2];return t.map(e=>`${e}\\${n}`)})}const K={EDO_BOUND:111,S_LOWER_BOUND:20,S_UPPER_BOUND:200,STEP_LETTERS:r,gcd:o,lcm:function(e,t){return Math.abs(e*t)/o(e,t)},modinv:s,extendedGcd:l,mod:i,rotate:c,arraysEqual:a,compareArrays:u,rotations:d,booth:f,leastMode:m,CountVector:h,wordOnDegree:p,dyadOnDegree:g,distinctSpectrum:y,maximumVariety:b,darkestMosModeAndGenBresenham:w,mosMode:function(e,t,n){if(n>=e+t)throw new Error("Brightness out of range");const[r,o]=w(e,t);return c(r,n*o.len())},stepVariety:x,replace:v,deleteStep:L,monotoneLm:M,monotoneMs:E,monotoneS0:S,subst:T,mosSubstitutionScales:$,isMosSubst:C,chirality:N,weakPeriod:function(e){for(let t=1;t<=e.length;t++){const n=e.slice(0,t),r=[];for(;r.length<e.length;)r.push(...n);if(a(e,r.slice(0,e.length)))return n}return e},stackedKSteps:_,guidedGsChains:B,kStepGuidedGsList:H,guidedGsList:function(e){const t=e.length,n=[];for(let r=2;r<=t-2;r++)1===o(r,t)&&n.push(...H(r,e));return n},GuideFrame:I,guideFrames:j,guideFrameToResult:R,det3:z,toStepVectorObj:G,getUnimodularBasis:P,necklacesFixedContent:Z,stringToNumbers:J,numbersToString:U,wordToSig:F,stepsAsCents:V,isInTuningRange:function(e,t,n,r=1200){const[o,s,l]=t,[i,c,a]=n,u=[r*i/o,r*(i+c)/(o+s),r*(i+c+a)/(o+s+l)].sort((e,t)=>e-t);return u[0]<=e&&e<=u[2]},edTuningsForTernary:X,wordToProfile:W,sigToEdTunings:Y,sigResult:function(e,{lm:t=!1,ms:n=!1,s0:r=!1,ggsLen:o=0,ggsLenConstraint:s="at most",complexity:l=0,complexityConstraint:i="at most",mv:c=0,mvConstraint:a="at most",mosSubst:u="off"}={}){const d=e;let f;f="on"===u?$(d):Z(d),f=f.filter(e=>{if(t&&!M(e))return!1;if(n&&!E(e))return!1;if(r&&!S(e))return!1;if(o>0){const t=j(e);if(0===t.length)return!1;if("exactly"===s){if(t[0].gs.length!==o)return!1}else if(t[0].gs.length>o)return!1}if(c>0){const t=b(e);if("exactly"===a){if(t!==c)return!1}else if(t>c)return!1}if(l>0){const t=j(e);if(0===t.length)return!1;if("exactly"===i){if(t[0].complexity()!==l)return!1}else if(t[0].complexity()>l)return!1}return!0});const m=f.map(e=>W(e));return m.sort((e,t)=>(e.structure?e.structure.complexity:255)-(t.structure?t.structure.complexity:255)),{profiles:m,ji_tunings:[],ed_tunings:Y(d)}},wordResult:function(e){const t=J(e),n=F(t);return{profile:W(t),ji_tunings:[],ed_tunings:Y(n)}},wordToBrightest:function(e){return U(m(J(e)))},wordToMv:function(e){return b(J(e))}};e.exports&&(e.exports=K),"undefined"!=typeof window&&(window.TernaryLib=K);const Q=K}},t={};function n(r){var o=t[r];if(void 0!==o)return o.exports;var s=t[r]={id:r,loaded:!1,exports:{}};return e[r](s,s.exports,n),s.loaded=!0,s.exports}n.d=(e,t)=>{for(var r in t)n.o(t,r)&&!n.o(e,r)&&Object.defineProperty(e,r,{enumerable:!0,get:t[r]})},n.hmd=e=>((e=Object.create(e)).children||(e.children=[]),Object.defineProperty(e,"exports",{enumerable:!0,set:()=>{throw new Error("ES Modules may not assign module.exports or exports.*, Use ESM export syntax, instead: "+e.id)}}),e),n.o=(e,t)=>Object.prototype.hasOwnProperty.call(e,t);var r=n(250);const o=300,s=35,l=-35;let i=null,c=null,a=null,u=null;const d=document.getElementById("status");function f(e){const t=[...Object.keys(e)],n=["L","m","s"];if(0===t.length)return"0";let r="";for(let o=0;o<t.length;++o)r+=`${e[t[o]]}${n[o]}`,o<t.length-1&&(r+="+");return r}function m(e,t){return 0===e?t:0===t?e:e>t?m(e%t,t):e===t?e:m(e,t%e)}function h(e,t){return(t+e%t)%t}function p(e,t,n,r,o){if(r<0||r>=t)throw new Error(`switchRows(): matrix index out of bounds! i1: ${r} but m: ${t}`);if(o<0||o>=t)throw new Error(`switchRows(): matrix index out of bounds! i2: ${o} but m: ${t}`);for(let t=0;t<n;t++){const s=e[n*o+t],l=e[n*r+t];[e[n*r+t],e[n*o+t]]=[s,l]}}function g(e,t,n,r,o){for(let t=0;t<n;t++)e[n*r+t]*=o}function y(e,t,n,r,o,s){for(let t=0;t<n;t++)e[n*o+t]+=s*e[n*r+t]}function b(e,t,n=""){const r=document.createElement("tr");let o=function(e,t=""){const n=function(e,t=""){const n=document.createElement("table"),r=n.createTHead();n.setAttribute("class","scrollable clickable");let o=r.insertRow(),s=document.createElement("th");if(s.appendChild(document.createTextNode("#")),o.appendChild(s),e)if(e[0]instanceof Array)for(let t=0;t<e[0].length;++t){let e=document.createElement("th");e.appendChild(document.createTextNode(`${t}`)),o.appendChild(e)}else if("object"==typeof e[0])for(let t of Object.keys(e[0])){let e=document.createElement("th");e.appendChild(document.createTextNode(`${t}`)),o.appendChild(e)}else{let e=document.createElement("th");e.appendChild(document.createTextNode(`${t}`)),o.appendChild(e)}return n}(e,t),r=n.createTBody();if(e[0]instanceof Array)for(const[t,n]of e.entries()){let n=r.insertRow();n.insertCell().appendChild(document.createTextNode(`${t+1}`));for(const r of e[t].values()){let e=document.createElement("td");e.appendChild(document.createTextNode(r)),n.appendChild(e)}}else if("object"==typeof e[0])for(const[t,n]of e.entries()){let e=r.insertRow();e.insertCell().appendChild(document.createTextNode(`${t+1}`));for(const t of Object.values(n)){let n=document.createElement("td");n.appendChild(document.createTextNode(`${t}`)),e.appendChild(n)}}else for(const[t,n]of e.entries()){let n=r.insertRow();n.insertCell().appendChild(document.createTextNode(`${t+1}`));let o=document.createElement("td");o.appendChild(document.createTextNode(e[t])),n.appendChild(o)}return n}(t,n);r.appendChild(o),e.appendChild(r)}!function(){function e(){if(d){let e,t,n,r;d.innerText="";const a=document.getElementById("lattice-vis");if(a){a.innerHTML="",a.setAttribute("style","vertical-align: text-top;");const u=document.createElementNS("http://www.w3.org/2000/svg","svg");if(u.setAttribute("id","lattice"),document.createElement("style").innerHTML="\n      .small {\n        font: 20px sans-serif;\n        fill: black;\n      }",!i)throw new Error("`currentWord` is null or undefined");if(!c)throw new Error("No suitable lattice basis");{let f=c[0],m=c[1];const b=(e,t)=>Array.isArray(e)?e[t]:e[String(t)]??e[t]??0;let x=[0,0,0],v=i.length;for(let z=0;z<v;++z)switch(i[z]){case"L":++x[0];break;case"m":++x[1];break;case"s":++x[2]}[e,t,n,r]=[1,0,0,1];let[L,M,E,S,T,k]=function(e,t,n,r,o){let s=structuredClone(e),l=structuredClone(t);for(let e=0;e<Math.min(n,r);++e){let t=e+1;for(;t<n&&Math.abs(s[r*e+e])<Number.EPSILON;)p(s,n,r,e,t),p(l,n,o,e,t),t++;if(Math.abs(s[r*e+e])<Number.EPSILON)return null;const i=s[r*e+e];for(let t=e+1;t<n;++t){const n=s[r*t+e];Math.abs(n)>=Number.EPSILON&&(y(s,0,r,e,t,-n/i),y(l,0,o,e,t,-n/i))}}for(let e=Math.min(n,r)-1;e>=0;--e){const t=s[r*e+e];for(let n=0;n<e;++n){const i=s[r*n+e];Math.abs(i)>=Number.EPSILON&&(y(s,0,r,e,n,-i/t),y(l,0,o,e,n,-i/t))}g(s,0,r,e,1/t),g(l,0,o,e,1/t)}return l}([b(f,0),b(f,1),b(f,2),b(m,0),b(m,1),b(m,2),x[0],x[1],x[2]],[e,t,n,r,0,0],3,3,2);for(let G=-20;G<=20;++G){const P=o+e*s*G,Z=o+t*l*G,D=P+n*s*100,J=Z+r*l*100,U=P+n*s*-100,F=Z+r*l*-100,V=o+n*s*G,X=300+r*l*G,W=V+e*s*100,Y=X+t*l*100,K=V+e*s*-100,Q=X+t*l*-100;u.innerHTML+=`<line\n                x1="${D}"\n                y1="${J}"\n                x2="${U}"\n                y2="${F}"\n                style="stroke:#6c00da; stroke-width:2"\n              />`,u.innerHTML+=`<line\n                x1="${W}"\n                y1="${Y}"\n                x2="${K}"\n                y2="${Q}"\n                style="stroke:gray; stroke-width:2"\n              />`}let $=o,C=300;for(let ee=0;ee<v;++ee)switch(u.innerHTML+=`<circle\n            cx="${$}"\n            cy="${C}"\n            r="7"\n            color="white"\n            stroke="black"\n            stroke-width="1"\n          />\n          <text\n            x="${$-3}"\n            y="${C+3}"\n            fill="white"\n            font-size="0.5em"\n          >${h(ee,v)}</text>`,i[ee]){case"L":$+=L*s,C+=M*l;break;case"m":$+=E*s,C+=S*l;break;case"s":$+=T*s,C+=k*l;break;default:throw new Error("Invalid letter")}u.setAttribute("viewBox","0 0 600 600"),a.innerHTML+=`<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${w(f)} and h = ${w(m)} are two different generators. g is horizontal, h is vertical.</small>`,a.innerHTML+='<div class="controls">\n        <button id="zoom-in">Zoom In (+)</button>\n        <button id="zoom-out">Zoom Out (-)</button>\n        <button id="reset-view">Reset View</button>\n        <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>\n    </div>',a.appendChild(u);const N=document.getElementById("zoom-in"),_=document.getElementById("zoom-out"),B=document.getElementById("reset-view"),O=document.getElementById("zoom-level");let H={x:0,y:0,width:800,height:600},A=!1,I={x:0,y:0},q=1;function j(){u.setAttribute("viewBox",`${H.x} ${H.y} ${H.width} ${H.height}`),O.textContent=Math.round(100*q)+"%"}function R(e){const t=u.getScreenCTM();return{x:(e.clientX-t.e)/t.a,y:(e.clientY-t.f)/t.d}}u.addEventListener("mousedown",e=>{A=!0,I=R(e)}),u.addEventListener("mousemove",e=>{if(!A)return;e.preventDefault();const t=R(e),n=t.x-I.x,r=t.y-I.y;H.x-=n,H.y-=r,j()}),u.addEventListener("mouseup",()=>{A=!1}),u.addEventListener("mouseleave",()=>{A=!1}),u.addEventListener("wheel",e=>{e.preventDefault();const t=R(e),n=e.deltaY<0?.9:1.1,r=H.width*n,o=H.height*n;H.x+=(t.x-H.x)*(1-n),H.y+=(t.y-H.y)*(1-n),H.width=r,H.height=o,q=800/H.width,j()}),N.addEventListener("click",()=>{const e=H.x+H.width/2,t=H.y+H.height/2;H.width*=.8,H.height*=.8,H.x=e-H.width/2,H.y=t-H.height/2,q=800/H.width,j()}),_.addEventListener("click",()=>{const e=H.x+H.width/2,t=H.y+H.height/2;H.width*=1.25,H.height*=1.25,H.x=e-H.width/2,H.y=t-H.height/2,q=800/H.width,j()}),B.addEventListener("click",()=>{H={x:0,y:0,width:800,height:600},q=1,j()}),j()}}}}function t(){if(i){const e=new Set(Array.from(i)).size;if(a){const t=document.getElementById("sw-code");if(t){t.innerHTML='<hr/><h2>SonicWeave code</h2>\n        (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>',t.innerHTML+='<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>';const n="Copy";async function r(e,t){let r=e.querySelector("code").innerText;await navigator.clipboard.writeText(r),t.innerText="Copied!",setTimeout(()=>{t.innerText=n},700)}document.querySelectorAll("pre").forEach(e=>{if(navigator.clipboard){let t=document.createElement("button");t.innerText=n,e.appendChild(t),t.addEventListener("click",async()=>{await r(e,t)})}});let o=document.getElementById("codeblock");const s=Array.from(i);o&&(o.innerHTML=3===e?`let L = ${a[0]}\nlet m = ${a[1]}\nlet s = ${a[2]}\n${s.join(";")};\nstack()`:2===e?`let L = ${a[0]}\nlet s = ${a[1]}\n${s.join(";")};\nstack()`:1===e?`let X = ${a[0]}\n${s.join(";")};\nstack()`:"Scales of rank > 3 are not supported")}}}}function n(){const e=document.getElementById("scale-profile");if(e){e.innerHTML="";const t=document.createElement("h2");if(t.innerText=`Scale profile for ${i}`,e.appendChild(t),u){const t=u.structure;if(t){e.innerHTML+='<b><a href="https://en.xen.wiki/w/Guide_frame\n           " target="_blank">Guide frame</a></b><br/><small>';let n=`${t.gs.map(e=>` ${w(e)}`)}`.slice(1);e.innerHTML+=`Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${function(e){let t=0;for(let n of Object.keys(e))t+=e[n];return t}(t.gs[0])}-steps: GS(${n})<br/>`,e.innerHTML+=`Aggregate generator ${w(t.aggregate)}<br/>`,e.innerHTML+=`Offsets ${t.polyoffset.map(e=>w(e))}<br/>`,e.innerHTML+=`Multiplicity ${JSON.stringify(t.multiplicity)}<br/>`,e.innerHTML+=`Complexity ${JSON.stringify(t.complexity)}<br/><br/>`,e.innerHTML+='<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>',e.innerHTML+=u.lm?"L = m<br/>":"",e.innerHTML+=u.ms?"m = s<br/>":"",e.innerHTML+=u.s0?"s = 0<br/>":"",u.lm||u.ms||u.s0||(e.innerHTML+="None<br/>"),e.innerHTML+="<br/>";const r=function(e){let t=0;for(let n=0;n<e.length;++n)"L"===e[n]&&++t;return t}(i),o=function(e){let t=0;for(let n=0;n<e.length;++n)"m"===e[n]&&++t;return t}(i),s=function(e){let t=0;for(let n=0;n<e.length;++n)"s"===e[n]&&++t;return t}(i);e.innerHTML+='<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>',e.innerHTML+=u.subst_l_ms?`subst ${r}L(${o}m${s}s)<br/>`:"",e.innerHTML+=u.subst_m_ls?`subst ${o}m(${r}L${s}s)<br/>`:"",e.innerHTML+=u.subst_s_lm?`subst ${s}s(${r}L${o}m)<br/>`:"","Achiral"===u.chirality?e.innerHTML+='<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral':e.innerHTML+=`<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${u.chirality} (reversed: ${u.reversed})`,e.innerHTML+=`<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${u.mv}</small>`}}}}function w(e){if(a[0].includes("/")){const[t,n]=a[0].split("/"),[r,o]=a[1].split("/"),[s,l]=a[2].split("/"),i=Number(t),c=Number(r),u=Number(s),d=Number(n),h=Number(o),p=Number(l),g=Math.pow(i,e[0]??0)*Math.pow(c,e[1]??0)*Math.pow(u,e[2]??0),y=Math.pow(d,e[0]??0)*Math.pow(h,e[1]??0)*Math.pow(p,e[2]??0),b=m(g,y);return`${f(e)} (${g/b}/${y/b})`}if(a[0].includes("\\")){const[t,n]=a[0].split("\\"),r=Number(n),[o,s]=a[1].split("\\"),[l,i]=a[2].split("\\"),c=Number(t),u=Number(o),d=Number(l);return`${f(e)} (${c*(e[0]??0)+u*(e[1]??0)+d*(e[2]??0)}\\${r})`}return f(e)}const x="Scales of rank 0 or rank 4 or higher are not supported.",v=document.getElementById("btn-sig"),L=document.getElementById("btn-word");v.addEventListener("click",()=>{const o=`${document.getElementById("input-step-sig").value}`.split(" ").map(e=>Number(e)).filter(e=>e),s=o.filter(e=>e>0).length,l=o.reduce((e,t)=>e+t,0);try{if(0===l)d.textContent="Scale is empty. This is a bug.";else if(s>3)d.textContent="Scales of rank 0 or rank 4 or higher are not supported.";else if(s>0){d.textContent="Computing...",document.getElementById("tables").innerHTML='\n      <hr /><h2>Tables</h2>\n\n      <table>\n        <tr>\n                      <td>\n                        Scales\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 250px;\n                          "\n                        >\n                          <table class="data" id="table-scales"></table>\n                        </div>\n                      </td>\n                      <td>\n                        JI tunings\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 250px;\n                          "\n                        >\n                          <table class="data" id="table-ji-tunings"></table>\n                        </div>\n                      </td>\n                      <td>\n                        edo tunings\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 200px;\n                          "\n                        >\n                          <table class="data" id="table-ed-tunings"></table>\n                        </div>\n                      </td></tr></table>';const l=document.getElementById("table-scales"),m=document.getElementById("table-ji-tunings"),h=document.getElementById("table-ed-tunings"),p=r.A.sigResult(o,{lm:document.getElementById("monotone-lm").checked,ms:document.getElementById("monotone-ms").checked,s0:document.getElementById("monotone-s0").checked,ggsLen:Number(document.getElementById("ggs-len").value),ggsLenConstraint:document.querySelector('input[name="ggs-len-constraint"]:checked').value,complexity:Number(document.getElementById("complexity").value),complexityConstraint:document.querySelector('input[name="complexity-constraint"]:checked').value,mv:Number(document.getElementById("mv").value),mvConstraint:document.querySelector('input[name="mv-constraint"]:checked').value,mosSubst:document.querySelector('input[name="mos-subst"]:checked').value}),g=p.profiles.map(e=>e.word),y=p.profiles.map(e=>e.lattice_basis),w=p.profiles,v=p.ji_tunings,L=p.ed_tunings;let M;M=3===s?["L","m","s"]:2===s?["L","s"]:1===s?["X"]:[...Array(s).keys()].map(e=>`X${e}`),d.innerHTML=`<h1>Results for ${f=[...Array(s).keys()].map(e=>`${o[e]}${M[e]}`).join(""),f.replaceAll("&","&amp;"),f.replaceAll("<","&lt;"),f.replaceAll(">","&gt;"),f.replaceAll("'","&#39;"),f.replaceAll('"',"&quot;"),f}</h1> (click on a table row to select a scale or a tuning)`,b(l,g,"scale");const E=l.getElementsByTagName("tr");if(E.length>=3){E[2].classList.add("selected"),i=g[0],u=w[0],c=u.lattice_basis;for(let r=2;r<E.length;++r)E[r].addEventListener("click",async()=>{l.querySelector(".selected").classList.remove("selected"),E[r].classList.add("selected");let o=g[r-2];u=w[r-2],c=y[r-2],i=o,t(),n();try{e()}catch(e){d.innerText=e}})}b(m,v);const S=m.getElementsByTagName("tr");for(let r=2;r<S.length;++r){const o=S[r];o.addEventListener("click",()=>{s>=1&&s<=3?(m.querySelector(".selected")&&m.querySelector(".selected").classList.remove("selected"),h.querySelector(".selected")&&h.querySelector(".selected").classList.remove("selected"),o.classList.add("selected"),a=v[r-2],t(),n(),e()):d.textContent=x})}if(L){b(h,L);const r=h.getElementsByTagName("tr");r[2].classList.add("selected");const o=L[0];a=o,n(),e(u.structure),t();for(let o=2;o<r.length;++o){const s=r[o];s.addEventListener("click",()=>{m.querySelector(".selected")&&m.querySelector(".selected").classList.remove("selected"),h.querySelector(".selected")&&h.querySelector(".selected").classList.remove("selected"),s.classList.add("selected");const r=L[o-2];a=r,n(),e(),t()})}}t(),n(),e()}}catch(e){d.innerText=e}var f}),L.addEventListener("click",()=>{const o=document.getElementById("input-word").value,s=new Set(Array.from(o)).size;d.textContent="Computing...";const l=r.A.wordResult(o),f=l.profile,m=l.profile.word,h=l.ji_tunings,p=l.ed_tunings;document.getElementById("tables").innerHTML='\n                <td>\n                  JI tunings\n                  <div\n                    style="\n                      overflow-y: auto;\n                      overflow-x: auto;\n                      vertical-align: top;\n                      height: 420px;\n                      width: 250px;\n                    "\n                  >\n                    <table class="data" id="table-ji-tunings"></table>\n                  </div>\n                </td>\n                <td>\n                  edo tunings\n                  <div\n                    style="\n                      overflow-y: auto;\n                      overflow-x: auto;\n                      vertical-align: top;\n                      height: 420px;\n                      width: 200px;\n                    "\n                  >\n                    <table class="data" id="table-ed-tunings"></table>\n                  </div>\n                </td>';const g=document.getElementById("table-ji-tunings"),y=document.getElementById("table-ed-tunings");i=m;try{d.innerHTML=`<h1>Results for ${i}</h1>(click on a table row to select a tuning)`;const r={L:0,M:0,s:0};for(let e=0;e<i.length;++e)r[i[e]]+=1;Object.values(r),b(g,h);const o=g.getElementsByTagName("tr");for(let r=2;r<o.length;++r){const l=o[r];l.addEventListener("click",()=>{s>=1&&s<=3?(g.querySelector(".selected")&&g.querySelector(".selected").classList.remove("selected"),y.querySelector(".selected")&&y.querySelector(".selected").classList.remove("selected"),l.classList.add("selected"),a=h[r-2],n(),e(),t()):d.textContent=x})}if(p){b(y,p);const r=y.getElementsByTagName("tr");r[2].classList.add("selected");for(let o=2;o<r.length;++o){const s=r[o];s.addEventListener("click",()=>{g.querySelector(".selected")&&g.querySelector(".selected").classList.remove("selected"),y.querySelector(".selected")&&y.querySelector(".selected").classList.remove("selected"),s.classList.add("selected");const r=p[o-2];a=r,n(),e(),t()})}}const l=p[0];l.ed,a=l,t(),u=f,c=u.lattice_basis,n(),e(),t()}catch(e){d.innerText=e}})}()})();
+(() => {
+  "use strict";
+  var e = {
+      250: (e, t, n) => {
+        (n.d(t, { A: () => Q }), (e = n.hmd(e)));
+        const r = [
+          "",
+          "X",
+          "Ls",
+          "Lms",
+          "Lmns",
+          "HLmns",
+          "HLmnst",
+          "BHLmnst",
+          "BHLmnstw",
+          "BCHLmnstw",
+          "BCHLmnpstw",
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+        ];
+        function o(e, t) {
+          for (e = Math.abs(e), t = Math.abs(t); 0 !== t; ) [e, t] = [t, e % t];
+          return e;
+        }
+        function s(e, t) {
+          const [n, r, o] = l(e, t);
+          if (1 !== n) throw new Error("Non-coprime generator error");
+          return ((r % t) + t) % t;
+        }
+        function l(e, t) {
+          let [n, r] = [e, t],
+            [o, s] = [1, 0],
+            [l, i] = [0, 1];
+          for (; 0 !== r; ) {
+            const e = Math.floor(n / r);
+            (([n, r] = [r, n - e * r]),
+              ([o, s] = [s, o - e * s]),
+              ([l, i] = [i, l - e * i]));
+          }
+          return [n, o, l];
+        }
+        function i(e, t) {
+          return ((e % t) + t) % t;
+        }
+        function c(e, t) {
+          if (0 === e.length) return [...e];
+          const n = i(t, e.length);
+          return 0 === n ? [...e] : [...e.slice(n), ...e.slice(0, n)];
+        }
+        function a(e, t) {
+          if (e.length !== t.length) return !1;
+          for (let n = 0; n < e.length; n++) if (e[n] !== t[n]) return !1;
+          return !0;
+        }
+        function u(e, t) {
+          const n = Math.min(e.length, t.length);
+          for (let r = 0; r < n; r++) {
+            if (e[r] < t[r]) return -1;
+            if (e[r] > t[r]) return 1;
+          }
+          return e.length - t.length;
+        }
+        function d(e) {
+          return Array.from({ length: e.length }, (t, n) => c(e, n));
+        }
+        function f(e) {
+          const t = e.length,
+            n = new Array(2 * t).fill(-1);
+          let r = 0;
+          for (let o = 1; o < 2 * t; o++) {
+            let s = n[o - r - 1];
+            for (; -1 !== s && e[o % t] !== e[(r + s + 1) % t]; )
+              (e[o % t] < e[(r + s + 1) % t] && (r = o - s - 1), (s = n[s]));
+            -1 === s && e[o % t] !== e[(r + s + 1) % t]
+              ? (e[o % t] < e[(r + s + 1) % t] && (r = o), (n[o - r] = -1))
+              : (n[o - r] = s + 1);
+          }
+          return r;
+        }
+        function m(e) {
+          return c(e, f(e));
+        }
+        class h {
+          constructor(e = new Map()) {
+            this.map = new Map(e);
+          }
+          static ZERO = new h();
+          static fromSlice(e) {
+            const t = new Map();
+            for (const n of e) t.set(n, (t.get(n) || 0) + 1);
+            return new h(t);
+          }
+          static fromObject(e) {
+            return new h(
+              new Map(Object.entries(e).map(([e, t]) => [parseInt(e), t])),
+            );
+          }
+          add(e) {
+            const t = new Map(this.map);
+            for (const [n, r] of e.map) {
+              const e = (t.get(n) || 0) + r;
+              0 === e ? t.delete(n) : t.set(n, e);
+            }
+            return new h(t);
+          }
+          neg() {
+            const e = new Map();
+            for (const [t, n] of this.map) e.set(t, -n);
+            return new h(e);
+          }
+          scalarMul(e) {
+            const t = new Map();
+            for (const [n, r] of this.map) t.set(n, e * r);
+            return new h(t);
+          }
+          get(e) {
+            return this.map.get(e) || 0;
+          }
+          len() {
+            let e = 0;
+            for (const t of this.map.values()) e += Math.abs(t);
+            return e;
+          }
+          isEmpty() {
+            return 0 === this.len();
+          }
+          keys() {
+            return [...this.map.keys()].sort((e, t) => e - t);
+          }
+          toObject() {
+            const e = {};
+            for (const [t, n] of this.map) e[t] = n;
+            return e;
+          }
+          toArray() {
+            const e = Math.max(...this.keys(), 0),
+              t = new Array(e + 1).fill(0);
+            for (const [e, n] of this.map) t[e] = n;
+            return t;
+          }
+          equals(e) {
+            if (this.map.size !== e.map.size) return !1;
+            for (const [t, n] of this.map) if (e.get(t) !== n) return !1;
+            return !0;
+          }
+          toString() {
+            return JSON.stringify(this.toObject());
+          }
+        }
+        function p(e, t, n) {
+          const r = c(e, t);
+          if (n <= e.length) return r.slice(0, n);
+          {
+            const t = Math.floor(n / e.length),
+              o = n % e.length;
+            let s = [];
+            for (let e = 0; e < t; e++) s = s.concat(r);
+            return s.concat(r.slice(0, o));
+          }
+        }
+        function g(e, t, n) {
+          return h.fromSlice(p(e, t, n));
+        }
+        function y(e, t) {
+          const n = new Set(),
+            r = [];
+          for (let o = 0; o < e.length; o++) {
+            const s = g(e, o, t),
+              l = s.toString();
+            n.has(l) || (n.add(l), r.push(s));
+          }
+          return r;
+        }
+        function b(e) {
+          if (0 === e.length) return 0;
+          let t = 0;
+          const n = Math.floor(e.length / 2);
+          for (let r = 1; r <= n; r++) {
+            const n = y(e, r);
+            t = Math.max(t, n.length);
+          }
+          return t;
+        }
+        function w(e, t) {
+          const n = o(e, t);
+          if (1 === n) {
+            const n = s(e, e + t),
+              r = [];
+            let [o, l] = [0, 0];
+            for (; o !== e || l !== t; )
+              e * l >= t * (o + 1)
+                ? ((o += 1), r.push(0))
+                : ((l += 1), r.push(1));
+            const i = h.fromSlice(r.slice(0, n));
+            return [r, i];
+          }
+          {
+            const [r, o] = w(e / n, t / n),
+              s = [];
+            for (let e = 0; e < n; e++) s.push(...r);
+            return [s, o];
+          }
+        }
+        function x(e) {
+          return new Set(e).size;
+        }
+        function v(e, t, n) {
+          return e.map((e) => (e === t ? n : e));
+        }
+        function L(e, t) {
+          return e.filter((e) => e !== t);
+        }
+        function M(e) {
+          return 2 === b(v(e, 1, 0));
+        }
+        function E(e) {
+          return 2 === b(v(e, 2, 1));
+        }
+        function S(e) {
+          return 2 === b(L(e, 2));
+        }
+        function T(e, t, n) {
+          if (0 === n.length) return e.filter((e) => e !== t);
+          const r = [];
+          let o = 0;
+          for (const s of e)
+            s === t ? (r.push(n[o % n.length]), o++) : r.push(s);
+          return r;
+        }
+        function k(e, t, n) {
+          const [r, o] = w(e, t + n),
+            [s, l] = w(t, n),
+            i = s.map((e) => e + 1),
+            a = l.len(),
+            u = [];
+          for (let e = 0; e < t + n; e++) {
+            const t = c(i, (e * a) % i.length);
+            u.push(T(r, 1, t));
+          }
+          return u;
+        }
+        function $(e) {
+          const [t, n, r] = e,
+            o = [
+              ...k(t, n, r),
+              ...k(n, r, t).map((e) => e.map((e) => (e + 1) % 3)),
+              ...k(r, t, n).map((e) =>
+                e.map((e) => (0 === e ? 2 : (e - 1) % 3)),
+              ),
+            ],
+            s = new Set(),
+            l = [];
+          for (const e of o) {
+            const t = m(e),
+              n = t.join(",");
+            s.has(n) || (s.add(n), l.push(t));
+          }
+          return l.sort((e, t) => u(e, t));
+        }
+        function C(e, t, n, r) {
+          return 3 === x(e) && 2 === b(L(e, t)) && 2 === b(v(e, n, r));
+        }
+        function N(e) {
+          const t = u(m(e), m([...e].reverse()));
+          return t < 0 ? "Right" : t > 0 ? "Left" : "Achiral";
+        }
+        function _(e, t) {
+          return Array.from({ length: t.length }, (n, r) => {
+            const o = p(t, e * r, e);
+            return h.fromSlice(o);
+          });
+        }
+        function B(e) {
+          const t = e.length,
+            n = [];
+          for (const r of d(e)) {
+            const e = r[t - 1],
+              o = r.slice(0, t - 1);
+            let s = !1;
+            for (const t of o)
+              if (t.equals(e)) {
+                s = !0;
+                break;
+              }
+            s || n.push(O(o));
+          }
+          return n;
+        }
+        function O(e) {
+          for (let t = 1; t <= e.length; t++) {
+            const n = e.slice(0, t);
+            let r = !0;
+            for (let o = 0; o < e.length; o++)
+              if (!e[o].equals(n[o % t])) {
+                r = !1;
+                break;
+              }
+            if (r) return n;
+          }
+          return e;
+        }
+        function H(e, t) {
+          return B(_(e, t));
+        }
+        function A(e, t) {
+          if (e.length !== t.length) return null;
+          for (let n = 0; n < e.length; n++) {
+            const r = c(t, n);
+            let o = !0;
+            for (let t = 0; t < e.length; t++)
+              if (!e[t].equals(r[t])) {
+                o = !1;
+                break;
+              }
+            if (o) return n;
+          }
+          return null;
+        }
+        class I {
+          constructor(e, t = [h.ZERO]) {
+            ((this.gs = e), (this.polyoffset = t));
+          }
+          complexity() {
+            return this.gs.length * this.polyoffset.length;
+          }
+          multiplicity() {
+            return this.polyoffset.length;
+          }
+          static trySimple(e, t) {
+            return 0 === e.length || 1 !== o(e.length, t)
+              ? []
+              : H(t, e).map((e) => new I(e, [h.ZERO]));
+          }
+          static tryMultiple(e, t, n) {
+            if (1 === t || 0 === e.length || e.length % t !== 0) return [];
+            const r = o(n, e.length);
+            if ((e.length / r) % t !== 0 && r === t) {
+              const t = [];
+              for (let n = 0; n < r; n++) {
+                const o = _(r, c(e, n));
+                t.push(o.slice(0, e.length / r));
+              }
+              const n = t[0],
+                o = [];
+              for (let s = 0; s < t.length; s++) {
+                const l = A(n, t[s]);
+                if (null === l) return [];
+                o.push(h.fromSlice(p(e, 0, l * r + s)));
+              }
+              return (
+                o.sort((e, t) => e.len() - t.len()),
+                1 === o.length && o[0].equals(h.ZERO)
+                  ? q(n).map((e) => new I(e, [h.ZERO]))
+                  : q(n).map((e) => new I(e, o))
+              );
+            }
+            return [];
+          }
+        }
+        function q(e) {
+          if (2 === e.length) return [[e[0]]];
+          const t = e.length,
+            n = [];
+          for (let r = 2; r <= t / 2; r++)
+            if (1 === o(r, t)) {
+              const o = [];
+              for (let n = 0; n < t; n++) {
+                let s = h.ZERO;
+                for (let o = 0; o < r; o++) s = s.add(e[(n * r + o) % t]);
+                o.push(s);
+              }
+              n.push(...B(o));
+            }
+          return n;
+        }
+        function j(e) {
+          const t = [],
+            n = e.length;
+          for (let r = 2; r <= n - 2; r++)
+            1 === o(r, n) && t.push(...I.trySimple(e, r));
+          const r = [];
+          for (let e = 2; e <= Math.sqrt(n); e++)
+            n % e === 0 && (r.push(e), e !== n / e && r.push(n / e));
+          for (const o of r)
+            for (let r = 2; r <= n - 2; r++) t.push(...I.tryMultiple(e, o, r));
+          t.sort((e, t) => e.complexity() - t.complexity());
+          const s = new Set(),
+            l = [];
+          for (const e of t) {
+            const t = JSON.stringify({
+              gs: e.gs.map((e) => e.toString()),
+              polyoffset: e.polyoffset.map((e) => e.toString()),
+            });
+            s.has(t) || (s.add(t), l.push(e));
+          }
+          return l;
+        }
+        function R(e) {
+          const { gs: t, polyoffset: n } = e,
+            r = (e) => ({
+              0: e.get(0) || 0,
+              1: e.get(1) || 0,
+              2: e.get(2) || 0,
+            });
+          return {
+            gs: t.map(r),
+            aggregate: r(t.reduce((e, t) => e.add(t), h.ZERO)),
+            polyoffset: n.map(r),
+            multiplicity: e.multiplicity(),
+            complexity: e.complexity(),
+          };
+        }
+        function z(e, t, n) {
+          const r = (e, t) =>
+            Array.isArray(e) ? e[t] : (e[String(t)] ?? e[t] ?? 0);
+          return (
+            r(e, 0) * r(t, 1) * r(n, 2) +
+            r(e, 1) * r(t, 2) * r(n, 0) +
+            r(e, 2) * r(t, 0) * r(n, 1) -
+            r(e, 2) * r(t, 1) * r(n, 0) -
+            r(e, 1) * r(t, 0) * r(n, 2) -
+            r(e, 0) * r(t, 2) * r(n, 1)
+          );
+        }
+        function G(e) {
+          return (
+            Array.isArray(e),
+            { 0: e[0] || 0, 1: e[1] || 0, 2: e[2] || 0 }
+          );
+        }
+        function P(e, t) {
+          for (const n of e)
+            if (1 === n.multiplicity()) {
+              const e = R(n),
+                r = e.gs;
+              for (let n = 0; n < r.length; n++)
+                for (let o = n; o < r.length; o++)
+                  if (1 === Math.abs(z(t, r[n], r[o])))
+                    return [G(r[n]), G(r[o]), e];
+              const o = e.polyoffset;
+              for (const n of o)
+                for (const o of r)
+                  if (1 === Math.abs(z(t, n, o))) return [G(n), G(o), e];
+            } else {
+              const e = R(n),
+                r = e.gs[0],
+                o = e.polyoffset;
+              if (o.length > 0) {
+                const n = o[o.length - 1];
+                if (1 === Math.abs(z(t, r, n))) return [G(r), G(n), e];
+              }
+            }
+          return null;
+        }
+        function Z(e) {
+          if (0 === e.length) return [];
+          const t = [],
+            n = [];
+          for (let r = 0; r < e.length; r++)
+            e[r] > 0 && (n.push(r), t.push(e[r]));
+          if (0 === t.length) return [];
+          const r = t.length,
+            o = t.reduce((e, t) => e + t, 0),
+            s = [...t];
+          s[0] -= 1;
+          const l = [0];
+          for (let e = 1; e < o; e++) l.push(r - 1);
+          const i = [];
+          for (let e = r - 1; e >= 0; e--) (0 === e && 0 === s[0]) || i.push(e);
+          const c = [];
+          return (
+            D(s, new Array(o).fill(0), i, l, 1, 1, 1, c, r, o),
+            c.map((e) => e.map((e) => n[e]))
+          );
+        }
+        function D(e, t, n, r, o, s, l, i, c, a) {
+          if (e[c - 1] === a - o)
+            ((e[c - 1] === t[o - s] && a % s === 0) || e[c - 1] > t[o - s]) &&
+              i.push([...r]);
+          else if (e[0] !== a - o) {
+            if (n.length > 0) {
+              let u = 0,
+                d = n[u];
+              for (; d >= r[o - s]; ) {
+                t[l] = o - l;
+                const f = 1 === e[d];
+                if (f) {
+                  const e = n.indexOf(d);
+                  -1 !== e && n.splice(e, 1);
+                }
+                if (
+                  ((e[d] -= 1),
+                  (r[o] = d),
+                  D(
+                    e,
+                    t,
+                    n,
+                    r,
+                    o + 1,
+                    d === r[o - s] ? s : o + 1,
+                    d === c - 1 ? l : o + 1,
+                    i,
+                    c,
+                    a,
+                  ),
+                  f)
+                ) {
+                  let e = 0;
+                  for (; e < n.length && n[e] > d; ) e++;
+                  n.splice(e, 0, d);
+                }
+                for (e[d] += 1, u++; u < n.length && n[u] >= d; ) u++;
+                if (u >= n.length) break;
+                d = n[u];
+              }
+            }
+            r[o] = c - 1;
+          }
+        }
+        function J(e) {
+          const t = [],
+            n = new Set(e).size,
+            o = r[Math.min(n, 11)];
+          for (const n of e) {
+            const e = o.indexOf(n);
+            -1 !== e && t.push(e);
+          }
+          return t;
+        }
+        function U(e) {
+          const t = new Set(e).size,
+            n = r[Math.min(t, 11)];
+          let o = "";
+          for (const t of e) t < n.length && (o += n[t]);
+          return o;
+        }
+        function F(e) {
+          const t = [0, 0, 0];
+          for (const n of e) n < 3 && t[n]++;
+          return t;
+        }
+        function V(e, t, n = 1200) {
+          return (e / t) * n;
+        }
+        function X(e, t = 111, n = 20, r = 200, o = 1200) {
+          const s = [];
+          for (let l = 3; l < t; l++)
+            for (let i = 2; i < l; i++)
+              for (let c = 1; c < i; c++) {
+                const a = l * e[0] + i * e[1] + c * e[2];
+                if (a <= t) {
+                  const e = V(c, a, o);
+                  n <= e && e <= r && s.push([l, i, c]);
+                }
+              }
+          return s;
+        }
+        function W(e) {
+          const t = U(m(e)),
+            n = M(e),
+            r = E(e),
+            o = S(e),
+            s = N(e),
+            l = U(m([...e].reverse())),
+            i = b(e),
+            c = F(e),
+            a = C(e, 0, 1, 2),
+            u = C(e, 1, 0, 2),
+            d = C(e, 2, 0, 1),
+            f = P(j(e), c);
+          if (f) {
+            const [e, c, m] = f;
+            return {
+              word: t,
+              lattice_basis: [e, c],
+              chirality: s,
+              reversed: l,
+              structure: m,
+              lm: n,
+              ms: r,
+              s0: o,
+              subst_l_ms: a,
+              subst_m_ls: u,
+              subst_s_lm: d,
+              mv: i,
+            };
+          }
+          return {
+            word: t,
+            lattice_basis: null,
+            chirality: s,
+            reversed: l,
+            structure: null,
+            lm: n,
+            ms: r,
+            s0: o,
+            subst_l_ms: a,
+            subst_m_ls: u,
+            subst_s_lm: d,
+            mv: i,
+          };
+        }
+        function Y(e) {
+          return X(e).map((t) => {
+            const n = t[0] * e[0] + t[1] * e[1] + t[2] * e[2];
+            return t.map((e) => `${e}\\${n}`);
+          });
+        }
+        const K = {
+          EDO_BOUND: 111,
+          S_LOWER_BOUND: 20,
+          S_UPPER_BOUND: 200,
+          STEP_LETTERS: r,
+          gcd: o,
+          lcm: function (e, t) {
+            return Math.abs(e * t) / o(e, t);
+          },
+          modinv: s,
+          extendedGcd: l,
+          mod: i,
+          rotate: c,
+          arraysEqual: a,
+          compareArrays: u,
+          rotations: d,
+          booth: f,
+          leastMode: m,
+          CountVector: h,
+          wordOnDegree: p,
+          dyadOnDegree: g,
+          distinctSpectrum: y,
+          maximumVariety: b,
+          darkestMosModeAndGenBresenham: w,
+          mosMode: function (e, t, n) {
+            if (n >= e + t) throw new Error("Brightness out of range");
+            const [r, o] = w(e, t);
+            return c(r, n * o.len());
+          },
+          stepVariety: x,
+          replace: v,
+          deleteStep: L,
+          monotoneLm: M,
+          monotoneMs: E,
+          monotoneS0: S,
+          subst: T,
+          mosSubstitutionScales: $,
+          isMosSubst: C,
+          chirality: N,
+          weakPeriod: function (e) {
+            for (let t = 1; t <= e.length; t++) {
+              const n = e.slice(0, t),
+                r = [];
+              for (; r.length < e.length; ) r.push(...n);
+              if (a(e, r.slice(0, e.length))) return n;
+            }
+            return e;
+          },
+          stackedKSteps: _,
+          guidedGsChains: B,
+          kStepGuidedGsList: H,
+          guidedGsList: function (e) {
+            const t = e.length,
+              n = [];
+            for (let r = 2; r <= t - 2; r++)
+              1 === o(r, t) && n.push(...H(r, e));
+            return n;
+          },
+          GuideFrame: I,
+          guideFrames: j,
+          guideFrameToResult: R,
+          det3: z,
+          toStepVectorObj: G,
+          getUnimodularBasis: P,
+          necklacesFixedContent: Z,
+          stringToNumbers: J,
+          numbersToString: U,
+          wordToSig: F,
+          stepsAsCents: V,
+          isInTuningRange: function (e, t, n, r = 1200) {
+            const [o, s, l] = t,
+              [i, c, a] = n,
+              u = [
+                (r * i) / o,
+                (r * (i + c)) / (o + s),
+                (r * (i + c + a)) / (o + s + l),
+              ].sort((e, t) => e - t);
+            return u[0] <= e && e <= u[2];
+          },
+          edTuningsForTernary: X,
+          wordToProfile: W,
+          sigToEdTunings: Y,
+          sigResult: function (
+            e,
+            {
+              lm: t = !1,
+              ms: n = !1,
+              s0: r = !1,
+              ggsLen: o = 0,
+              ggsLenConstraint: s = "at most",
+              complexity: l = 0,
+              complexityConstraint: i = "at most",
+              mv: c = 0,
+              mvConstraint: a = "at most",
+              mosSubst: u = "off",
+            } = {},
+          ) {
+            const d = e;
+            let f;
+            ((f = "on" === u ? $(d) : Z(d)),
+              (f = f.filter((e) => {
+                if (t && !M(e)) return !1;
+                if (n && !E(e)) return !1;
+                if (r && !S(e)) return !1;
+                if (o > 0) {
+                  const t = j(e);
+                  if (0 === t.length) return !1;
+                  if ("exactly" === s) {
+                    if (t[0].gs.length !== o) return !1;
+                  } else if (t[0].gs.length > o) return !1;
+                }
+                if (c > 0) {
+                  const t = b(e);
+                  if ("exactly" === a) {
+                    if (t !== c) return !1;
+                  } else if (t > c) return !1;
+                }
+                if (l > 0) {
+                  const t = j(e);
+                  if (0 === t.length) return !1;
+                  if ("exactly" === i) {
+                    if (t[0].complexity() !== l) return !1;
+                  } else if (t[0].complexity() > l) return !1;
+                }
+                return !0;
+              })));
+            const m = f.map((e) => W(e));
+            return (
+              m.sort(
+                (e, t) =>
+                  (e.structure ? e.structure.complexity : 255) -
+                  (t.structure ? t.structure.complexity : 255),
+              ),
+              { profiles: m, ji_tunings: [], ed_tunings: Y(d) }
+            );
+          },
+          wordResult: function (e) {
+            const t = J(e),
+              n = F(t);
+            return { profile: W(t), ji_tunings: [], ed_tunings: Y(n) };
+          },
+          wordToBrightest: function (e) {
+            return U(m(J(e)));
+          },
+          wordToMv: function (e) {
+            return b(J(e));
+          },
+        };
+        (e.exports && (e.exports = K),
+          "undefined" != typeof window && (window.TernaryLib = K));
+        const Q = K;
+      },
+    },
+    t = {};
+  function n(r) {
+    var o = t[r];
+    if (void 0 !== o) return o.exports;
+    var s = (t[r] = { id: r, loaded: !1, exports: {} });
+    return (e[r](s, s.exports, n), (s.loaded = !0), s.exports);
+  }
+  ((n.d = (e, t) => {
+    for (var r in t)
+      n.o(t, r) &&
+        !n.o(e, r) &&
+        Object.defineProperty(e, r, { enumerable: !0, get: t[r] });
+  }),
+    (n.hmd = (e) => (
+      (e = Object.create(e)).children || (e.children = []),
+      Object.defineProperty(e, "exports", {
+        enumerable: !0,
+        set: () => {
+          throw new Error(
+            "ES Modules may not assign module.exports or exports.*, Use ESM export syntax, instead: " +
+              e.id,
+          );
+        },
+      }),
+      e
+    )),
+    (n.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)));
+  var r = n(250);
+  const o = 300,
+    s = 35,
+    l = -35;
+  let i = null,
+    c = null,
+    a = null,
+    u = null;
+  const d = document.getElementById("status");
+  function f(e) {
+    const t = [...Object.keys(e)],
+      n = ["L", "m", "s"];
+    if (0 === t.length) return "0";
+    let r = "";
+    for (let o = 0; o < t.length; ++o)
+      ((r += `${e[t[o]]}${n[o]}`), o < t.length - 1 && (r += "+"));
+    return r;
+  }
+  function m(e, t) {
+    return 0 === e
+      ? t
+      : 0 === t
+        ? e
+        : e > t
+          ? m(e % t, t)
+          : e === t
+            ? e
+            : m(e, t % e);
+  }
+  function h(e, t) {
+    return (t + (e % t)) % t;
+  }
+  function p(e, t, n, r, o) {
+    if (r < 0 || r >= t)
+      throw new Error(
+        `switchRows(): matrix index out of bounds! i1: ${r} but m: ${t}`,
+      );
+    if (o < 0 || o >= t)
+      throw new Error(
+        `switchRows(): matrix index out of bounds! i2: ${o} but m: ${t}`,
+      );
+    for (let t = 0; t < n; t++) {
+      const s = e[n * o + t],
+        l = e[n * r + t];
+      [e[n * r + t], e[n * o + t]] = [s, l];
+    }
+  }
+  function g(e, t, n, r, o) {
+    for (let t = 0; t < n; t++) e[n * r + t] *= o;
+  }
+  function y(e, t, n, r, o, s) {
+    for (let t = 0; t < n; t++) e[n * o + t] += s * e[n * r + t];
+  }
+  function b(e, t, n = "") {
+    const r = document.createElement("tr");
+    let o = (function (e, t = "") {
+      const n = (function (e, t = "") {
+          const n = document.createElement("table"),
+            r = n.createTHead();
+          n.setAttribute("class", "scrollable clickable");
+          let o = r.insertRow(),
+            s = document.createElement("th");
+          if (
+            (s.appendChild(document.createTextNode("#")), o.appendChild(s), e)
+          )
+            if (e[0] instanceof Array)
+              for (let t = 0; t < e[0].length; ++t) {
+                let e = document.createElement("th");
+                (e.appendChild(document.createTextNode(`${t}`)),
+                  o.appendChild(e));
+              }
+            else if ("object" == typeof e[0])
+              for (let t of Object.keys(e[0])) {
+                let e = document.createElement("th");
+                (e.appendChild(document.createTextNode(`${t}`)),
+                  o.appendChild(e));
+              }
+            else {
+              let e = document.createElement("th");
+              (e.appendChild(document.createTextNode(`${t}`)),
+                o.appendChild(e));
+            }
+          return n;
+        })(e, t),
+        r = n.createTBody();
+      if (e[0] instanceof Array)
+        for (const [t, n] of e.entries()) {
+          let n = r.insertRow();
+          n.insertCell().appendChild(document.createTextNode(`${t + 1}`));
+          for (const r of e[t].values()) {
+            let e = document.createElement("td");
+            (e.appendChild(document.createTextNode(r)), n.appendChild(e));
+          }
+        }
+      else if ("object" == typeof e[0])
+        for (const [t, n] of e.entries()) {
+          let e = r.insertRow();
+          e.insertCell().appendChild(document.createTextNode(`${t + 1}`));
+          for (const t of Object.values(n)) {
+            let n = document.createElement("td");
+            (n.appendChild(document.createTextNode(`${t}`)), e.appendChild(n));
+          }
+        }
+      else
+        for (const [t, n] of e.entries()) {
+          let n = r.insertRow();
+          n.insertCell().appendChild(document.createTextNode(`${t + 1}`));
+          let o = document.createElement("td");
+          (o.appendChild(document.createTextNode(e[t])), n.appendChild(o));
+        }
+      return n;
+    })(t, n);
+    (r.appendChild(o), e.appendChild(r));
+  }
+  !(function () {
+    function e() {
+      if (d) {
+        let e, t, n, r;
+        d.innerText = "";
+        const a = document.getElementById("lattice-vis");
+        if (a) {
+          ((a.innerHTML = ""),
+            a.setAttribute("style", "vertical-align: text-top;"));
+          const u = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg",
+          );
+          if (
+            (u.setAttribute("id", "lattice"),
+            (document.createElement("style").innerHTML =
+              "\n      .small {\n        font: 20px sans-serif;\n        fill: black;\n      }"),
+            !i)
+          )
+            throw new Error("`currentWord` is null or undefined");
+          if (!c) throw new Error("No suitable lattice basis");
+          {
+            let f = c[0],
+              m = c[1];
+            const b = (e, t) =>
+              Array.isArray(e) ? e[t] : (e[String(t)] ?? e[t] ?? 0);
+            let x = [0, 0, 0],
+              v = i.length;
+            for (let z = 0; z < v; ++z)
+              switch (i[z]) {
+                case "L":
+                  ++x[0];
+                  break;
+                case "m":
+                  ++x[1];
+                  break;
+                case "s":
+                  ++x[2];
+              }
+            [e, t, n, r] = [1, 0, 0, 1];
+            let [L, M, E, S, T, k] = (function (e, t, n, r, o) {
+              let s = structuredClone(e),
+                l = structuredClone(t);
+              for (let e = 0; e < Math.min(n, r); ++e) {
+                let t = e + 1;
+                for (; t < n && Math.abs(s[r * e + e]) < Number.EPSILON; )
+                  (p(s, n, r, e, t), p(l, n, o, e, t), t++);
+                if (Math.abs(s[r * e + e]) < Number.EPSILON) return null;
+                const i = s[r * e + e];
+                for (let t = e + 1; t < n; ++t) {
+                  const n = s[r * t + e];
+                  Math.abs(n) >= Number.EPSILON &&
+                    (y(s, 0, r, e, t, -n / i), y(l, 0, o, e, t, -n / i));
+                }
+              }
+              for (let e = Math.min(n, r) - 1; e >= 0; --e) {
+                const t = s[r * e + e];
+                for (let n = 0; n < e; ++n) {
+                  const i = s[r * n + e];
+                  Math.abs(i) >= Number.EPSILON &&
+                    (y(s, 0, r, e, n, -i / t), y(l, 0, o, e, n, -i / t));
+                }
+                (g(s, 0, r, e, 1 / t), g(l, 0, o, e, 1 / t));
+              }
+              return l;
+            })(
+              [
+                b(f, 0),
+                b(f, 1),
+                b(f, 2),
+                b(m, 0),
+                b(m, 1),
+                b(m, 2),
+                x[0],
+                x[1],
+                x[2],
+              ],
+              [e, t, n, r, 0, 0],
+              3,
+              3,
+              2,
+            );
+            for (let G = -20; G <= 20; ++G) {
+              const P = o + e * s * G,
+                Z = o + t * l * G,
+                D = P + n * s * 100,
+                J = Z + r * l * 100,
+                U = P + n * s * -100,
+                F = Z + r * l * -100,
+                V = o + n * s * G,
+                X = 300 + r * l * G,
+                W = V + e * s * 100,
+                Y = X + t * l * 100,
+                K = V + e * s * -100,
+                Q = X + t * l * -100;
+              ((u.innerHTML += `<line\n                x1="${D}"\n                y1="${J}"\n                x2="${U}"\n                y2="${F}"\n                style="stroke:#6c00da; stroke-width:2"\n              />`),
+                (u.innerHTML += `<line\n                x1="${W}"\n                y1="${Y}"\n                x2="${K}"\n                y2="${Q}"\n                style="stroke:gray; stroke-width:2"\n              />`));
+            }
+            let $ = o,
+              C = 300;
+            for (let ee = 0; ee < v; ++ee)
+              switch (
+                ((u.innerHTML += `<circle\n            cx="${$}"\n            cy="${C}"\n            r="7"\n            color="white"\n            stroke="black"\n            stroke-width="1"\n          />\n          <text\n            x="${$ - 3}"\n            y="${C + 3}"\n            fill="white"\n            font-size="0.5em"\n          >${h(ee, v)}</text>`),
+                i[ee])
+              ) {
+                case "L":
+                  (($ += L * s), (C += M * l));
+                  break;
+                case "m":
+                  (($ += E * s), (C += S * l));
+                  break;
+                case "s":
+                  (($ += T * s), (C += k * l));
+                  break;
+                default:
+                  throw new Error("Invalid letter");
+              }
+            (u.setAttribute("viewBox", "0 0 600 600"),
+              (a.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${w(f)} and h = ${w(m)} are two different generators. g is horizontal, h is vertical.</small>`),
+              (a.innerHTML +=
+                '<div class="controls">\n        <button id="zoom-in">Zoom In (+)</button>\n        <button id="zoom-out">Zoom Out (-)</button>\n        <button id="reset-view">Reset View</button>\n        <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>\n    </div>'),
+              a.appendChild(u));
+            const N = document.getElementById("zoom-in"),
+              _ = document.getElementById("zoom-out"),
+              B = document.getElementById("reset-view"),
+              O = document.getElementById("zoom-level");
+            let H = { x: 0, y: 0, width: 800, height: 600 },
+              A = !1,
+              I = { x: 0, y: 0 },
+              q = 1;
+            function j() {
+              (u.setAttribute(
+                "viewBox",
+                `${H.x} ${H.y} ${H.width} ${H.height}`,
+              ),
+                (O.textContent = Math.round(100 * q) + "%"));
+            }
+            function R(e) {
+              const t = u.getScreenCTM();
+              return { x: (e.clientX - t.e) / t.a, y: (e.clientY - t.f) / t.d };
+            }
+            (u.addEventListener("mousedown", (e) => {
+              ((A = !0), (I = R(e)));
+            }),
+              u.addEventListener("mousemove", (e) => {
+                if (!A) return;
+                e.preventDefault();
+                const t = R(e),
+                  n = t.x - I.x,
+                  r = t.y - I.y;
+                ((H.x -= n), (H.y -= r), j());
+              }),
+              u.addEventListener("mouseup", () => {
+                A = !1;
+              }),
+              u.addEventListener("mouseleave", () => {
+                A = !1;
+              }),
+              u.addEventListener("wheel", (e) => {
+                e.preventDefault();
+                const t = R(e),
+                  n = e.deltaY < 0 ? 0.9 : 1.1,
+                  r = H.width * n,
+                  o = H.height * n;
+                ((H.x += (t.x - H.x) * (1 - n)),
+                  (H.y += (t.y - H.y) * (1 - n)),
+                  (H.width = r),
+                  (H.height = o),
+                  (q = 800 / H.width),
+                  j());
+              }),
+              N.addEventListener("click", () => {
+                const e = H.x + H.width / 2,
+                  t = H.y + H.height / 2;
+                ((H.width *= 0.8),
+                  (H.height *= 0.8),
+                  (H.x = e - H.width / 2),
+                  (H.y = t - H.height / 2),
+                  (q = 800 / H.width),
+                  j());
+              }),
+              _.addEventListener("click", () => {
+                const e = H.x + H.width / 2,
+                  t = H.y + H.height / 2;
+                ((H.width *= 1.25),
+                  (H.height *= 1.25),
+                  (H.x = e - H.width / 2),
+                  (H.y = t - H.height / 2),
+                  (q = 800 / H.width),
+                  j());
+              }),
+              B.addEventListener("click", () => {
+                ((H = { x: 0, y: 0, width: 800, height: 600 }), (q = 1), j());
+              }),
+              j());
+          }
+        }
+      }
+    }
+    function t() {
+      if (i) {
+        const e = new Set(Array.from(i)).size;
+        if (a) {
+          const t = document.getElementById("sw-code");
+          if (t) {
+            ((t.innerHTML =
+              '<hr/><h2>SonicWeave code</h2>\n        (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>'),
+              (t.innerHTML +=
+                '<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>'));
+            const n = "Copy";
+            async function r(e, t) {
+              let r = e.querySelector("code").innerText;
+              (await navigator.clipboard.writeText(r),
+                (t.innerText = "Copied!"),
+                setTimeout(() => {
+                  t.innerText = n;
+                }, 700));
+            }
+            document.querySelectorAll("pre").forEach((e) => {
+              if (navigator.clipboard) {
+                let t = document.createElement("button");
+                ((t.innerText = n),
+                  e.appendChild(t),
+                  t.addEventListener("click", async () => {
+                    await r(e, t);
+                  }));
+              }
+            });
+            let o = document.getElementById("codeblock");
+            const s = Array.from(i);
+            o &&
+              (o.innerHTML =
+                3 === e
+                  ? `let L = ${a[0]}\nlet m = ${a[1]}\nlet s = ${a[2]}\n${s.join(";")};\nstack()`
+                  : 2 === e
+                    ? `let L = ${a[0]}\nlet s = ${a[1]}\n${s.join(";")};\nstack()`
+                    : 1 === e
+                      ? `let X = ${a[0]}\n${s.join(";")};\nstack()`
+                      : "Scales of rank > 3 are not supported");
+          }
+        }
+      }
+    }
+    function n() {
+      const e = document.getElementById("scale-profile");
+      if (e) {
+        e.innerHTML = "";
+        const t = document.createElement("h2");
+        if (((t.innerText = `Scale profile for ${i}`), e.appendChild(t), u)) {
+          const t = u.structure;
+          if (t) {
+            e.innerHTML +=
+              '<b><a href="https://en.xen.wiki/w/Guide_frame\n           " target="_blank">Guide frame</a></b><br/><small>';
+            let n = `${t.gs.map((e) => ` ${w(e)}`)}`.slice(1);
+            ((e.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${(function (
+              e,
+            ) {
+              let t = 0;
+              for (let n of Object.keys(e)) t += e[n];
+              return t;
+            })(t.gs[0])}-steps: GS(${n})<br/>`),
+              (e.innerHTML += `Aggregate generator ${w(t.aggregate)}<br/>`),
+              (e.innerHTML += `Offsets ${t.polyoffset.map((e) => w(e))}<br/>`),
+              (e.innerHTML += `Multiplicity ${JSON.stringify(t.multiplicity)}<br/>`),
+              (e.innerHTML += `Complexity ${JSON.stringify(t.complexity)}<br/><br/>`),
+              (e.innerHTML +=
+                '<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>'),
+              (e.innerHTML += u.lm ? "L = m<br/>" : ""),
+              (e.innerHTML += u.ms ? "m = s<br/>" : ""),
+              (e.innerHTML += u.s0 ? "s = 0<br/>" : ""),
+              u.lm || u.ms || u.s0 || (e.innerHTML += "None<br/>"),
+              (e.innerHTML += "<br/>"));
+            const r = (function (e) {
+                let t = 0;
+                for (let n = 0; n < e.length; ++n) "L" === e[n] && ++t;
+                return t;
+              })(i),
+              o = (function (e) {
+                let t = 0;
+                for (let n = 0; n < e.length; ++n) "m" === e[n] && ++t;
+                return t;
+              })(i),
+              s = (function (e) {
+                let t = 0;
+                for (let n = 0; n < e.length; ++n) "s" === e[n] && ++t;
+                return t;
+              })(i);
+            ((e.innerHTML +=
+              '<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>'),
+              (e.innerHTML += u.subst_l_ms
+                ? `subst ${r}L(${o}m${s}s)<br/>`
+                : ""),
+              (e.innerHTML += u.subst_m_ls
+                ? `subst ${o}m(${r}L${s}s)<br/>`
+                : ""),
+              (e.innerHTML += u.subst_s_lm
+                ? `subst ${s}s(${r}L${o}m)<br/>`
+                : ""),
+              "Achiral" === u.chirality
+                ? (e.innerHTML +=
+                    '<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral')
+                : (e.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${u.chirality} (reversed: ${u.reversed})`),
+              (e.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${u.mv}</small>`));
+          }
+        }
+      }
+    }
+    function w(e) {
+      if (a[0].includes("/")) {
+        const [t, n] = a[0].split("/"),
+          [r, o] = a[1].split("/"),
+          [s, l] = a[2].split("/"),
+          i = Number(t),
+          c = Number(r),
+          u = Number(s),
+          d = Number(n),
+          h = Number(o),
+          p = Number(l),
+          g =
+            Math.pow(i, e[0] ?? 0) *
+            Math.pow(c, e[1] ?? 0) *
+            Math.pow(u, e[2] ?? 0),
+          y =
+            Math.pow(d, e[0] ?? 0) *
+            Math.pow(h, e[1] ?? 0) *
+            Math.pow(p, e[2] ?? 0),
+          b = m(g, y);
+        return `${f(e)} (${g / b}/${y / b})`;
+      }
+      if (a[0].includes("\\")) {
+        const [t, n] = a[0].split("\\"),
+          r = Number(n),
+          [o, s] = a[1].split("\\"),
+          [l, i] = a[2].split("\\"),
+          c = Number(t),
+          u = Number(o),
+          d = Number(l);
+        return `${f(e)} (${c * (e[0] ?? 0) + u * (e[1] ?? 0) + d * (e[2] ?? 0)}\\${r})`;
+      }
+      return f(e);
+    }
+    const x = "Scales of rank 0 or rank 4 or higher are not supported.",
+      v = document.getElementById("btn-sig"),
+      L = document.getElementById("btn-word");
+    (v.addEventListener("click", () => {
+      const o = `${document.getElementById("input-step-sig").value}`
+          .split(" ")
+          .map((e) => Number(e))
+          .filter((e) => e),
+        s = o.filter((e) => e > 0).length,
+        l = o.reduce((e, t) => e + t, 0);
+      try {
+        if (0 === l) d.textContent = "Scale is empty. This is a bug.";
+        else if (s > 3)
+          d.textContent =
+            "Scales of rank 0 or rank 4 or higher are not supported.";
+        else if (s > 0) {
+          ((d.textContent = "Computing..."),
+            (document.getElementById("tables").innerHTML =
+              '\n      <hr /><h2>Tables</h2>\n\n      <table>\n        <tr>\n                      <td>\n                        Scales\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 250px;\n                          "\n                        >\n                          <table class="data" id="table-scales"></table>\n                        </div>\n                      </td>\n                      <td>\n                        JI tunings\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 250px;\n                          "\n                        >\n                          <table class="data" id="table-ji-tunings"></table>\n                        </div>\n                      </td>\n                      <td>\n                        edo tunings\n                        <div\n                          style="\n                            overflow-y: auto;\n                            overflow-x: auto;\n                            vertical-align: top;\n                            height: 420px;\n                            width: 200px;\n                          "\n                        >\n                          <table class="data" id="table-ed-tunings"></table>\n                        </div>\n                      </td></tr></table>'));
+          const l = document.getElementById("table-scales"),
+            m = document.getElementById("table-ji-tunings"),
+            h = document.getElementById("table-ed-tunings"),
+            p = r.A.sigResult(o, {
+              lm: document.getElementById("monotone-lm").checked,
+              ms: document.getElementById("monotone-ms").checked,
+              s0: document.getElementById("monotone-s0").checked,
+              ggsLen: Number(document.getElementById("ggs-len").value),
+              ggsLenConstraint: document.querySelector(
+                'input[name="ggs-len-constraint"]:checked',
+              ).value,
+              complexity: Number(document.getElementById("complexity").value),
+              complexityConstraint: document.querySelector(
+                'input[name="complexity-constraint"]:checked',
+              ).value,
+              mv: Number(document.getElementById("mv").value),
+              mvConstraint: document.querySelector(
+                'input[name="mv-constraint"]:checked',
+              ).value,
+              mosSubst: document.querySelector(
+                'input[name="mos-subst"]:checked',
+              ).value,
+            }),
+            g = p.profiles.map((e) => e.word),
+            y = p.profiles.map((e) => e.lattice_basis),
+            w = p.profiles,
+            v = p.ji_tunings,
+            L = p.ed_tunings;
+          let M;
+          ((M =
+            3 === s
+              ? ["L", "m", "s"]
+              : 2 === s
+                ? ["L", "s"]
+                : 1 === s
+                  ? ["X"]
+                  : [...Array(s).keys()].map((e) => `X${e}`)),
+            (d.innerHTML = `<h1>Results for ${((f = [...Array(s).keys()].map((e) => `${o[e]}${M[e]}`).join("")), f.replaceAll("&", "&amp;"), f.replaceAll("<", "&lt;"), f.replaceAll(">", "&gt;"), f.replaceAll("'", "&#39;"), f.replaceAll('"', "&quot;"), f)}</h1> (click on a table row to select a scale or a tuning)`),
+            b(l, g, "scale"));
+          const E = l.getElementsByTagName("tr");
+          if (E.length >= 3) {
+            (E[2].classList.add("selected"),
+              (i = g[0]),
+              (u = w[0]),
+              (c = u.lattice_basis));
+            for (let r = 2; r < E.length; ++r)
+              E[r].addEventListener("click", async () => {
+                (l.querySelector(".selected").classList.remove("selected"),
+                  E[r].classList.add("selected"));
+                let o = g[r - 2];
+                ((u = w[r - 2]), (c = y[r - 2]), (i = o), t(), n());
+                try {
+                  e();
+                } catch (e) {
+                  d.innerText = e;
+                }
+              });
+          }
+          b(m, v);
+          const S = m.getElementsByTagName("tr");
+          for (let r = 2; r < S.length; ++r) {
+            const o = S[r];
+            o.addEventListener("click", () => {
+              s >= 1 && s <= 3
+                ? (m.querySelector(".selected") &&
+                    m.querySelector(".selected").classList.remove("selected"),
+                  h.querySelector(".selected") &&
+                    h.querySelector(".selected").classList.remove("selected"),
+                  o.classList.add("selected"),
+                  (a = v[r - 2]),
+                  t(),
+                  n(),
+                  e())
+                : (d.textContent = x);
+            });
+          }
+          if (L) {
+            b(h, L);
+            const r = h.getElementsByTagName("tr");
+            r[2].classList.add("selected");
+            const o = L[0];
+            ((a = o), n(), e(u.structure), t());
+            for (let o = 2; o < r.length; ++o) {
+              const s = r[o];
+              s.addEventListener("click", () => {
+                (m.querySelector(".selected") &&
+                  m.querySelector(".selected").classList.remove("selected"),
+                  h.querySelector(".selected") &&
+                    h.querySelector(".selected").classList.remove("selected"),
+                  s.classList.add("selected"));
+                const r = L[o - 2];
+                ((a = r), n(), e(), t());
+              });
+            }
+          }
+          (t(), n(), e());
+        }
+      } catch (e) {
+        d.innerText = e;
+      }
+      var f;
+    }),
+      L.addEventListener("click", () => {
+        const o = document.getElementById("input-word").value,
+          s = new Set(Array.from(o)).size;
+        d.textContent = "Computing...";
+        const l = r.A.wordResult(o),
+          f = l.profile,
+          m = l.profile.word,
+          h = l.ji_tunings,
+          p = l.ed_tunings;
+        document.getElementById("tables").innerHTML =
+          '\n                <td>\n                  JI tunings\n                  <div\n                    style="\n                      overflow-y: auto;\n                      overflow-x: auto;\n                      vertical-align: top;\n                      height: 420px;\n                      width: 250px;\n                    "\n                  >\n                    <table class="data" id="table-ji-tunings"></table>\n                  </div>\n                </td>\n                <td>\n                  edo tunings\n                  <div\n                    style="\n                      overflow-y: auto;\n                      overflow-x: auto;\n                      vertical-align: top;\n                      height: 420px;\n                      width: 200px;\n                    "\n                  >\n                    <table class="data" id="table-ed-tunings"></table>\n                  </div>\n                </td>';
+        const g = document.getElementById("table-ji-tunings"),
+          y = document.getElementById("table-ed-tunings");
+        i = m;
+        try {
+          d.innerHTML = `<h1>Results for ${i}</h1>(click on a table row to select a tuning)`;
+          const r = { L: 0, M: 0, s: 0 };
+          for (let e = 0; e < i.length; ++e) r[i[e]] += 1;
+          (Object.values(r), b(g, h));
+          const o = g.getElementsByTagName("tr");
+          for (let r = 2; r < o.length; ++r) {
+            const l = o[r];
+            l.addEventListener("click", () => {
+              s >= 1 && s <= 3
+                ? (g.querySelector(".selected") &&
+                    g.querySelector(".selected").classList.remove("selected"),
+                  y.querySelector(".selected") &&
+                    y.querySelector(".selected").classList.remove("selected"),
+                  l.classList.add("selected"),
+                  (a = h[r - 2]),
+                  n(),
+                  e(),
+                  t())
+                : (d.textContent = x);
+            });
+          }
+          if (p) {
+            b(y, p);
+            const r = y.getElementsByTagName("tr");
+            r[2].classList.add("selected");
+            for (let o = 2; o < r.length; ++o) {
+              const s = r[o];
+              s.addEventListener("click", () => {
+                (g.querySelector(".selected") &&
+                  g.querySelector(".selected").classList.remove("selected"),
+                  y.querySelector(".selected") &&
+                    y.querySelector(".selected").classList.remove("selected"),
+                  s.classList.add("selected"));
+                const r = p[o - 2];
+                ((a = r), n(), e(), t());
+              });
+            }
+          }
+          const l = p[0];
+          (l.ed, (a = l), t(), (u = f), (c = u.lattice_basis), n(), e(), t());
+        } catch (e) {
+          d.innerText = e;
+        }
+      }));
+  })();
+})();

@@ -321,7 +321,8 @@ function tableHead(data, header = "") {
             let g = currentLatticeBasis[0];
             let h = currentLatticeBasis[1];
             // Helper to get value from array or object with string keys
-            const getVal = (v, i) => Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
+            const getVal = (v, i) =>
+              Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
             let sig = [0, 0, 0];
             let n = currentWord.length;
             for (let i = 0; i < n; ++i) {
@@ -341,7 +342,17 @@ function tableHead(data, header = "") {
             }
             [A, B, C, D] = [1, 0, 0, 1];
             let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
-              [getVal(g, 0), getVal(g, 1), getVal(g, 2), getVal(h, 0), getVal(h, 1), getVal(h, 2), sig[0], sig[1], sig[2]],
+              [
+                getVal(g, 0),
+                getVal(g, 1),
+                getVal(g, 2),
+                getVal(h, 0),
+                getVal(h, 1),
+                getVal(h, 2),
+                sig[0],
+                sig[1],
+                sig[2],
+              ],
               [A, B, C, D, 0, 0],
               3,
               3,
@@ -822,21 +833,25 @@ stack()`
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edoTuningTable = document.getElementById("table-ed-tunings");
-          const sigResultData = TernaryLib.sigResult(
-            sig,
-            {
-              lm: document.getElementById("monotone-lm").checked,
-              ms: document.getElementById("monotone-ms").checked,
-              s0: document.getElementById("monotone-s0").checked,
-              ggsLen: Number(document.getElementById("ggs-len").value),
-              ggsLenConstraint: document.querySelector('input[name="ggs-len-constraint"]:checked').value,
-              complexity: Number(document.getElementById("complexity").value),
-              complexityConstraint: document.querySelector('input[name="complexity-constraint"]:checked').value,
-              mv: Number(document.getElementById("mv").value),
-              mvConstraint: document.querySelector('input[name="mv-constraint"]:checked').value,
-              mosSubst: document.querySelector('input[name="mos-subst"]:checked').value
-            }
-          );
+          const sigResultData = TernaryLib.sigResult(sig, {
+            lm: document.getElementById("monotone-lm").checked,
+            ms: document.getElementById("monotone-ms").checked,
+            s0: document.getElementById("monotone-s0").checked,
+            ggsLen: Number(document.getElementById("ggs-len").value),
+            ggsLenConstraint: document.querySelector(
+              'input[name="ggs-len-constraint"]:checked',
+            ).value,
+            complexity: Number(document.getElementById("complexity").value),
+            complexityConstraint: document.querySelector(
+              'input[name="complexity-constraint"]:checked',
+            ).value,
+            mv: Number(document.getElementById("mv").value),
+            mvConstraint: document.querySelector(
+              'input[name="mv-constraint"]:checked',
+            ).value,
+            mosSubst: document.querySelector('input[name="mos-subst"]:checked')
+              .value,
+          });
           const scales = sigResultData["profiles"].map((j) => j["word"]);
           const latticeBases = sigResultData["profiles"].map(
             (j) => j["lattice_basis"],
