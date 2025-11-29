@@ -343,7 +343,7 @@ impl RawJiRatio {
             // Zero is not a valid harmonic
             Err(IllegalJiRatio { numer: 0, denom: 1 })
         } else {
-            // SAFETY: gcd(n, 1) == 1, so ratio is already in lowest terms
+            // gcd(n, 1) == 1, so ratio is already in lowest terms
             Ok(RawJiRatio { numer: n, denom: 1 })
         }
     }
