@@ -45,13 +45,6 @@ function gcd(a, b) {
 }
 
 /**
- * Least Common Multiple
- */
-function lcm(a, b) {
-  return Math.abs(a * b) / gcd(a, b);
-}
-
-/**
  * Modular inverse: find x such that (x*a) mod b = 1
  */
 function modinv(a, b) {
@@ -365,18 +358,6 @@ function darkestMosModeAndGenBresenham(a, b) {
   }
 }
 
-/**
- * Get a specific mode of a MOS by brightness
- */
-function mosMode(a, b, brightness) {
-  if (brightness >= a + b) {
-    throw new Error("Brightness out of range");
-  }
-  const [mos, darkGen] = darkestMosModeAndGenBresenham(a, b);
-  const darkGenStepCount = darkGen.len();
-  return rotate(mos, brightness * darkGenStepCount);
-}
-
 // ============================================================================
 // WORD/SCALE OPERATIONS
 // ============================================================================
@@ -523,23 +504,6 @@ function chirality(word) {
   if (cmp < 0) return "Right";
   if (cmp > 0) return "Left";
   return "Achiral";
-}
-
-/**
- * Get the weak period of a sequence
- */
-function weakPeriod(slice) {
-  for (let l = 1; l <= slice.length; l++) {
-    const prefix = slice.slice(0, l);
-    const repeated = [];
-    while (repeated.length < slice.length) {
-      repeated.push(...prefix);
-    }
-    if (arraysEqual(slice, repeated.slice(0, slice.length))) {
-      return prefix;
-    }
-  }
-  return slice;
 }
 
 // ============================================================================
@@ -1113,21 +1077,6 @@ function stepsAsCents(steps, ed, equaveCents = 1200) {
 }
 
 /**
- * Check if a value is in the tuning range for a ternary scale
- */
-function isInTuningRange(testValue, stepSig, interval, equaveCents = 1200) {
-  const [a, b, c] = stepSig;
-  const [x, y, z] = interval;
-
-  const value100 = (equaveCents * x) / a;
-  const value110 = (equaveCents * (x + y)) / (a + b);
-  const value111 = (equaveCents * (x + y + z)) / (a + b + c);
-
-  const values = [value100, value110, value111].sort((a, b) => a - b);
-  return values[0] <= testValue && testValue <= values[2];
-}
-
-/**
  * Find all ED tunings for a ternary step signature
  */
 function edTuningsForTernary(
@@ -1323,23 +1272,6 @@ function wordResult(query) {
   };
 }
 
-/**
- * Get the brightest mode of a word
- */
-function wordToBrightest(query) {
-  const wordInNumbers = stringToNumbers(query);
-  const brightest = leastMode(wordInNumbers);
-  return numbersToString(brightest);
-}
-
-/**
- * Get the maximum variety of a word
- */
-function wordToMv(query) {
-  const wordInNumbers = stringToNumbers(query);
-  return maximumVariety(wordInNumbers);
-}
-
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -1354,7 +1286,6 @@ const TernaryLib = {
 
   // Utility functions
   gcd,
-  lcm,
   modinv,
   extendedGcd,
   mod,
@@ -1376,7 +1307,6 @@ const TernaryLib = {
 
   // MOS generation
   darkestMosModeAndGenBresenham,
-  mosMode,
 
   // Scale properties
   stepVariety,
@@ -1389,7 +1319,6 @@ const TernaryLib = {
   mosSubstitutionScales,
   isMosSubst,
   chirality,
-  weakPeriod,
 
   // Guide frames
   stackedKSteps,
@@ -1413,7 +1342,6 @@ const TernaryLib = {
 
   // ED tunings
   stepsAsCents,
-  isInTuningRange,
   edTuningsForTernary,
 
   // Main API
@@ -1421,8 +1349,6 @@ const TernaryLib = {
   sigToEdTunings,
   sigResult,
   wordResult,
-  wordToBrightest,
-  wordToMv,
 };
 
 // Export for different module systems

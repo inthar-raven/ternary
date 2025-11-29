@@ -13,43 +13,23 @@ const EDGE_WIDTH = 2;
 
 const GROUND_INDIGO = "#6c00da";
 
-// global state (TODO: replace this with arguments for functions that show scale and tuning data)
+// Global state
 let currentWord = null;
-// let currentLCount = 0;
-// let currentMCount = 0;
-// let currentSCount = 0;
 let currentLatticeBasis = null;
 let currentTuning = null;
 let currentProfile = null;
 
 const statusElement = document.getElementById("status");
 
-function countL(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "L") {
-      ++result;
-    }
+/**
+ * Count occurrences of a character in a string
+ */
+function countChar(str, char) {
+  let count = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === char) count++;
   }
-  return result;
-}
-function countM(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "m") {
-      ++result;
-    }
-  }
-  return result;
-}
-function countS(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "s") {
-      ++result;
-    }
-  }
-  return result;
+  return count;
 }
 function displayStepVector(vector) {
   const keys = [...Object.keys(vector)];
@@ -67,20 +47,8 @@ function displayStepVector(vector) {
   return result;
 }
 
-function gcd(a, b) {
-  if (a === 0) {
-    return b;
-  } else if (b === 0) {
-    return a;
-  } else {
-    return a > b ? gcd(a % b, b) : a === b ? a : gcd(a, b % a);
-  }
-}
-
-// Modulo that works like Python %
-function modulo(a, m) {
-  return (m + (a % m)) % m;
-}
+// Use gcd and mod from TernaryLib
+const { gcd, mod } = TernaryLib;
 
 function stepVectorLength(vector) {
   let result = 0;
@@ -88,16 +56,6 @@ function stepVectorLength(vector) {
     result += vector[key];
   }
   return result;
-}
-// The m x m identity matrix.
-function eye(m) {
-  let arr = Array(m * m);
-  for (let i = 0; i < m; i++) {
-    for (let j = 0; j < m; j++) {
-      arr[m * i + j] = i === j ? 1 : 0;
-    }
-  }
-  return arr;
 }
 
 // Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
@@ -194,12 +152,6 @@ function gaussianElimination(left, right, m, n1, n2) {
     multiplyRow(rightClone, m, n2, j, 1 / pivot);
   }
   return rightClone;
-}
-
-// Finds the inverse of `matrix`,
-// If `matrix` is not invertible, throws an error.
-function inverseMatrix(matrix, m) {
-  return gaussianElimination(matrix, eye(m), m, m, m);
 }
 
 // Makes a table in `tableElement` with the given `data`.
@@ -409,7 +361,7 @@ function tableHead(data, header = "") {
             y="${currentY + 3}"
             fill="black"
             font-size="0.5em"
-          >${modulo(deg, n)}</text>`;
+          >${mod(deg, n)}</text>`;
               switch (currentWord[deg]) {
                 case "L":
                   currentX += L_x * SPACING_X;
@@ -690,9 +642,9 @@ stack()`
             el.innerHTML += `None<br/>`;
           }
           el.innerHTML += `<br/>`;
-          const a = countL(currentWord);
-          const b = countM(currentWord);
-          const c = countS(currentWord);
+          const a = countChar(currentWord, "L");
+          const b = countChar(currentWord, "m");
+          const c = countChar(currentWord, "s");
 
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
           el.innerHTML += currentProfile["subst_l_ms"]
@@ -753,13 +705,23 @@ stack()`
   }
 
   function escapeHtml(text) {
-    text.replaceAll("&", "&amp;");
-    text.replaceAll("<", "&lt;");
-    text.replaceAll(">", "&gt;");
-    text.replaceAll(`'`, "&#39;");
-    text.replaceAll(`"`, "&quot;");
-    return text;
+    return text
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll(`'`, "&#39;")
+      .replaceAll(`"`, "&quot;");
   }
+
+  /**
+   * Clear selection from both tuning tables and select a row
+   */
+  function selectTuningRow(jiTable, edoTable, row) {
+    jiTable.querySelector(`.selected`)?.classList.remove("selected");
+    edoTable.querySelector(`.selected`)?.classList.remove("selected");
+    row.classList.add("selected");
+  }
+
   const RANK_LIMIT = 3;
   const NO_HIGH_RANK_SCALES = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
 
@@ -911,19 +873,7 @@ stack()`
             const thisRow = jiRows[i];
             thisRow.addEventListener("click", () => {
               if (arity >= 1 && arity <= 3) {
-                // unselect selected row in either JI tuning table or ED tuning table
-                if (jiTuningTable.querySelector(`.selected`)) {
-                  jiTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                if (edoTuningTable.querySelector(`.selected`)) {
-                  edoTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                // select the row clicked on
-                thisRow.classList.add("selected");
+                selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
                 currentTuning = jiTunings[i - 2];
                 showSonicWeaveCode();
                 showScaleProfile();
@@ -945,19 +895,7 @@ stack()`
             for (let i = 2; i < edRows.length; ++i) {
               const thisRow = edRows[i];
               thisRow.addEventListener("click", () => {
-                // unselect selected row in either JI tuning table or ED tuning table
-                if (jiTuningTable.querySelector(`.selected`)) {
-                  jiTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                if (edoTuningTable.querySelector(`.selected`)) {
-                  edoTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                // select the row clicked on
-                thisRow.classList.add("selected");
+                selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
                 const edoTuning = edoTunings[i - 2];
                 currentTuning = edoTuning;
                 showScaleProfile();
@@ -1019,31 +957,13 @@ stack()`
     try {
       statusElement.innerHTML = `<h1>Results for ${currentWord}</h1>(click on a table row to select a tuning)`;
 
-      const sig_ = { L: 0, M: 0, s: 0 };
-      for (let i = 0; i < currentWord.length; ++i) {
-        sig_[currentWord[i]] += 1;
-      }
-      const sig = Object.values(sig_); // values will be extracted ordered by the keys; for indexing by 0, 1, 2... rather than L, m, s
-
       makeTable(jiTuningTable, jiTunings);
       const jiRows = jiTuningTable.getElementsByTagName("tr");
       for (let i = 2; i < jiRows.length; ++i) {
         const thisRow = jiRows[i];
         thisRow.addEventListener("click", () => {
           if (arity >= 1 && arity <= 3) {
-            // unselect selected row in either JI tuning table or ED tuning table
-            if (jiTuningTable.querySelector(`.selected`)) {
-              jiTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            if (edoTuningTable.querySelector(`.selected`)) {
-              edoTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            // select the row clicked on
-            thisRow.classList.add("selected");
+            selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
             currentTuning = jiTunings[i - 2];
             showScaleProfile();
             createLatticeView();
@@ -1060,19 +980,7 @@ stack()`
         for (let i = 2; i < edRows.length; ++i) {
           const thisRow = edRows[i];
           thisRow.addEventListener("click", () => {
-            // unselect selected row in either JI tuning table or ED tuning table
-            if (jiTuningTable.querySelector(`.selected`)) {
-              jiTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            if (edoTuningTable.querySelector(`.selected`)) {
-              edoTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            // select the row clicked on
-            thisRow.classList.add("selected");
+            selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
             const edoTuning = edoTunings[i - 2];
             currentTuning = edoTuning;
             showScaleProfile();
@@ -1081,9 +989,7 @@ stack()`
           });
         }
       }
-      const edoTuning = edoTunings[0];
-      const ed = edoTuning["ed"];
-      currentTuning = edoTuning;
+      currentTuning = edoTunings[0];
       showSonicWeaveCode();
       currentProfile = profile;
       currentLatticeBasis = currentProfile["lattice_basis"];
