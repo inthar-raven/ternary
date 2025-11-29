@@ -512,7 +512,6 @@ impl DivAssign for RawJiRatio {
 
 impl CheckedDiv for RawJiRatio {
     fn checked_div(&self, other: &Self) -> Option<Self> {
-        // Division with overflow checking
         let d = gcd(self.numer * other.denom, self.denom * other.numer);
         Some(RawJiRatio {
             numer: self.numer.checked_mul(other.denom)? / d,

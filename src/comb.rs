@@ -7,13 +7,13 @@ use crate::words::Letter;
 /// Generates all partitions of `n` using parts <= `m` with exactly `parts` parts.
 fn partitions_exact_part_count_rec(n: usize, m: usize, parts: usize) -> Vec<Vec<usize>> {
     match (n, m, parts) {
-        (0, 0, 0) => vec![vec![]], // Base case: empty partition
-        (0, m, _) if m > 0 => vec![], // Invalid: sum is 0 but m > 0
-        (0, _, k) if k > 0 => vec![], // Invalid: sum is 0 but need k parts
+        (0, 0, 0) => vec![vec![]],             // Base case: empty partition
+        (0, m, _) if m > 0 => vec![],          // Invalid: sum is 0 but m > 0
+        (0, _, k) if k > 0 => vec![],          // Invalid: sum is 0 but need k parts
         (n, m, _) if n > 0 && m > n => vec![], // Invalid: max part > sum
         (n, _, k) if n > 0 && k > n => vec![], // Invalid: more parts than sum
-        (n, 0, _) if n > 0 => vec![], // Invalid: no parts available
-        (n, _, 0) if n > 0 => vec![], // Invalid: need parts but none allowed
+        (n, 0, _) if n > 0 => vec![],          // Invalid: no parts available
+        (n, _, 0) if n > 0 => vec![],          // Invalid: need parts but none allowed
         _ => (0..=m)
             // Try each possible value for the first part
             .flat_map(|l| {
