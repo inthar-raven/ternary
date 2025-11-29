@@ -151,7 +151,7 @@ function gaussianElimination(left, right, m, n1, n2) {
     if (Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
       return null;
     }
-    // Clear lower triangle{
+    // Clear lower triangle
     const pivot = leftClone[n1 * j + j];
     for (let i2 = j + 1; i2 < m; ++i2) {
       const target = leftClone[n1 * i2 + j];
@@ -341,21 +341,21 @@ import("./pkg").then((wasm) => {
               3,
               2,
             );
-            for (let i = -8; i <= 8; ++i) {
+            for (let i = -20; i <= 20; ++i) {
               // Lines of constant g
               const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
               const p0y = ORIGIN_X + B * SPACING_Y * i;
-              const p1x = p0x + C * SPACING_X * 10; // add a large positive h offset
-              const p1y = p0y + D * SPACING_Y * 10;
-              const p2x = p0x + C * SPACING_X * -10; // add a large negative h offset
-              const p2y = p0y + D * SPACING_Y * -10;
+              const p1x = p0x + C * SPACING_X * 100; // add a large positive h offset
+              const p1y = p0y + D * SPACING_Y * 100;
+              const p2x = p0x + C * SPACING_X * -100; // add a large negative h offset
+              const p2y = p0y + D * SPACING_Y * -100;
               // Lines of constant h
               const q0x = ORIGIN_X + C * SPACING_X * i;
               const q0y = ORIGIN_Y + D * SPACING_Y * i;
-              const q1x = q0x + A * SPACING_X * 10;
-              const q1y = q0y + B * SPACING_Y * 10;
-              const q2x = q0x + A * SPACING_X * -10;
-              const q2y = q0y + B * SPACING_Y * -10;
+              const q1x = q0x + A * SPACING_X * 100;
+              const q1y = q0y + B * SPACING_Y * 100;
+              const q2x = q0x + A * SPACING_X * -100;
+              const q2y = q0y + B * SPACING_Y * -100;
 
               // draw the line of constant g
               svgTag.innerHTML += `<line
@@ -415,7 +415,135 @@ import("./pkg").then((wasm) => {
               `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
             );
             latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
+            // Add zoom buttons
+            latticeElement.innerHTML += 
+    `<div class="controls">
+        <button id="zoom-in">Zoom In (+)</button>
+        <button id="zoom-out">Zoom Out (-)</button>
+        <button id="reset-view">Reset View</button>
+        <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>
+    </div>`;
             latticeElement.appendChild(svgTag);
+
+            // Zoom functionality
+            const zoomInButton = document.getElementById('zoom-in');
+            const zoomOutButton = document.getElementById('zoom-out');
+            const resetViewButton = document.getElementById('reset-view');
+            let currentZoom = 1.0;  // Initial zoom level
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+            let viewBox = {
+              x: 0,
+              y: 0,
+              width: 800,
+              height: 600
+            };
+            
+            let isPanning = false;
+            let startPoint = { x: 0, y: 0 };
+            let scale = 1.0;
+
+            // Update viewBox attribute
+            function updateViewBox() {
+                svgTag.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+                zoomLevelDisplay.textContent = Math.round(scale * 100) + '%';
+            }
+
+            // Convert screen coordinates to SVG coordinates
+            function getPointInSVG(e) {
+                const CTM = svgTag.getScreenCTM();
+                return {
+                    x: (e.clientX - CTM.e) / CTM.a,
+                    y: (e.clientY - CTM.f) / CTM.d
+                };
+            }
+            
+            // Mouse down - start panning
+            svgTag.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                startPoint = getPointInSVG(e);
+            });
+            
+            // Mouse move - pan
+            svgTag.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                
+                e.preventDefault();
+                const currentPoint = getPointInSVG(e);
+                const dx = currentPoint.x - startPoint.x;
+                const dy = currentPoint.y - startPoint.y;
+                
+                viewBox.x -= dx;
+                viewBox.y -= dy;
+                
+                updateViewBox();
+            });
+            
+            // Mouse up - stop panning
+            svgTag.addEventListener('mouseup', () => {
+                isPanning = false;
+            });
+            
+            svgTag.addEventListener('mouseleave', () => {
+                isPanning = false;
+            });
+            
+            // Wheel - zoom
+            svgTag.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                const point = getPointInSVG(e);
+                const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
+                
+                // Calculate new dimensions
+                const newWidth = viewBox.width * zoomFactor;
+                const newHeight = viewBox.height * zoomFactor;
+                
+                // Adjust position to zoom towards mouse cursor
+                viewBox.x += (point.x - viewBox.x) * (1 - zoomFactor);
+                viewBox.y += (point.y - viewBox.y) * (1 - zoomFactor);
+                
+                viewBox.width = newWidth;
+                viewBox.height = newHeight;
+                
+                scale = 800 / viewBox.width;
+                
+                updateViewBox();
+            });
+
+            // Button functions
+            zoomInButton.addEventListener('click', () => {
+              const centerX = viewBox.x + viewBox.width / 2;
+              const centerY = viewBox.y + viewBox.height / 2;
+              
+              viewBox.width *= 0.8;
+              viewBox.height *= 0.8;
+              
+              viewBox.x = centerX - viewBox.width / 2;
+              viewBox.y = centerY - viewBox.height / 2;
+              
+              scale = 800 / viewBox.width;
+              updateViewBox();
+            });
+            zoomOutButton.addEventListener('click', () => {
+              const centerX = viewBox.x + viewBox.width / 2;
+              const centerY = viewBox.y + viewBox.height / 2;
+              
+              viewBox.width *= 1.25;
+              viewBox.height *= 1.25;
+              
+              viewBox.x = centerX - viewBox.width / 2;
+              viewBox.y = centerY - viewBox.height / 2;
+              
+              scale = 800 / viewBox.width;
+              updateViewBox();
+            });
+            resetViewButton.addEventListener('click', () => {
+              viewBox = { x: 0, y: 0, width: 800, height: 600 };
+              scale = 1;
+              updateViewBox();
+            });
+            // Initialize
+            updateViewBox();
           } else {
             throw new Error("No suitable lattice basis");
           }
