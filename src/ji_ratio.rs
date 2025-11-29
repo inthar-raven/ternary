@@ -300,19 +300,10 @@ impl RawJiRatio {
     /// The reciprocal of a `RawJiRatio`.
     #[inline(always)]
     pub fn reciprocal(&self) -> RawJiRatio {
-        // SOUNDNESS: By construction, gcd(`numer`, `denom`) == 1.
         RawJiRatio {
             numer: self.denom,
             denom: self.numer,
         }
-    }
-    /// This function creates a new `RawJiRatio` without checking whether `numer/denom` is a valid JI ratio in lowest terms.
-    /// Thhs function might panic!
-    pub fn new(numer: u64, denom: u64) -> RawJiRatio {
-        assert!(numer > 0);
-        assert!(denom > 0);
-        assert_eq!(num_integer::gcd(numer, denom), 1);
-        RawJiRatio { numer, denom }
     }
     /// 1/1, the unison.
     pub const UNISON: RawJiRatio = RawJiRatio { numer: 1, denom: 1 };

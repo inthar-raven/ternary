@@ -31,7 +31,6 @@ pub struct SubgroupMonzo(((Monzo, i32), (Monzo, i32), (Monzo, i32))); // Using j
 
 impl SubgroupMonzo {
     /// Tries to create a new `SubgroupMonzo` with length 3 enforced.
-    #[allow(clippy::result_unit_err)]
     pub fn try_new(basis: &[Monzo], vector: &[i32]) -> Result<Self, SubgroupMonzoErr> {
         // placeholder Err type
         if basis.len() < 3 || vector.len() < 3 {
