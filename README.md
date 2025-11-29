@@ -4,14 +4,12 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 
 # How to build and run
 
-1. [Install the Rust toolchain](https://www.rust-lang.org/tools/install).
-1. Run `cargo install wasm-pack`.
 1. [Install `npm`](https://nodejs.org/en/download/package-manager).
 1. Run `npm install` in the project directory.
 1. Run `npm run serve` in the project directory.
 1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
 
-By default the WASM is compiled in release mode. To compile it in development mode, make sure that the `mode` value is set to `"development"` in the project directory's `webpack.config.js` file.
+By default the code is compiled in release mode. To compile it in development mode, make sure that the `mode` value is set to `"development"` in the project directory's `webpack.config.js` file.
 
 # Dev scripts
 
