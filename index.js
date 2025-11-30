@@ -50,6 +50,44 @@ function displayStepVector(vector) {
 // Use gcd and mod from TernaryLib
 const { gcd, mod } = TernaryLib;
 
+/**
+ * Parse an equave ratio string (e.g., "2/1") and convert to cents
+ * Returns 1200 (octave) if parsing fails
+ */
+function parseEquaveToCents(ratioStr) {
+  const match = ratioStr.trim().match(/^(\d+)\/(\d+)$/);
+  if (!match) {
+    return 1200; // Default to octave
+  }
+  const numerator = parseInt(match[1], 10);
+  const denominator = parseInt(match[2], 10);
+  if (denominator === 0 || numerator <= 0 || denominator <= 0) {
+    return 1200; // Default to octave
+  }
+  // cents = 1200 * log2(ratio)
+  return 1200 * Math.log2(numerator / denominator);
+}
+
+/**
+ * Get the current equave ratio string from the input field (normalized)
+ */
+function getEquaveRatio() {
+  const input = document.getElementById("input-equave");
+  if (!input) return "2/1";
+  const value = input.value.trim();
+  const match = value.match(/^(\d+)\/(\d+)$/);
+  if (!match) return "2/1";
+  return `${match[1]}/${match[2]}`;
+}
+
+/**
+ * Get the current equave in cents from the input field
+ */
+function getEquaveCents() {
+  const input = document.getElementById("input-equave");
+  return input ? parseEquaveToCents(input.value) : 1200;
+}
+
 function stepVectorLength(vector) {
   let result = 0;
   for (let key of Object.keys(vector)) {
@@ -670,7 +708,19 @@ stack()`
 
   // display both the step vector in sum form and what interval it is in the current tuning
   function alsoInCurrentTuning(v) {
-    if (currentTuning["0"].includes("/")) {
+    if (currentTuning["0"].includes("\\")) {
+      const [str0, eqvStr] = currentTuning["0"].split("/");
+      const [str1, _1] = currentTuning["1"].split("/");
+      const [str2, _2] = currentTuning["2"].split("/");
+      const [numLstr, denLstr] = str0.split("\\");
+      const ed = Number(denLstr);
+      const [numMstr, _3] = str1.split("\\");
+      const [numSstr, _4] = str2.split("\\");
+      const numL = Number(numLstr);
+      const numM = Number(numMstr);
+      const numS = Number(numSstr);
+      return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}${eqvStr}`;
+    } else if (currentTuning["0"].includes("/")) {
       const [numLstr, denLstr] = currentTuning["0"].split("/");
       const [numMstr, denMstr] = currentTuning["1"].split("/");
       const [numSstr, denSstr] = currentTuning["2"].split("/");
@@ -690,15 +740,6 @@ stack()`
         Math.pow(denS, v["2"] ?? 0);
       const d = gcd(num, den);
       return `${displayStepVector(v)} (${num / d}/${den / d})`;
-    } else if (currentTuning["0"].includes("\\")) {
-      const [numLstr, denLstr] = currentTuning["0"].split("\\");
-      const ed = Number(denLstr);
-      const [numMstr, _1] = currentTuning["1"].split("\\");
-      const [numSstr, _2] = currentTuning["2"].split("\\");
-      const numL = Number(numLstr);
-      const numM = Number(numMstr);
-      const numS = Number(numSstr);
-      return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
     } else {
       return displayStepVector(v);
     }
@@ -813,6 +854,8 @@ stack()`
             ).value,
             mosSubst: document.querySelector('input[name="mos-subst"]:checked')
               .value,
+            equaveCents: getEquaveCents(),
+            equaveRatio: getEquaveRatio(),
           });
           const scales = sigResultData["profiles"].map((j) => j["word"]);
           const latticeBases = sigResultData["profiles"].map(
@@ -917,7 +960,7 @@ stack()`
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
-    const wordResultData = TernaryLib.wordResult(query);
+    const wordResultData = TernaryLib.wordResult(query, getEquaveCents(), getEquaveRatio());
     const profile = wordResultData["profile"];
     const brightestMode = wordResultData["profile"]["word"];
     const jiTunings = wordResultData["ji_tunings"];

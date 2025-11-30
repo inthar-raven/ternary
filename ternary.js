@@ -9,7 +9,7 @@
 // CONSTANTS
 // ============================================================================
 
-const EDO_BOUND = 111;
+const ED_BOUND = 111;
 const S_LOWER_BOUND = 20.0;
 const S_UPPER_BOUND = 200.0;
 
@@ -1088,7 +1088,7 @@ function stepsAsCents(steps, ed, equaveCents = 1200) {
  */
 function edTuningsForTernary(
   stepSig,
-  edBound = EDO_BOUND,
+  edBound = ED_BOUND,
   aberLower = S_LOWER_BOUND,
   aberUpper = S_UPPER_BOUND,
   equaveCents = 1200,
@@ -1171,12 +1171,16 @@ function wordToProfile(query) {
 
 /**
  * Get ED tunings formatted as strings
+ * @param stepSig - Step signature array
+ * @param equaveCents - Equave size in cents (for filtering)
+ * @param equaveRatio - Equave as ratio string like "2/1" (for display)
  */
-function sigToEdTunings(stepSig) {
-  const edTunings = edTuningsForTernary(stepSig);
+function sigToEdTunings(stepSig, equaveCents = 1200, equaveRatio = "2/1") {
+  const edTunings = edTuningsForTernary(stepSig, ED_BOUND, S_LOWER_BOUND, S_UPPER_BOUND, equaveCents);
+  const isDefaultEquave = equaveRatio === "2/1";
   return edTunings.map((v) => {
-    const edo = v[0] * stepSig[0] + v[1] * stepSig[1] + v[2] * stepSig[2];
-    return v.map((i) => `${i}\\${edo}`);
+    const ed = v[0] * stepSig[0] + v[1] * stepSig[1] + v[2] * stepSig[2];
+    return v.map((i) => isDefaultEquave ? `${i}\\${ed}` : `${i}\\${ed}<${equaveRatio}>`);
   });
 }
 
@@ -1196,6 +1200,8 @@ function sigResult(
     mv = 0,
     mvConstraint = "at most",
     mosSubst = "off",
+    equaveCents = 1200,
+    equaveRatio = "2/1",
   } = {},
 ) {
   const stepSig = query;
@@ -1261,21 +1267,21 @@ function sigResult(
   return {
     profiles: profiles,
     ji_tunings: [], // JI tunings are disabled for now (would require more complex computation)
-    ed_tunings: sigToEdTunings(stepSig),
+    ed_tunings: sigToEdTunings(stepSig, equaveCents, equaveRatio),
   };
 }
 
 /**
  * Process a word query (main API function)
  */
-function wordResult(query) {
+function wordResult(query, equaveCents = 1200, equaveRatio = "2/1") {
   const wordAsNumbers = stringToNumbers(query);
   const stepSig = wordToSig(wordAsNumbers);
 
   return {
     profile: wordToProfile(wordAsNumbers),
     ji_tunings: [],
-    ed_tunings: sigToEdTunings(stepSig),
+    ed_tunings: sigToEdTunings(stepSig, equaveCents, equaveRatio),
   };
 }
 
@@ -1286,7 +1292,7 @@ function wordResult(query) {
 // Export for use in browser (window) or module systems
 const TernaryLib = {
   // Constants
-  EDO_BOUND,
+  ED_BOUND,
   S_LOWER_BOUND,
   S_UPPER_BOUND,
   STEP_LETTERS,
