@@ -603,10 +603,12 @@ function tableHead(data, header = "") {
             // Initialize
             updateViewBox();
           } else {
-            throw new Error("No suitable lattice basis");
+            // No lattice basis available - show a message instead of throwing
+            latticeElement.innerHTML = `<hr/><h2>Lattice view</h2><br/><small>No suitable lattice basis found for this scale.</small>`;
           }
         } else {
-          throw new Error("`state.word` is null or undefined");
+          // No word selected
+          latticeElement.innerHTML = "";
         }
       }
     }
@@ -693,6 +695,8 @@ stack()`
       if (state.profile) {
         // const ploidacot = state.profile["ploidacot"];
         const structure = state.profile["structure"];
+        
+        // Guide frame info (only if structure exists)
         if (structure) {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
            " target="_blank">Guide frame</a></b><br/><small>`;
@@ -704,41 +708,57 @@ stack()`
           el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
           el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
-          el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
-          el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
-          el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
-          if (
-            !state.profile["lm"] &&
-            !state.profile["ms"] &&
-            !state.profile["s0"]
-          ) {
-            el.innerHTML += `None<br/>`;
-          }
-          el.innerHTML += `<br/>`;
-          const a = countChar(state.word, "L");
-          const b = countChar(state.word, "m");
-          const c = countChar(state.word, "s");
-
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
-          el.innerHTML += state.profile["subst_l_ms"]
-            ? `subst ${a}L(${b}m${c}s)<br/>`
-            : "";
-          el.innerHTML += state.profile["subst_m_ls"]
-            ? `subst ${b}m(${a}L${c}s)<br/>`
-            : "";
-          el.innerHTML += state.profile["subst_s_lm"]
-            ? `subst ${c}s(${a}L${b}m)<br/>`
-            : "";
-
-          if (state.profile["chirality"] === "Achiral") {
-            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
-          } else {
-            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
-          }
-          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${state.profile["mv"]}</small>`;
+          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/></small>`; // TODO prettify
+        } else {
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
         }
+        
+        // Monotone MOS properties (always shown)
+        el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
+        el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
+        el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
+        el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
+        if (
+          !state.profile["lm"] &&
+          !state.profile["ms"] &&
+          !state.profile["s0"]
+        ) {
+          el.innerHTML += `None<br/>`;
+        }
+        el.innerHTML += `<br/>`;
+        
+        // MOS substitution properties (always shown)
+        const a = countChar(state.word, "L");
+        const b = countChar(state.word, "m");
+        const c = countChar(state.word, "s");
+
+        el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+        el.innerHTML += state.profile["subst_l_ms"]
+          ? `subst ${a}L(${b}m${c}s)<br/>`
+          : "";
+        el.innerHTML += state.profile["subst_m_ls"]
+          ? `subst ${b}m(${a}L${c}s)<br/>`
+          : "";
+        el.innerHTML += state.profile["subst_s_lm"]
+          ? `subst ${c}s(${a}L${b}m)<br/>`
+          : "";
+        if (
+          !state.profile["subst_l_ms"] &&
+          !state.profile["subst_m_ls"] &&
+          !state.profile["subst_s_lm"]
+        ) {
+          el.innerHTML += `None<br/>`;
+        }
+
+        // Chirality (always shown)
+        if (state.profile["chirality"] === "Achiral") {
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
+        } else {
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
+        }
+        
+        // Maximum variety (always shown)
+        el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
       }
     }
   }
