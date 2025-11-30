@@ -18,6 +18,8 @@ let currentWord = null;
 let currentLatticeBasis = null;
 let currentTuning = null;
 let currentProfile = null;
+let currentEquaveNum = 2;
+let currentEquaveDen = 1;
 
 const statusElement = document.getElementById("status");
 
@@ -73,11 +75,24 @@ function parseEquaveToCents(ratioStr) {
  */
 function getEquaveRatio() {
   const input = document.getElementById("input-equave");
-  if (!input) return "2/1";
+  if (!input) {
+    currentEquaveNum = 2;
+    currentEquaveDen = 1;
+    return "2/1";
+  }
   const value = input.value.trim();
   const match = value.match(/^(\d+)\/(\d+)$/);
-  if (!match) return "2/1";
-  return `${match[1]}/${match[2]}`;
+  if (!match) {
+    currentEquaveNum = 2;
+    currentEquaveDen = 1;
+    return "2/1";
+  }
+  const num = parseInt(match[1], 10);
+  const den = parseInt(match[2], 10);
+  const d = gcd(num, den);
+  currentEquaveNum = num / d;
+  currentEquaveDen = den / d;
+  return `${num / d}/${den / d}`;
 }
 
 /**
@@ -422,7 +437,7 @@ function tableHead(data, header = "") {
               "viewBox",
               `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
             );
-            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen)} and h = ${alsoInCurrentTuning(h, currentEquaveNum, currentEquaveDen)} are two different generators. g is horizontal, h is vertical.</small>`;
             // Add zoom buttons
             latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
@@ -436,7 +451,6 @@ function tableHead(data, header = "") {
             const zoomInButton = document.getElementById("zoom-in");
             const zoomOutButton = document.getElementById("zoom-out");
             const resetViewButton = document.getElementById("reset-view");
-            let currentZoom = 1.0; // Initial zoom level
             const zoomLevelDisplay = document.getElementById("zoom-level");
             let viewBox = {
               x: 0,
@@ -649,12 +663,12 @@ stack()`
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
            " target="_blank">Guide frame</a></b><br/><small>`;
           let gsDisp =
-            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g)}`)}`.slice(
+            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen)}`)}`.slice(
               1,
             );
           el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"])}<br/>`; // TODO prettify
-          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
+          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], currentEquaveNum, currentEquaveDen)}<br/>`; // TODO prettify
+          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
           /*
@@ -707,19 +721,29 @@ stack()`
   }
 
   // display both the step vector in sum form and what interval it is in the current tuning
-  function alsoInCurrentTuning(v) {
+  function alsoInCurrentTuning(v, equaveNum = 2, equaveDen = 1) {
     if (currentTuning["0"].includes("\\")) {
-      const [str0, eqvStr] = currentTuning["0"].split("/");
-      const [str1, _1] = currentTuning["1"].split("/");
-      const [str2, _2] = currentTuning["2"].split("/");
-      const [numLstr, denLstr] = str0.split("\\");
-      const ed = Number(denLstr);
-      const [numMstr, _3] = str1.split("\\");
-      const [numSstr, _4] = str2.split("\\");
-      const numL = Number(numLstr);
-      const numM = Number(numMstr);
-      const numS = Number(numSstr);
-      return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}${eqvStr}`;
+      if (equaveNum !== 2 || equaveDen !== 1) {
+        const str0 = currentTuning["0"].substring(0, currentTuning["0"].indexOf("<"));
+        const str1 = currentTuning["1"].substring(0, currentTuning["1"].indexOf("<"));
+        const str2 = currentTuning["2"].substring(0, currentTuning["2"].indexOf("<"));
+        const [numLstr, denLstr] = str0.split("\\");
+        const [numMstr, _1] = str1.split("\\");
+        const [numSstr, _2] = str2.split("\\");
+        const numL = Number(numLstr);
+        const numM = Number(numMstr);
+        const numS = Number(numSstr);
+        const ed = Number(denLstr);
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equaveNum}/${equaveDen}>)`;
+      } else {
+        const [numLstr, denLstr] = currentTuning["0"].split("\\");
+        const ed = Number(denLstr);
+        const [numMstr, _3] = currentTuning["1"].split("\\");
+        const [numSstr, _4] = currentTuning["2"].split("\\");
+        const numL = Number(numLstr);
+        const numM = Number(numMstr);
+        const numS = Number(numSstr);
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;}
     } else if (currentTuning["0"].includes("/")) {
       const [numLstr, denLstr] = currentTuning["0"].split("/");
       const [numMstr, denMstr] = currentTuning["1"].split("/");
