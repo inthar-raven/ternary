@@ -19,7 +19,10 @@ Then visit `http://localhost:8080/` in your browser.
 - Given step signature, it displays the edo tunings.
 - When you select a tuning on the results page, the SonicWeave code is displayed.
 - JI-agnostic 2D lattice view for every scale.
-- Non-octave equaves are now supported.
+- Non-octave equaves are supported (enter as a JI ratio like "3/1").
+- Configurable tuning bounds:
+  - Max ED size (default 111)
+  - Min/max smallest step size in cents (default 20–200)
 - Every scale comes with a Scale Profile that shows properties of the scale selected or queried
   - guide frame (guided generator sequence; multiplicity or interleaving polyoffset; complexity)
   - monotone MOS properties satisfied (L=M, M=s, s=0)
