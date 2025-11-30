@@ -19,26 +19,13 @@ const statusElement = document.getElementById("status");
  * Count occurrences of a character in a string
  */
 function countChar(str, char) {
-  let count = 0;
-  for (let i = 0; i < str.length; i++) {
-    if (str[i] === char) count++;
-  }
-  return count;
+  return [...str].filter(c => c === char).length;
 }
 function displayStepVector(vector) {
-  const keys = [...Object.keys(vector)];
+  const keys = Object.keys(vector);
+  if (keys.length === 0) return "0";
   const sizeIdentifiers = ["L", "m", "s"];
-  if (keys.length === 0) {
-    return "0";
-  }
-  let result = "";
-  for (let i = 0; i < keys.length; ++i) {
-    result += `${vector[keys[i]]}${sizeIdentifiers[i]}`;
-    if (i < keys.length - 1) {
-      result += "+";
-    }
-  }
-  return result;
+  return keys.map((k, i) => `${vector[k]}${sizeIdentifiers[i]}`).join("+");
 }
 
 // Use gcd and mod from TernaryLib
@@ -115,29 +102,16 @@ function getSUpper() {
 }
 
 function stepVectorLength(vector) {
-  let result = 0;
-  for (let key of Object.keys(vector)) {
-    result += vector[key];
-  }
-  return result;
+  return Object.values(vector).reduce((sum, v) => sum + v, 0);
 }
 
 // Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
 function swapRows(arr, m, n, i1, i2) {
-  if (i1 < 0 || i1 >= m) {
-    throw new Error(
-      `switchRows(): matrix index out of bounds! i1: ${i1} but m: ${m}`,
-    );
-  }
-  if (i2 < 0 || i2 >= m) {
-    throw new Error(
-      `switchRows(): matrix index out of bounds! i2: ${i2} but m: ${m}`,
-    );
+  if (i1 < 0 || i1 >= m || i2 < 0 || i2 >= m) {
+    throw new Error(`swapRows(): matrix index out of bounds!`);
   }
   for (let j = 0; j < n; j++) {
-    const new1 = arr[n * i2 + j];
-    const new2 = arr[n * i1 + j];
-    [arr[n * i1 + j], arr[n * i2 + j]] = [new1, new2];
+    [arr[n * i1 + j], arr[n * i2 + j]] = [arr[n * i2 + j], arr[n * i1 + j]];
   }
 }
 
@@ -227,12 +201,11 @@ function makeTable(tableElement, data, header = "") {
 }
 
 // Return a new table view
-// TODO: make table entries selectable
 function tableContent(data, header = "") {
   const table = tableHead(data, header);
   const tbody = table.createTBody();
   if (data[0] instanceof Array) {
-    for (const [i, element] of data.entries()) {
+    for (const [i] of data.entries()) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
@@ -244,11 +217,11 @@ function tableContent(data, header = "") {
       }
     }
   } else if (typeof data[0] === "object") {
-    for (const [i, element] of data.entries()) {
+    for (let i = 0; i < data.length; i++) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
-      for (const value of Object.values(element)) {
+      for (const value of Object.values(data[i])) {
         // iterate over columns
         let td = document.createElement("td");
         td.appendChild(document.createTextNode(`${value}`));
@@ -256,7 +229,7 @@ function tableContent(data, header = "") {
       }
     }
   } else {
-    for (const [i, _] of data.entries()) {
+    for (let i = 0; i < data.length; i++) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); //row numbering
@@ -568,33 +541,21 @@ function tableHead(data, header = "") {
               updateViewBox();
             });
 
+            // Zoom by factor around center
+            function zoomBy(factor) {
+              const centerX = viewBox.x + viewBox.width / 2;
+              const centerY = viewBox.y + viewBox.height / 2;
+              viewBox.width *= factor;
+              viewBox.height *= factor;
+              viewBox.x = centerX - viewBox.width / 2;
+              viewBox.y = centerY - viewBox.height / 2;
+              scale = 800 / viewBox.width;
+              updateViewBox();
+            }
+
             // Button functions
-            zoomInButton.addEventListener("click", () => {
-              const centerX = viewBox.x + viewBox.width / 2;
-              const centerY = viewBox.y + viewBox.height / 2;
-
-              viewBox.width *= 0.8;
-              viewBox.height *= 0.8;
-
-              viewBox.x = centerX - viewBox.width / 2;
-              viewBox.y = centerY - viewBox.height / 2;
-
-              scale = 800 / viewBox.width;
-              updateViewBox();
-            });
-            zoomOutButton.addEventListener("click", () => {
-              const centerX = viewBox.x + viewBox.width / 2;
-              const centerY = viewBox.y + viewBox.height / 2;
-
-              viewBox.width *= 1.25;
-              viewBox.height *= 1.25;
-
-              viewBox.x = centerX - viewBox.width / 2;
-              viewBox.y = centerY - viewBox.height / 2;
-
-              scale = 800 / viewBox.width;
-              updateViewBox();
-            });
+            zoomInButton.addEventListener("click", () => zoomBy(0.8));
+            zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
               viewBox = { x: 0, y: 0, width: 800, height: 600 };
               scale = 1;
@@ -901,6 +862,13 @@ stack()`
     row.classList.add("selected");
   }
 
+  // Helper to update all views
+  function updateViews(equave) {
+    showScaleProfile(appState, equave);
+    createLatticeView(appState, equave);
+    showSonicWeaveCode(appState);
+  }
+
   const RANK_LIMIT = 3;
   const NO_HIGH_RANK_SCALES = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
 
@@ -1041,14 +1009,7 @@ stack()`
                 appState.profile = profiles[i - 2];
                 appState.latticeBasis = latticeBases[i - 2];
                 appState.word = scaleWord;
-                showSonicWeaveCode(appState);
-                showScaleProfile(appState, equave);
-
-                try {
-                  createLatticeView(appState, equave);
-                } catch (err) {
-                  statusElement.innerText = err;
-                }
+                updateViews(equave);
               });
             }
           }
@@ -1060,9 +1021,7 @@ stack()`
               if (arity >= 1 && arity <= 3) {
                 selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
                 appState.tuning = jiTunings[i - 2];
-                showSonicWeaveCode(appState);
-                showScaleProfile(appState, equave);
-                createLatticeView(appState, equave);
+                updateViews(equave);
               } else {
                 statusElement.textContent = NO_HIGH_RANK_SCALES;
               }
@@ -1074,24 +1033,18 @@ stack()`
             edRows[2].classList.add("selected");
             const edoTuning = edoTunings[0];
             appState.tuning = edoTuning;
-            showScaleProfile(appState, equave);
-            createLatticeView(appState, equave);
-            showSonicWeaveCode(appState);
+            updateViews(equave);
             for (let i = 2; i < edRows.length; ++i) {
               const thisRow = edRows[i];
               thisRow.addEventListener("click", () => {
                 selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
                 const edoTuning = edoTunings[i - 2];
                 appState.tuning = edoTuning;
-                showScaleProfile(appState, equave);
-                createLatticeView(appState, equave);
-                showSonicWeaveCode(appState);
+                updateViews(equave);
               });
             }
           }
-          showSonicWeaveCode(appState);
-          showScaleProfile(appState, equave);
-          createLatticeView(appState, equave);
+          updateViews(equave);
         }
       }
     } catch (err) {
@@ -1157,9 +1110,7 @@ stack()`
           if (arity >= 1 && arity <= 3) {
             selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
             appState.tuning = jiTunings[i - 2];
-            showScaleProfile(appState, equave);
-            createLatticeView(appState, equave);
-            showSonicWeaveCode(appState);
+            updateViews(equave);
           } else {
             statusElement.textContent = NO_HIGH_RANK_SCALES;
           }
@@ -1175,19 +1126,14 @@ stack()`
             selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
             const edoTuning = edoTunings[i - 2];
             appState.tuning = edoTuning;
-            showScaleProfile(appState, equave);
-            createLatticeView(appState, equave);
-            showSonicWeaveCode(appState);
+            updateViews(equave);
           });
         }
       }
       appState.tuning = edoTunings[0];
-      showSonicWeaveCode(appState);
       appState.profile = profile;
       appState.latticeBasis = appState.profile["lattice_basis"];
-      showScaleProfile(appState, equave);
-      createLatticeView(appState, equave);
-      showSonicWeaveCode(appState);
+      updateViews(equave);
     } catch (err) {
       statusElement.innerText = err;
     }

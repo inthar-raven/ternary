@@ -385,21 +385,21 @@ function deleteStep(scale, letter) {
 }
 
 /**
- * Check if L=m results in a MOS (monotone property)
+ * Check if L=m results in a MOS (a monotone MOS property)
  */
 function monotoneLm(scale) {
   return maximumVariety(replace(scale, 1, 0)) === 2;
 }
 
 /**
- * Check if m=s results in a MOS (monotone property)
+ * Check if m=s results in a MOS (a monotone MOS property)
  */
 function monotoneMs(scale) {
   return maximumVariety(replace(scale, 2, 1)) === 2;
 }
 
 /**
- * Check if s=0 results in a MOS (monotone property)
+ * Check if s=0 results in a MOS (a monotone MOS property)
  */
 function monotoneS0(scale) {
   return maximumVariety(deleteStep(scale, 2)) === 2;
