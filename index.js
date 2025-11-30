@@ -283,7 +283,7 @@ function tableHead(data, header = "") {
     tuning: null,
     profile: null,
   };
-  
+
   // New approach:
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
@@ -666,17 +666,6 @@ stack()`
           el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
-          /*
-          if (ploidacot) {
-            const ploid = ploidacot["ploid"];
-            const ploidString = ploid === 1 ? "" : `${ploid}-ploid `;
-            const shear = ploidacot["shear"];
-            const shearString = shear === 0 ? "" : `${shear}-sheared `;
-            const cot = ploidacot["cot"];
-            const cotString = `${cot}-cot`;
-            el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot" target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
-          }
-          */
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
           el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
           el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
