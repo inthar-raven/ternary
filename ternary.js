@@ -251,9 +251,16 @@ class CountVector {
   }
 
   equals(other) {
+    if (!other || !(other instanceof CountVector)) return false;
     if (this.map.size !== other.map.size) return false;
     for (const [key, value] of this.map) {
-      if (other.get(key) !== value) return false;
+      const otherValue = other.get(key);
+      // Handle nested CountVectors or other objects with equals method
+      if (value !== null && typeof value === 'object' && typeof value.equals === 'function') {
+        if (!value.equals(otherValue)) return false;
+      } else {
+        if (otherValue !== value) return false;
+      }
     }
     return true;
   }
