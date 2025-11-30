@@ -418,32 +418,46 @@ function tableHead(data, header = "") {
 
             let currentX = ORIGIN_X;
             let currentY = ORIGIN_Y;
+            // Track cumulative step counts for pitch calculation
+            let stepCounts = { L: 0, m: 0, s: 0 };
+            
             for (let deg = 0; deg < n; ++deg) {
-              svgTag.innerHTML += `<circle
-            cx="${currentX}"
-            cy="${currentY}"
-            r="${UNOCCUPIED_DOT_RADIUS}"
-            color="white"
-            fill="white"
-            stroke="white"
-            stroke-width="1"
-          />
-          <text
-            x="${currentX - 3}"
-            y="${currentY + 3}"
-            fill="black"
-            font-size="0.5em"
-          >${mod(deg, n)}</text>`;
+              const { pitch, cents } = getPitchInfo(stepCounts, state.tuning, equave);
+              const centsRounded = Math.round(cents);
+              const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
+              
+              svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
+            <circle
+              cx="${currentX}"
+              cy="${currentY}"
+              r="${UNOCCUPIED_DOT_RADIUS}"
+              fill="white"
+              stroke="white"
+              stroke-width="1"
+            >
+              <title>${tooltipText}</title>
+            </circle>
+            <text
+              x="${currentX - 3}"
+              y="${currentY + 3}"
+              fill="black"
+              font-size="0.5em"
+              style="pointer-events: none;"
+            >${mod(deg, n)}</text>
+          </g>`;
               switch (state.word[deg]) {
                 case "L":
+                  stepCounts.L++;
                   currentX += L_x * SPACING_X;
                   currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
                   break;
                 case "m":
+                  stepCounts.m++;
                   currentX += M_x * SPACING_X;
                   currentY += M_y * SPACING_Y;
                   break;
                 case "s":
+                  stepCounts.s++;
                   currentX += S_x * SPACING_X;
                   currentY += S_y * SPACING_Y;
                   break;
@@ -457,6 +471,7 @@ function tableHead(data, header = "") {
               `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
             );
             latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, state.tuning, equave)} and h = ${alsoInCurrentTuning(h, state.tuning, equave)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
             // Add zoom buttons
             latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
@@ -774,6 +789,77 @@ stack()`
       return `${displayStepVector(v)} (${num / d}/${den / d})`;
     } else {
       return displayStepVector(v);
+    }
+  }
+
+  /**
+   * Get pitch info for a scale degree given step counts
+   * @param stepCounts - Object with counts of L, m, s steps: { L: n, m: n, s: n }
+   * @param tuning - The current tuning object
+   * @param equave - The equave { num, den, ratio }
+   * @returns { pitch: string, cents: number }
+   */
+  function getPitchInfo(stepCounts, tuning, equave) {
+    if (!tuning) return { pitch: "", cents: 0 };
+    
+    const nL = stepCounts.L || 0;
+    const nM = stepCounts.m || 0;
+    const nS = stepCounts.s || 0;
+    
+    // Calculate equave in cents
+    const equaveCents = 1200 * Math.log2(equave.num / equave.den);
+    
+    if (tuning["0"].includes("\\")) {
+      // ED tuning format like "5\12" or "5\12<3/1>"
+      let str0 = tuning["0"];
+      let str1 = tuning["1"];
+      let str2 = tuning["2"];
+      
+      // Strip equave suffix if present
+      if (str0.includes("<")) {
+        str0 = str0.substring(0, str0.indexOf("<"));
+        str1 = str1.substring(0, str1.indexOf("<"));
+        str2 = str2.substring(0, str2.indexOf("<"));
+      }
+      
+      const [numLstr, denLstr] = str0.split("\\");
+      const [numMstr] = str1.split("\\");
+      const [numSstr] = str2.split("\\");
+      const stepsL = Number(numLstr);
+      const stepsM = Number(numMstr);
+      const stepsS = Number(numSstr);
+      const ed = Number(denLstr);
+      
+      const totalSteps = nL * stepsL + nM * stepsM + nS * stepsS;
+      const cents = (totalSteps / ed) * equaveCents;
+      
+      let pitch;
+      if (equave.num !== 2 || equave.den !== 1) {
+        pitch = `${totalSteps}\\${ed}<${equave.num}/${equave.den}>`;
+      } else {
+        pitch = `${totalSteps}\\${ed}`;
+      }
+      return { pitch, cents };
+    } else if (tuning["0"].includes("/")) {
+      // JI tuning format like "9/8"
+      const [numLstr, denLstr] = tuning["0"].split("/");
+      const [numMstr, denMstr] = tuning["1"].split("/");
+      const [numSstr, denSstr] = tuning["2"].split("/");
+      const numL = Number(numLstr);
+      const numM = Number(numMstr);
+      const numS = Number(numSstr);
+      const denL = Number(denLstr);
+      const denM = Number(denMstr);
+      const denS = Number(denSstr);
+      
+      const num = Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
+      const den = Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
+      const d = gcd(num, den);
+      const ratio = (num / d) / (den / d);
+      const cents = 1200 * Math.log2(ratio);
+      return { pitch: `${num / d}/${den / d}`, cents };
+    } else {
+      return { pitch: `${nL}L + ${nM}m + ${nS}s`, cents: 0 };
     }
   }
 
