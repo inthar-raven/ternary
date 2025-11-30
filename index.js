@@ -13,14 +13,6 @@ const EDGE_WIDTH = 2;
 
 const GROUND_INDIGO = "#6c00da";
 
-// Global state
-let currentWord = null;
-let currentLatticeBasis = null;
-let currentTuning = null;
-let currentProfile = null;
-let currentEquaveNum = 2;
-let currentEquaveDen = 1;
-
 const statusElement = document.getElementById("status");
 
 /**
@@ -72,27 +64,22 @@ function parseEquaveToCents(ratioStr) {
 
 /**
  * Get the current equave ratio string from the input field (normalized)
+ * Returns { ratio: "m/n", num: m, den: n }
  */
 function getEquaveRatio() {
   const input = document.getElementById("input-equave");
   if (!input) {
-    currentEquaveNum = 2;
-    currentEquaveDen = 1;
-    return "2/1";
+    return { ratio: "2/1", num: 2, den: 1 };
   }
   const value = input.value.trim();
   const match = value.match(/^(\d+)\/(\d+)$/);
   if (!match) {
-    currentEquaveNum = 2;
-    currentEquaveDen = 1;
-    return "2/1";
+    return { ratio: "2/1", num: 2, den: 1 };
   }
   const num = parseInt(match[1], 10);
   const den = parseInt(match[2], 10);
   const d = gcd(num, den);
-  currentEquaveNum = num / d;
-  currentEquaveDen = den / d;
-  return `${num / d}/${den / d}`;
+  return { ratio: `${num / d}/${den / d}`, num: num / d, den: den / d };
 }
 
 /**
@@ -289,6 +276,14 @@ function tableHead(data, header = "") {
 
 // Main application code (using TernaryLib imported at top)
 (function initApp() {
+  // app state
+  const appState = {
+    word: null,
+    latticeBasis: null,
+    tuning: null,
+    profile: null,
+  };
+  
   // New approach:
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
@@ -296,7 +291,7 @@ function tableHead(data, header = "") {
   // TODO: Indicate what kind of guide frame it is. (simple, multiple/interleaved)
   //
   // TODO: show a legend for the different colored lines
-  function createLatticeView() {
+  function createLatticeView(state, equave) {
     if (statusElement) {
       statusElement.innerText = "";
 
@@ -321,17 +316,17 @@ function tableHead(data, header = "") {
         font: 20px sans-serif;
         fill: black;
       }`;
-        if (currentWord) {
-          if (currentLatticeBasis) {
-            let g = currentLatticeBasis[0];
-            let h = currentLatticeBasis[1];
+        if (state.word) {
+          if (state.latticeBasis) {
+            let g = state.latticeBasis[0];
+            let h = state.latticeBasis[1];
             // Helper to get value from array or object with string keys
             const getVal = (v, i) =>
               Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
             let sig = [0, 0, 0];
-            let n = currentWord.length;
+            let n = state.word.length;
             for (let i = 0; i < n; ++i) {
-              switch (currentWord[i]) {
+              switch (state.word[i]) {
                 case "L":
                   ++sig[0];
                   break;
@@ -415,7 +410,7 @@ function tableHead(data, header = "") {
             fill="black"
             font-size="0.5em"
           >${mod(deg, n)}</text>`;
-              switch (currentWord[deg]) {
+              switch (state.word[deg]) {
                 case "L":
                   currentX += L_x * SPACING_X;
                   currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
@@ -437,7 +432,7 @@ function tableHead(data, header = "") {
               "viewBox",
               `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
             );
-            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen)} and h = ${alsoInCurrentTuning(h, currentEquaveNum, currentEquaveDen)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, state.tuning, equave)} and h = ${alsoInCurrentTuning(h, state.tuning, equave)} are two different generators. g is horizontal, h is vertical.</small>`;
             // Add zoom buttons
             latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
@@ -572,17 +567,17 @@ function tableHead(data, header = "") {
             throw new Error("No suitable lattice basis");
           }
         } else {
-          throw new Error("`currentWord` is null or undefined");
+          throw new Error("`state.word` is null or undefined");
         }
       }
     }
   }
 
   // Function for showing the SonicWeave code
-  function showSonicWeaveCode() {
-    if (currentWord) {
-      const arity = new Set(Array.from(currentWord)).size;
-      if (currentTuning) {
+  function showSonicWeaveCode(state) {
+    if (state.word) {
+      const arity = new Set(Array.from(state.word)).size;
+      if (state.tuning) {
         const element = document.getElementById("sw-code");
         if (element) {
           element.innerHTML = `<hr/><h2>SonicWeave code</h2>
@@ -624,22 +619,22 @@ function tableHead(data, header = "") {
           });
 
           let codeblock = document.getElementById("codeblock");
-          const arr = Array.from(currentWord);
+          const arr = Array.from(state.word);
           if (codeblock) {
             codeblock.innerHTML =
               arity === 3
-                ? `let L = ${currentTuning[0]}
-let m = ${currentTuning[1]}
-let s = ${currentTuning[2]}
+                ? `let L = ${state.tuning[0]}
+let m = ${state.tuning[1]}
+let s = ${state.tuning[2]}
 ${arr.join(";")};
 stack()`
                 : arity === 2
-                  ? `let L = ${currentTuning[0]}
-let s = ${currentTuning[1]}
+                  ? `let L = ${state.tuning[0]}
+let s = ${state.tuning[1]}
 ${arr.join(";")};
 stack()`
                   : arity === 1
-                    ? `let X = ${currentTuning[0]}
+                    ? `let X = ${state.tuning[0]}
 ${arr.join(";")};
 stack()`
                     : "Scales of rank > 3 are not supported";
@@ -649,26 +644,26 @@ stack()`
     }
   }
 
-  function showScaleProfile() {
+  function showScaleProfile(state, equave) {
     const el = document.getElementById("scale-profile");
     if (el) {
       el.innerHTML = "";
       const h2 = document.createElement("h2");
-      h2.innerText = `Scale profile for ${currentWord}`;
+      h2.innerText = `Scale profile for ${state.word}`;
       el.appendChild(h2);
-      if (currentProfile) {
-        // const ploidacot = currentProfile["ploidacot"];
-        const structure = currentProfile["structure"];
+      if (state.profile) {
+        // const ploidacot = state.profile["ploidacot"];
+        const structure = state.profile["structure"];
         if (structure) {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
            " target="_blank">Guide frame</a></b><br/><small>`;
           let gsDisp =
-            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen)}`)}`.slice(
+            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
               1,
             );
           el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], currentEquaveNum, currentEquaveDen)}<br/>`; // TODO prettify
-          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, currentEquaveNum, currentEquaveDen))}<br/>`; // TODO prettify
+          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
+          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
           el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
           /*
@@ -683,50 +678,50 @@ stack()`
           }
           */
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
-          el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
-          el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
-          el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
+          el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
+          el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
+          el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
           if (
-            !currentProfile["lm"] &&
-            !currentProfile["ms"] &&
-            !currentProfile["s0"]
+            !state.profile["lm"] &&
+            !state.profile["ms"] &&
+            !state.profile["s0"]
           ) {
             el.innerHTML += `None<br/>`;
           }
           el.innerHTML += `<br/>`;
-          const a = countChar(currentWord, "L");
-          const b = countChar(currentWord, "m");
-          const c = countChar(currentWord, "s");
+          const a = countChar(state.word, "L");
+          const b = countChar(state.word, "m");
+          const c = countChar(state.word, "s");
 
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
-          el.innerHTML += currentProfile["subst_l_ms"]
+          el.innerHTML += state.profile["subst_l_ms"]
             ? `subst ${a}L(${b}m${c}s)<br/>`
             : "";
-          el.innerHTML += currentProfile["subst_m_ls"]
+          el.innerHTML += state.profile["subst_m_ls"]
             ? `subst ${b}m(${a}L${c}s)<br/>`
             : "";
-          el.innerHTML += currentProfile["subst_s_lm"]
+          el.innerHTML += state.profile["subst_s_lm"]
             ? `subst ${c}s(${a}L${b}m)<br/>`
             : "";
 
-          if (currentProfile["chirality"] === "Achiral") {
+          if (state.profile["chirality"] === "Achiral") {
             el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
           } else {
-            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${currentProfile["chirality"]} (reversed: ${currentProfile["reversed"]})`;
+            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
           }
-          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${currentProfile["mv"]}</small>`;
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${state.profile["mv"]}</small>`;
         }
       }
     }
   }
 
   // display both the step vector in sum form and what interval it is in the current tuning
-  function alsoInCurrentTuning(v, equaveNum = 2, equaveDen = 1) {
-    if (currentTuning["0"].includes("\\")) {
-      if (equaveNum !== 2 || equaveDen !== 1) {
-        const str0 = currentTuning["0"].substring(0, currentTuning["0"].indexOf("<"));
-        const str1 = currentTuning["1"].substring(0, currentTuning["1"].indexOf("<"));
-        const str2 = currentTuning["2"].substring(0, currentTuning["2"].indexOf("<"));
+  function alsoInCurrentTuning(v, tuning, equave) {
+    if (tuning["0"].includes("\\")) {
+      if (equave.num !== 2 || equave.den !== 1) {
+        const str0 = tuning["0"].substring(0, tuning["0"].indexOf("<"));
+        const str1 = tuning["1"].substring(0, tuning["1"].indexOf("<"));
+        const str2 = tuning["2"].substring(0, tuning["2"].indexOf("<"));
         const [numLstr, denLstr] = str0.split("\\");
         const [numMstr, _1] = str1.split("\\");
         const [numSstr, _2] = str2.split("\\");
@@ -734,20 +729,20 @@ stack()`
         const numM = Number(numMstr);
         const numS = Number(numSstr);
         const ed = Number(denLstr);
-        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equaveNum}/${equaveDen}>)`;
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equave.num}/${equave.den}>)`;
       } else {
-        const [numLstr, denLstr] = currentTuning["0"].split("\\");
+        const [numLstr, denLstr] = tuning["0"].split("\\");
         const ed = Number(denLstr);
-        const [numMstr, _3] = currentTuning["1"].split("\\");
-        const [numSstr, _4] = currentTuning["2"].split("\\");
+        const [numMstr, _3] = tuning["1"].split("\\");
+        const [numSstr, _4] = tuning["2"].split("\\");
         const numL = Number(numLstr);
         const numM = Number(numMstr);
         const numS = Number(numSstr);
         return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;}
-    } else if (currentTuning["0"].includes("/")) {
-      const [numLstr, denLstr] = currentTuning["0"].split("/");
-      const [numMstr, denMstr] = currentTuning["1"].split("/");
-      const [numSstr, denSstr] = currentTuning["2"].split("/");
+    } else if (tuning["0"].includes("/")) {
+      const [numLstr, denLstr] = tuning["0"].split("/");
+      const [numMstr, denMstr] = tuning["1"].split("/");
+      const [numSstr, denSstr] = tuning["2"].split("/");
       const numL = Number(numLstr);
       const numM = Number(numMstr);
       const numS = Number(numSstr);
@@ -860,6 +855,7 @@ stack()`
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edoTuningTable = document.getElementById("table-ed-tunings");
+          const equave = getEquaveRatio();
           const sigResultData = TernaryLib.sigResult(sig, {
             lm: document.getElementById("monotone-lm").checked,
             ms: document.getElementById("monotone-ms").checked,
@@ -879,7 +875,7 @@ stack()`
             mosSubst: document.querySelector('input[name="mos-subst"]:checked')
               .value,
             equaveCents: getEquaveCents(),
-            equaveRatio: getEquaveRatio(),
+            equaveRatio: equave.ratio,
           });
           const scales = sigResultData["profiles"].map((j) => j["word"]);
           const latticeBases = sigResultData["profiles"].map(
@@ -905,9 +901,9 @@ stack()`
           const scaleRows = scaleTable.getElementsByTagName("tr");
           if (scaleRows.length >= 3) {
             scaleRows[2].classList.add("selected"); // For some reason 2 is the first row of a nonempty table.
-            currentWord = scales[0];
-            currentProfile = profiles[0];
-            currentLatticeBasis = currentProfile["lattice_basis"];
+            appState.word = scales[0];
+            appState.profile = profiles[0];
+            appState.latticeBasis = appState.profile["lattice_basis"];
 
             for (let i = 2; i < scaleRows.length; ++i) {
               scaleRows[i].addEventListener("click", async () => {
@@ -920,14 +916,14 @@ stack()`
                 scaleRows[i].classList.add("selected");
                 // get scale pattern
                 let scaleWord = scales[i - 2];
-                currentProfile = profiles[i - 2];
-                currentLatticeBasis = latticeBases[i - 2];
-                currentWord = scaleWord;
-                showSonicWeaveCode();
-                showScaleProfile();
+                appState.profile = profiles[i - 2];
+                appState.latticeBasis = latticeBases[i - 2];
+                appState.word = scaleWord;
+                showSonicWeaveCode(appState);
+                showScaleProfile(appState, equave);
 
                 try {
-                  createLatticeView();
+                  createLatticeView(appState, equave);
                 } catch (err) {
                   statusElement.innerText = err;
                 }
@@ -941,10 +937,10 @@ stack()`
             thisRow.addEventListener("click", () => {
               if (arity >= 1 && arity <= 3) {
                 selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
-                currentTuning = jiTunings[i - 2];
-                showSonicWeaveCode();
-                showScaleProfile();
-                createLatticeView();
+                appState.tuning = jiTunings[i - 2];
+                showSonicWeaveCode(appState);
+                showScaleProfile(appState, equave);
+                createLatticeView(appState, equave);
               } else {
                 statusElement.textContent = NO_HIGH_RANK_SCALES;
               }
@@ -955,25 +951,25 @@ stack()`
             const edRows = edoTuningTable.getElementsByTagName("tr");
             edRows[2].classList.add("selected");
             const edoTuning = edoTunings[0];
-            currentTuning = edoTuning;
-            showScaleProfile();
-            createLatticeView(currentWord, currentProfile["structure"]);
-            showSonicWeaveCode();
+            appState.tuning = edoTuning;
+            showScaleProfile(appState, equave);
+            createLatticeView(appState, equave);
+            showSonicWeaveCode(appState);
             for (let i = 2; i < edRows.length; ++i) {
               const thisRow = edRows[i];
               thisRow.addEventListener("click", () => {
                 selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
                 const edoTuning = edoTunings[i - 2];
-                currentTuning = edoTuning;
-                showScaleProfile();
-                createLatticeView();
-                showSonicWeaveCode();
+                appState.tuning = edoTuning;
+                showScaleProfile(appState, equave);
+                createLatticeView(appState, equave);
+                showSonicWeaveCode(appState);
               });
             }
           }
-          showSonicWeaveCode();
-          showScaleProfile();
-          createLatticeView();
+          showSonicWeaveCode(appState);
+          showScaleProfile(appState, equave);
+          createLatticeView(appState, equave);
         }
       }
     } catch (err) {
@@ -984,7 +980,8 @@ stack()`
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
-    const wordResultData = TernaryLib.wordResult(query, getEquaveCents(), getEquaveRatio());
+    const equave = getEquaveRatio();
+    const wordResultData = TernaryLib.wordResult(query, getEquaveCents(), equave.ratio);
     const profile = wordResultData["profile"];
     const brightestMode = wordResultData["profile"]["word"];
     const jiTunings = wordResultData["ji_tunings"];
@@ -1020,9 +1017,9 @@ stack()`
                 </td>`;
     const jiTuningTable = document.getElementById("table-ji-tunings");
     const edoTuningTable = document.getElementById("table-ed-tunings");
-    currentWord = brightestMode;
+    appState.word = brightestMode;
     try {
-      statusElement.innerHTML = `<h1>Results for ${currentWord}</h1>(click on a table row to select a tuning)`;
+      statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
 
       makeTable(jiTuningTable, jiTunings);
       const jiRows = jiTuningTable.getElementsByTagName("tr");
@@ -1031,10 +1028,10 @@ stack()`
         thisRow.addEventListener("click", () => {
           if (arity >= 1 && arity <= 3) {
             selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
-            currentTuning = jiTunings[i - 2];
-            showScaleProfile();
-            createLatticeView();
-            showSonicWeaveCode();
+            appState.tuning = jiTunings[i - 2];
+            showScaleProfile(appState, equave);
+            createLatticeView(appState, equave);
+            showSonicWeaveCode(appState);
           } else {
             statusElement.textContent = NO_HIGH_RANK_SCALES;
           }
@@ -1049,20 +1046,20 @@ stack()`
           thisRow.addEventListener("click", () => {
             selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
             const edoTuning = edoTunings[i - 2];
-            currentTuning = edoTuning;
-            showScaleProfile();
-            createLatticeView();
-            showSonicWeaveCode();
+            appState.tuning = edoTuning;
+            showScaleProfile(appState, equave);
+            createLatticeView(appState, equave);
+            showSonicWeaveCode(appState);
           });
         }
       }
-      currentTuning = edoTunings[0];
-      showSonicWeaveCode();
-      currentProfile = profile;
-      currentLatticeBasis = currentProfile["lattice_basis"];
-      showScaleProfile();
-      createLatticeView();
-      showSonicWeaveCode();
+      appState.tuning = edoTunings[0];
+      showSonicWeaveCode(appState);
+      appState.profile = profile;
+      appState.latticeBasis = appState.profile["lattice_basis"];
+      showScaleProfile(appState, equave);
+      createLatticeView(appState, equave);
+      showSonicWeaveCode(appState);
     } catch (err) {
       statusElement.innerText = err;
     }
