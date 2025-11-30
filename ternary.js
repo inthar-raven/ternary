@@ -6,12 +6,12 @@
  */
 
 // ============================================================================
-// CONSTANTS
+// DEFAULT BOUNDS (can be overridden by user)
 // ============================================================================
 
-const ED_BOUND = 111;
-const S_LOWER_BOUND = 20.0;
-const S_UPPER_BOUND = 200.0;
+const DEFAULT_ED_BOUND = 111;
+const DEFAULT_S_LOWER_BOUND = 20.0;
+const DEFAULT_S_UPPER_BOUND = 200.0;
 
 const STEP_LETTERS = [
   "", // 0
@@ -1088,9 +1088,9 @@ function stepsAsCents(steps, ed, equaveCents = 1200) {
  */
 function edTuningsForTernary(
   stepSig,
-  edBound = ED_BOUND,
-  aberLower = S_LOWER_BOUND,
-  aberUpper = S_UPPER_BOUND,
+  edBound = DEFAULT_ED_BOUND,
+  aberLower = DEFAULT_S_LOWER_BOUND,
+  aberUpper = DEFAULT_S_UPPER_BOUND,
   equaveCents = 1200,
 ) {
   const results = [];
@@ -1172,11 +1172,16 @@ function wordToProfile(query) {
 /**
  * Get ED tunings formatted as strings
  * @param stepSig - Step signature array
- * @param equaveCents - Equave size in cents (for filtering)
- * @param equaveRatio - Equave as ratio string like "2/1" (for display)
+ * @param options - Object with equaveCents, equaveRatio, edBound, sLower, sUpper
  */
-function sigToEdTunings(stepSig, equaveCents = 1200, equaveRatio = "2/1") {
-  const edTunings = edTuningsForTernary(stepSig, ED_BOUND, S_LOWER_BOUND, S_UPPER_BOUND, equaveCents);
+function sigToEdTunings(stepSig, {
+  equaveCents = 1200,
+  equaveRatio = "2/1",
+  edBound = DEFAULT_ED_BOUND,
+  sLower = DEFAULT_S_LOWER_BOUND,
+  sUpper = DEFAULT_S_UPPER_BOUND,
+} = {}) {
+  const edTunings = edTuningsForTernary(stepSig, edBound, sLower, sUpper, equaveCents);
   const isDefaultEquave = equaveRatio === "2/1";
   return edTunings.map((v) => {
     const ed = v[0] * stepSig[0] + v[1] * stepSig[1] + v[2] * stepSig[2];
@@ -1202,6 +1207,9 @@ function sigResult(
     mosSubst = "off",
     equaveCents = 1200,
     equaveRatio = "2/1",
+    edBound = DEFAULT_ED_BOUND,
+    sLower = DEFAULT_S_LOWER_BOUND,
+    sUpper = DEFAULT_S_UPPER_BOUND,
   } = {},
 ) {
   const stepSig = query;
@@ -1267,21 +1275,27 @@ function sigResult(
   return {
     profiles: profiles,
     ji_tunings: [], // JI tunings are disabled for now (would require more complex computation)
-    ed_tunings: sigToEdTunings(stepSig, equaveCents, equaveRatio),
+    ed_tunings: sigToEdTunings(stepSig, { equaveCents, equaveRatio, edBound, sLower, sUpper }),
   };
 }
 
 /**
  * Process a word query (main API function)
  */
-function wordResult(query, equaveCents = 1200, equaveRatio = "2/1") {
+function wordResult(query, {
+  equaveCents = 1200,
+  equaveRatio = "2/1",
+  edBound = DEFAULT_ED_BOUND,
+  sLower = DEFAULT_S_LOWER_BOUND,
+  sUpper = DEFAULT_S_UPPER_BOUND,
+} = {}) {
   const wordAsNumbers = stringToNumbers(query);
   const stepSig = wordToSig(wordAsNumbers);
 
   return {
     profile: wordToProfile(wordAsNumbers),
     ji_tunings: [],
-    ed_tunings: sigToEdTunings(stepSig, equaveCents, equaveRatio),
+    ed_tunings: sigToEdTunings(stepSig, { equaveCents, equaveRatio, edBound, sLower, sUpper }),
   };
 }
 
@@ -1291,10 +1305,10 @@ function wordResult(query, equaveCents = 1200, equaveRatio = "2/1") {
 
 // Export for use in browser (window) or module systems
 const TernaryLib = {
-  // Constants
-  ED_BOUND,
-  S_LOWER_BOUND,
-  S_UPPER_BOUND,
+  // Default bounds (can be overridden)
+  DEFAULT_ED_BOUND,
+  DEFAULT_S_LOWER_BOUND,
+  DEFAULT_S_UPPER_BOUND,
   STEP_LETTERS,
 
   // Utility functions

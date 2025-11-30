@@ -90,6 +90,30 @@ function getEquaveCents() {
   return input ? parseEquaveToCents(input.value) : 1200;
 }
 
+/**
+ * Get the ED bound from the input field
+ */
+function getEdBound() {
+  const input = document.getElementById("input-ed-bound");
+  return input ? parseInt(input.value, 10) || TernaryLib.DEFAULT_ED_BOUND : TernaryLib.DEFAULT_ED_BOUND;
+}
+
+/**
+ * Get the minimum s size in cents from the input field
+ */
+function getSLower() {
+  const input = document.getElementById("input-s-lower");
+  return input ? parseFloat(input.value) || TernaryLib.DEFAULT_S_LOWER_BOUND : TernaryLib.DEFAULT_S_LOWER_BOUND;
+}
+
+/**
+ * Get the maximum s size in cents from the input field
+ */
+function getSUpper() {
+  const input = document.getElementById("input-s-upper");
+  return input ? parseFloat(input.value) || TernaryLib.DEFAULT_S_UPPER_BOUND : TernaryLib.DEFAULT_S_UPPER_BOUND;
+}
+
 function stepVectorLength(vector) {
   let result = 0;
   for (let key of Object.keys(vector)) {
@@ -865,6 +889,9 @@ stack()`
               .value,
             equaveCents: getEquaveCents(),
             equaveRatio: equave.ratio,
+            edBound: getEdBound(),
+            sLower: getSLower(),
+            sUpper: getSUpper(),
           });
           const scales = sigResultData["profiles"].map((j) => j["word"]);
           const latticeBases = sigResultData["profiles"].map(
@@ -970,7 +997,13 @@ stack()`
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
     const equave = getEquaveRatio();
-    const wordResultData = TernaryLib.wordResult(query, getEquaveCents(), equave.ratio);
+    const wordResultData = TernaryLib.wordResult(query, {
+      equaveCents: getEquaveCents(),
+      equaveRatio: equave.ratio,
+      edBound: getEdBound(),
+      sLower: getSLower(),
+      sUpper: getSUpper(),
+    });
     const profile = wordResultData["profile"];
     const brightestMode = wordResultData["profile"]["word"];
     const jiTunings = wordResultData["ji_tunings"];
