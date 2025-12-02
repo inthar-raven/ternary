@@ -898,6 +898,8 @@ stack()`
           overflow-y: auto;
           overflow-x: auto;
           vertical-align: top;
+          height: 500px;
+          width: ${window.innerWidth};
         "
       >
       <table>
