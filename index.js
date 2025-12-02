@@ -2,8 +2,8 @@
 import TernaryLib from "./ternary.js";
 
 // consts for the lattice view
-const LATTICE_SVG_WIDTH = 600;
-const LATTICE_SVG_HEIGHT = 600;
+const LATTICE_SVG_WIDTH = 500;
+const LATTICE_SVG_HEIGHT = 500;
 const ORIGIN_X = LATTICE_SVG_WIDTH / 2;
 const ORIGIN_Y = LATTICE_SVG_HEIGHT / 2;
 const SPACING_X = 35;
@@ -308,7 +308,7 @@ function tableHead(data, header = "") {
         );
         svgTag.setAttribute("id", "lattice");
         svgTag.setAttribute("width", "100%");
-        svgTag.setAttribute("height", "500");
+        svgTag.setAttribute("height", "100%");
         const svgStyle = document.createElement("style");
         svgStyle.innerHTML = `
       .small {
@@ -441,10 +441,7 @@ function tableHead(data, header = "") {
               }
             }
             // We deferred appending elements until now
-            svgTag.setAttribute(
-              "viewBox",
-              `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
-            );
+            // Initial viewBox will be set by updateViewBox() below
             latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, state.tuning, equave)} and h = ${alsoInCurrentTuning(h, state.tuning, equave)} are two different generators. g is horizontal, h is vertical.</small>`;
             latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
             // Add zoom buttons
@@ -464,8 +461,8 @@ function tableHead(data, header = "") {
             let viewBox = {
               x: 150,
               y: 150,
-              width: 400,
-              height: 400,
+              width: LATTICE_SVG_WIDTH,
+              height: LATTICE_SVG_HEIGHT,
             };
 
             let isPanning = false;
@@ -559,7 +556,7 @@ function tableHead(data, header = "") {
             zoomInButton.addEventListener("click", () => zoomBy(0.8));
             zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
-              viewBox = { x: 150, y: 150, width: 400, height: 400 };
+              viewBox = { x: 150, y: 150, width: LATTICE_SVG_WIDTH, height: LATTICE_SVG_HEIGHT };
               scale = 1;
               updateViewBox();
             });
