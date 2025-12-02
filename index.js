@@ -489,7 +489,7 @@ function tableHead(data, header = "") {
             }
 
             // Mouse down - start panning
-            svgTag.addEventListener("mousedwn", (e) => {
+            svgTag.addEventListener("mousedown", (e) => {
               isPanning = true;
               startPoint = getPointInSVG(e);
             });
