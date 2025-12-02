@@ -462,10 +462,10 @@ function tableHead(data, header = "") {
             const resetViewButton = document.getElementById("reset-view");
             const zoomLevelDisplay = document.getElementById("zoom-level");
             let viewBox = {
-              x: 0,
-              y: 0,
-              width: 800,
-              height: 600,
+              x: 150,
+              y: 150,
+              width: 400,
+              height: 400,
             };
 
             let isPanning = false;
@@ -559,7 +559,7 @@ function tableHead(data, header = "") {
             zoomInButton.addEventListener("click", () => zoomBy(0.8));
             zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
-              viewBox = { x: 0, y: 0, width: 800, height: 600 };
+              viewBox = { x: 150, y: 150, width: 400, height: 300 };
               scale = 1;
               updateViewBox();
             });
