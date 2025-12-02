@@ -893,7 +893,13 @@ stack()`
 
           document.getElementById("tables").innerHTML = `
       <hr /><h2>Tables</h2>
-
+      <div
+        style="
+          overflow-y: auto;
+          overflow-x: auto;
+          vertical-align: top;
+        "
+      >
       <table>
         <tr>
                       <td>
@@ -937,7 +943,7 @@ stack()`
                         >
                           <table class="data" id="table-ed-tunings"></table>
                         </div>
-                      </td></tr></table>`;
+                      </td></tr></table></div>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edTuningTable = document.getElementById("table-ed-tunings");
