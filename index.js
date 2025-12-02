@@ -307,6 +307,8 @@ function tableHead(data, header = "") {
           "svg",
         );
         svgTag.setAttribute("id", "lattice");
+        svgTag.setAttribute("width", "100%");
+        svgTag.setAttribute("height", "500");
         const svgStyle = document.createElement("style");
         svgStyle.innerHTML = `
       .small {
