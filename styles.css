@@ -1,0 +1,454 @@
+
+/* Basic.css  */
+
+@font-face {
+  font-family: "Open Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("./fonts/opensans.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "SF Mono Regular";
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("./fonts/SFMono-Regular.otf") format("otf");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --sans: 400 16px/1.5 "Open Sans", sans-serif;
+  --mono: "OCR A Std", monospace;
+  --c1: #6c00da; /*button, link*/
+  --c2: #333;
+  --c3: #10002e;
+  --c4: #fff;
+  --c5: #fff;
+  --m1: 8px;
+  --rc: 8px;
+}
+
+/* fix table */
+
+table {
+  table-layout: fixed;
+  /*  white-space: pre;*/
+}
+
+.hscroll {
+  overflow-x: auto;
+}
+
+.example {
+  white-space: nowrap;
+}
+
+html {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* General settings */
+
+body {
+  margin: 0;
+  padding: 0;
+  padding-top: 16px;
+  padding-bottom: 32px;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-style: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--c3);
+  color: var(--c4);
+}
+
+.normal {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+pre[class*="language-"] {
+  position: relative;
+  overflow: auto;
+  background-color: #2f005e;
+  color: chartreuse;
+  font-family: var(--mono);
+  font-size: 14px;
+
+  /* make space  */
+  margin: 5px 0;
+  padding: 1.75rem 0 1.75rem 1rem;
+  border-radius: 10px;
+}
+
+pre[class*="language-"] button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+
+  font-size: 0.9rem;
+  padding: 0.15rem;
+  background-color: #828282;
+
+  border: ridge 1px #7b7b7c;
+  border-radius: 5px;
+  text-shadow: #c4c4c4 0 0 2px;
+}
+
+pre[class*="language-"] button:hover {
+  cursor: pointer;
+  background-color: #bcbabb;
+}
+
+.katex {
+  font-size: 1.1em;
+  line-height: 0.1;
+  text-indent: 0;
+  text-rendering: auto;
+  border-color: currentColor;
+  color: var(--c4);
+}
+
+.katex-display {
+  font-size: 1.1em;
+  line-height: 1.1;
+  display: block;
+  margin: 1em 0;
+  text-align: center;
+}
+
+img,
+iframe {
+  border: none;
+  max-width: 100%;
+}
+
+a {
+  color: var(--c1);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--c1);
+  text-decoration: underline;
+}
+
+/*pre {font: 1em/1.6 var(--mono); background: var(--c2); padding: 1em; overflow: auto}*/
+/*pre {font: 1em/1.6 var(--mono); overflow: auto} */
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+pre[class*="language-"] {
+  position: relative;
+  overflow: auto;
+
+  /* make space  */
+  margin: 5px 0;
+  padding: 1.75rem 0 1.75rem 1rem;
+  border-radius: 10px;
+}
+
+pre[class*="language-"] button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+
+  font-size: 0.9rem;
+  padding: 0.15rem;
+  background-color: #828282;
+
+  border: ridge 1px #7b7b7c;
+  border-radius: 5px;
+  text-shadow: #c4c4c4 0 0 2px;
+}
+
+pre[class*="language-"] button:hover {
+  cursor: pointer;
+  background-color: #bcbabb;
+}
+
+main {
+  display: grid;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+blockquote {
+  border-left: 5px solid var(--c2);
+  padding: 1em 1.5em;
+  margin: 0;
+}
+
+hr {
+  border: 0;
+  border-bottom: 1px solid var(--c4);
+}
+
+/* Headlines */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0.6em 0;
+  font-weight: normal;
+}
+
+h1 {
+  font-size: 2.625em;
+  line-height: 1.2;
+  color: #6c00da;
+}
+
+h2 {
+  font-size: 1.625em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.3125em;
+  line-height: 1.24;
+}
+
+h4 {
+  font-size: 1.1875em;
+  line-height: 1.23;
+}
+
+h5,
+h6 {
+  font-size: 1em;
+  font-weight: bold;
+}
+
+/* Table */
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: none;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  border: none;
+  padding: 0.4em;
+}
+
+thead,
+tfoot {
+  background: var(--c2);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--c2);
+}
+
+#table-scales td {
+  cursor: pointer;
+}
+
+#table-ji-tunings td {
+  cursor: pointer;
+}
+
+#table-ed-tunings td {
+  cursor: pointer;
+}
+
+.data tr:nth-child(even) {
+  background-color: rgb(20%, 10%, 30%);
+}
+
+table.clickable tr.selected {
+  background-color: #6c00da;
+}
+
+/* Rounded Corners*/
+
+/*pre,code,input,select,textarea,button,img {border-radius: none}*/
+
+/* Forms */
+
+input,
+select,
+textarea {
+  font-size: 1em;
+  color: var(--c4);
+  background: var(--c2);
+  border: 1;
+  padding: 0.2em;
+}
+
+button,
+input[type="submit"],
+input[type="reset"],
+input[type="button"] {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 1em;
+  display: inline-block;
+  color: var(--c5);
+  background: var(--c1);
+  border: 0;
+  margin: 4px;
+  padding: 0.6em;
+  cursor: pointer;
+  text-align: center;
+  font: 1em var(--mono);
+}
+
+button:hover,
+button:focus,
+input:hover,
+textarea:hover,
+select:hover {
+  opacity: 0.8;
+}
+
+/* Infinite Grid */
+
+section {
+  display: flex;
+  flex-flow: row wrap;
+}
+
+[style*="--c:"],
+section > section,
+aside,
+article {
+  flex: var(--c, 1);
+  margin: var(--m1);
+}
+
+/* Cards */
+
+article {
+  background: var(--c2);
+  border-radius: var(--rc);
+  padding: 1em;
+  box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.3);
+}
+
+[style*="--c:"]:first-child,
+section > section:first-child,
+article:first-child {
+  margin-left: 0;
+}
+[style*="--c:"]:last-child,
+section > section:last-child,
+article:last-child {
+  margin-right: 0;
+}
+
+audio {
+  width: 300px;
+  height: 40px;
+}
+
+audio::-webkit-media-controls-play-button,
+audio::-webkit-media-controls-panel {
+  background-color: #ddd;
+  color: #ddd;
+}
+
+/* Tooltip container */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+
+  /* Position the tooltip text */
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -60px;
+
+  /* Fade in tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Tooltip arrow */
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c2: #333;
+    --c3: #10002e;
+    --c4: #fff;
+  }
+}
+
+html {
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+svg {
+  min-width: 10px;
+}
+.controls {
+  margin-bottom: 10px;
+  padding: 10px;
+}
