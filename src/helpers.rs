@@ -69,15 +69,14 @@ where
 }
 
 /// Check if given subset is a maximal set in the collection (not properly contained in any other set).
-pub fn is_maximal_in<T>(set: Vec<T>, sets: &Vec<Vec<T>>) -> bool
+pub fn is_maximal_in<T>(set: &[T], sets: &[Vec<T>]) -> bool
 where
     T: Clone + Eq + Ord,
 {
+    let set_as_btree: BTreeSet<&T> = set.iter().collect();
     for set2 in sets {
-        if (set.clone().into_iter().collect::<BTreeSet<T>>())
-            .is_subset(&(set2).clone().into_iter().collect::<BTreeSet<T>>())
-            && set.len() < set2.len()
-        {
+        let set2_as_btree: BTreeSet<&T> = set2.iter().collect();
+        if set_as_btree.is_subset(&set2_as_btree) && set.len() < set2.len() {
             return false;
         }
     }

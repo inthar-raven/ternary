@@ -17,7 +17,7 @@ pub fn specified_odd_limit(odds: &[u64]) -> Vec<RawJiRatio> {
         .filter(|x| **x > 0 && **x % 2 == 1)
         .copied()
         .collect(); // filter out invalid input
-    pairs(&odds, &odds.clone())
+    pairs(&odds, &odds)
         .into_iter()
         .map(|(m, n)| {
             RawJiRatio::try_new(m, n)
@@ -265,9 +265,9 @@ pub fn maximal_valid_polyoffsets(
         .filter(|x| is_valid_polyoffset(strand, x))
         .collect();
     Ok(valid_polyoffsets
-        .clone()
-        .into_iter()
-        .filter(|x| crate::helpers::is_maximal_in(x.to_vec(), &valid_polyoffsets))
+        .iter()
+        .filter(|x| crate::helpers::is_maximal_in(x, &valid_polyoffsets))
+        .cloned()
         .collect())
 }
 
