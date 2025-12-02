@@ -559,7 +559,7 @@ function tableHead(data, header = "") {
             zoomInButton.addEventListener("click", () => zoomBy(0.8));
             zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
-              viewBox = { x: 150, y: 150, width: 400, height: 300 };
+              viewBox = { x: 150, y: 150, width: 400, height: 400 };
               scale = 1;
               updateViewBox();
             });
