@@ -489,7 +489,7 @@ function tableHead(data, header = "") {
             }
 
             // Mouse down - start panning
-            svgTag.addEventListener("mousedown", (e) => {
+            svgTag.addEventListener("mousedwn", (e) => {
               isPanning = true;
               startPoint = getPointInSVG(e);
             });
@@ -856,9 +856,9 @@ stack()`
   /**
    * Clear selection from both tuning tables and select a row
    */
-  function selectTuningRow(jiTable, edoTable, row) {
+  function selectTuningRow(jiTable, edTable, row) {
     jiTable.querySelector(`.selected`)?.classList.remove("selected");
-    edoTable.querySelector(`.selected`)?.classList.remove("selected");
+    edTable.querySelector(`.selected`)?.classList.remove("selected");
     row.classList.add("selected");
   }
 
@@ -926,7 +926,7 @@ stack()`
                         </div>
                       </td>
                       <td>
-                        edo tunings
+                        ed tunings
                         <div
                           style="
                             overflow-y: auto;
@@ -941,7 +941,7 @@ stack()`
                       </td></tr></table>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
-          const edoTuningTable = document.getElementById("table-ed-tunings");
+          const edTuningTable = document.getElementById("table-ed-tunings");
           const equave = getEquaveRatio();
           const sigResultData = TernaryLib.sigResult(sig, {
             lm: document.getElementById("monotone-lm").checked,
@@ -974,7 +974,7 @@ stack()`
           const profiles = sigResultData["profiles"];
 
           const jiTunings = sigResultData["ji_tunings"];
-          const edoTunings = sigResultData["ed_tunings"];
+          const edTunings = sigResultData["ed_tunings"];
           let letters;
           if (arity === 3) {
             letters = ["L", "m", "s"];
@@ -1019,7 +1019,7 @@ stack()`
             const thisRow = jiRows[i];
             thisRow.addEventListener("click", () => {
               if (arity >= 1 && arity <= 3) {
-                selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
                 appState.tuning = jiTunings[i - 2];
                 updateViews(equave);
               } else {
@@ -1027,19 +1027,19 @@ stack()`
               }
             });
           }
-          if (edoTunings) {
-            makeTable(edoTuningTable, edoTunings);
-            const edRows = edoTuningTable.getElementsByTagName("tr");
+          if (edTunings) {
+            makeTable(edTuningTable, edTunings);
+            const edRows = edTuningTable.getElementsByTagName("tr");
             edRows[2].classList.add("selected");
-            const edoTuning = edoTunings[0];
-            appState.tuning = edoTuning;
+            const edTuning = edTunings[0];
+            appState.tuning = edTuning;
             updateViews(equave);
             for (let i = 2; i < edRows.length; ++i) {
               const thisRow = edRows[i];
               thisRow.addEventListener("click", () => {
-                selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
-                const edoTuning = edoTunings[i - 2];
-                appState.tuning = edoTuning;
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                const edTuning = edTunings[i - 2];
+                appState.tuning = edTuning;
                 updateViews(equave);
               });
             }
@@ -1066,7 +1066,7 @@ stack()`
     const profile = wordResultData["profile"];
     const brightestMode = wordResultData["profile"]["word"];
     const jiTunings = wordResultData["ji_tunings"];
-    const edoTunings = wordResultData["ed_tunings"];
+    const edTunings = wordResultData["ed_tunings"];
     document.getElementById("tables").innerHTML = `
                 <td>
                   JI tunings
@@ -1083,7 +1083,7 @@ stack()`
                   </div>
                 </td>
                 <td>
-                  edo tunings
+                  ed(equave) tunings
                   <div
                     style="
                       overflow-y: auto;
@@ -1097,7 +1097,7 @@ stack()`
                   </div>
                 </td>`;
     const jiTuningTable = document.getElementById("table-ji-tunings");
-    const edoTuningTable = document.getElementById("table-ed-tunings");
+    const edTuningTable = document.getElementById("table-ed-tunings");
     appState.word = brightestMode;
     try {
       statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
@@ -1108,7 +1108,7 @@ stack()`
         const thisRow = jiRows[i];
         thisRow.addEventListener("click", () => {
           if (arity >= 1 && arity <= 3) {
-            selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
+            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
             appState.tuning = jiTunings[i - 2];
             updateViews(equave);
           } else {
@@ -1116,21 +1116,21 @@ stack()`
           }
         });
       }
-      if (edoTunings) {
-        makeTable(edoTuningTable, edoTunings);
-        const edRows = edoTuningTable.getElementsByTagName("tr");
+      if (edTunings) {
+        makeTable(edTuningTable, edTunings);
+        const edRows = edTuningTable.getElementsByTagName("tr");
         edRows[2].classList.add("selected");
         for (let i = 2; i < edRows.length; ++i) {
           const thisRow = edRows[i];
           thisRow.addEventListener("click", () => {
-            selectTuningRow(jiTuningTable, edoTuningTable, thisRow);
-            const edoTuning = edoTunings[i - 2];
-            appState.tuning = edoTuning;
+            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+            const edTuning = edTunings[i - 2];
+            appState.tuning = edTuning;
             updateViews(equave);
           });
         }
       }
-      appState.tuning = edoTunings[0];
+      appState.tuning = edTunings[0];
       appState.profile = profile;
       appState.latticeBasis = appState.profile["lattice_basis"];
       updateViews(equave);
