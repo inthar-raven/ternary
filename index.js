@@ -899,7 +899,7 @@ stack()`
           overflow-x: auto;
           vertical-align: top;
           height: 500px;
-          width: ${window.innerWidth};
+          width: 100%;
         "
       >
       <table>
