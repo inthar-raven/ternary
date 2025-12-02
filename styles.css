@@ -34,7 +34,7 @@
 :root {
   --sans: 400 16px/1.5 "Open Sans", sans-serif;
   --mono: "OCR A Std", monospace;
-  --c1: #6c00da; /*button, link*/
+  --c1: #76f; /*button, link*/
   --c2: #333;
   --c3: #10002e;
   --c4: #fff;
@@ -222,7 +222,7 @@ h6 {
 h1 {
   font-size: 2.625em;
   line-height: 1.2;
-  color: #6c00da;
+  color: #76f;
 }
 
 h2 {
@@ -290,7 +290,7 @@ thead th {
 }
 
 table.clickable tr.selected {
-  background-color: #6c00da;
+  background-color: #76f;
 }
 
 /* Rounded Corners*/

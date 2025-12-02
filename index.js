@@ -11,7 +11,7 @@ const SPACING_Y = -35;
 const UNOCCUPIED_DOT_RADIUS = 7;
 const EDGE_WIDTH = 2;
 
-const GROUND_INDIGO = "#6c00da";
+const GROUND_INDIGO = "#76f";
 
 const statusElement = document.getElementById("status");
 
