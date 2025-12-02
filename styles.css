@@ -447,8 +447,54 @@ html {
 
 svg {
   min-width: 10px;
+  max-width: 100%;
 }
 .controls {
   margin-bottom: 10px;
   padding: 10px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 600px) {
+  table {
+    table-layout: auto;
+    width: 100%;
+  }
+  
+  input[type="text"],
+  input[type="number"] {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .data {
+    font-size: 14px;
+  }
+  
+  pre[class*="language-"] {
+    font-size: 12px;
+    overflow-x: auto;
+  }
+  
+  .tables-row {
+    flex-direction: column;
+  }
+  
+  .table-column {
+    width: 100% !important;
+    min-width: 0;
+  }
+}
+
+/* Responsive table columns */
+.tables-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.table-column {
+  flex: 1;
+  min-width: 150px;
+  max-width: 100%;
 }

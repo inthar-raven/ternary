@@ -902,9 +902,8 @@ stack()`
           width: 100%;
         "
       >
-      <table>
-        <tr>
-                      <td>
+      <div class="tables-row">
+                      <div class="table-column">
                         Scales
                         <div
                           style="
@@ -912,13 +911,12 @@ stack()`
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 250px;
                           "
                         >
                           <table class="data" id="table-scales"></table>
                         </div>
-                      </td>
-                      <td>
+                      </div>
+                      <div class="table-column">
                         JI tunings
                         <div
                           style="
@@ -926,13 +924,12 @@ stack()`
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 250px;
                           "
                         >
                           <table class="data" id="table-ji-tunings"></table>
                         </div>
-                      </td>
-                      <td>
+                      </div>
+                      <div class="table-column">
                         ed(equave) tunings
                         <div
                           style="
@@ -940,12 +937,11 @@ stack()`
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 200px;
                           "
                         >
                           <table class="data" id="table-ed-tunings"></table>
                         </div>
-                      </td></tr></table></div>`;
+                      </div></div></div>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edTuningTable = document.getElementById("table-ed-tunings");
@@ -1075,34 +1071,34 @@ stack()`
     const jiTunings = wordResultData["ji_tunings"];
     const edTunings = wordResultData["ed_tunings"];
     document.getElementById("tables").innerHTML = `
-                <td>
-                  JI tunings
-                  <div
-                    style="
-                      overflow-y: auto;
-                      overflow-x: auto;
-                      vertical-align: top;
-                      height: 420px;
-                      width: 250px;
-                    "
-                  >
-                    <table class="data" id="table-ji-tunings"></table>
+                <div class="tables-row">
+                  <div class="table-column">
+                    JI tunings
+                    <div
+                      style="
+                        overflow-y: auto;
+                        overflow-x: auto;
+                        vertical-align: top;
+                        height: 420px;
+                      "
+                    >
+                      <table class="data" id="table-ji-tunings"></table>
+                    </div>
                   </div>
-                </td>
-                <td>
-                  ed(equave) tunings
-                  <div
-                    style="
-                      overflow-y: auto;
-                      overflow-x: auto;
-                      vertical-align: top;
-                      height: 420px;
-                      width: 200px;
-                    "
-                  >
-                    <table class="data" id="table-ed-tunings"></table>
+                  <div class="table-column">
+                    ed(equave) tunings
+                    <div
+                      style="
+                        overflow-y: auto;
+                        overflow-x: auto;
+                        vertical-align: top;
+                        height: 420px;
+                      "
+                    >
+                      <table class="data" id="table-ed-tunings"></table>
+                    </div>
                   </div>
-                </td>`;
+                </div>`;
     const jiTuningTable = document.getElementById("table-ji-tunings");
     const edTuningTable = document.getElementById("table-ed-tunings");
     appState.word = brightestMode;
