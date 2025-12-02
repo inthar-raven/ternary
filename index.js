@@ -926,7 +926,7 @@ stack()`
                         </div>
                       </td>
                       <td>
-                        ed tunings
+                        ed(equave) tunings
                         <div
                           style="
                             overflow-y: auto;
