@@ -102,7 +102,7 @@ function arraysEqual(a, b) {
 
 /**
  * Compare two arrays lexicographically
- * Returns -1 if a < b, 0 if a == b, 1 if a > b
+ * Returns a negative number if a < b, 0 if a == b, a positive number if a > b
  */
 function compareArrays(a, b) {
   const minLen = Math.min(a.length, b.length);
