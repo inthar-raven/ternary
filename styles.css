@@ -448,7 +448,18 @@ html {
 svg {
   min-width: 10px;
   max-width: 100%;
+  touch-action: none;
 }
+
+#lattice {
+  touch-action: none;
+  cursor: grab;
+}
+
+#lattice:active {
+  cursor: grabbing;
+}
+
 .controls {
   margin-bottom: 10px;
   padding: 10px;

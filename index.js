@@ -326,7 +326,9 @@ import("./pkg").then((wasm) => {
         );
         svgTag.setAttribute("id", "lattice");
         svgTag.setAttribute("width", "100%");
-        svgTag.setAttribute("height", "100%");
+        svgTag.setAttribute("height", "400");
+        svgTag.style.touchAction = "none";
+        svgTag.style.cursor = "grab";
         const svgStyle = document.createElement("style");
         svgStyle.innerHTML = `
       .small {
@@ -499,9 +501,12 @@ import("./pkg").then((wasm) => {
             // Convert screen coordinates to SVG coordinates
             function getPointInSVG(e) {
               const CTM = svgTag.getScreenCTM();
+              // Handle both mouse and touch events
+              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+              const clientY = e.touches ? e.touches[0].clientY : e.clientY;
               return {
-                x: (e.clientX - CTM.e) / CTM.a,
-                y: (e.clientY - CTM.f) / CTM.d,
+                x: (clientX - CTM.e) / CTM.a,
+                y: (clientY - CTM.f) / CTM.d,
               };
             }
 
@@ -510,6 +515,15 @@ import("./pkg").then((wasm) => {
               isPanning = true;
               startPoint = getPointInSVG(e);
             });
+
+            // Touch start - start panning
+            svgTag.addEventListener("touchstart", (e) => {
+              if (e.touches.length === 1) {
+                e.preventDefault();
+                isPanning = true;
+                startPoint = getPointInSVG(e);
+              }
+            }, { passive: false });
 
             // Mouse move - pan
             svgTag.addEventListener("mousemove", (e) => {
@@ -526,8 +540,28 @@ import("./pkg").then((wasm) => {
               updateViewBox();
             });
 
+            // Touch move - pan
+            svgTag.addEventListener("touchmove", (e) => {
+              if (!isPanning || e.touches.length !== 1) return;
+
+              e.preventDefault();
+              const currentPoint = getPointInSVG(e);
+              const dx = currentPoint.x - startPoint.x;
+              const dy = currentPoint.y - startPoint.y;
+
+              viewBox.x -= dx;
+              viewBox.y -= dy;
+
+              updateViewBox();
+            }, { passive: false });
+
             // Mouse up - stop panning
             svgTag.addEventListener("mouseup", () => {
+              isPanning = false;
+            });
+
+            // Touch end - stop panning
+            svgTag.addEventListener("touchend", () => {
               isPanning = false;
             });
 
