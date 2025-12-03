@@ -174,28 +174,84 @@ fn numbers_to_string(word: &[usize]) -> String {
     result
 }
 
-/// Convert a CountVector to a 3-element u8 vector for serialization
-fn countvector_to_u8_vec(cv: &CountVector<usize>) -> Vec<u8> {
-    let btreemap = cv.into_inner();
-    vec![
-        *btreemap.get(&0).unwrap_or(&0) as u8,
-        *btreemap.get(&1).unwrap_or(&0) as u8,
-        *btreemap.get(&2).unwrap_or(&0) as u8,
-    ]
-}
-
 fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
     let GuideFrame { gs, polyoffset } = structure;
-    let aggregate_cv: CountVector<usize> = gs
-        .iter()
-        .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
-
-    GuideResult {
-        gs: gs.iter().map(countvector_to_u8_vec).collect(),
-        aggregate: countvector_to_u8_vec(&aggregate_cv),
-        polyoffset: polyoffset.iter().map(countvector_to_u8_vec).collect(),
-        multiplicity: structure.multiplicity() as u8,
-        complexity: structure.complexity() as u8,
+    if structure.multiplicity() == 1 {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            aggregate: {
+                let cv: CountVector<usize> = gs
+                    .iter()
+                    .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
+                let btreemap = cv.into_inner();
+                vec![
+                    *btreemap.get(&0).unwrap_or(&0) as u8,
+                    *btreemap.get(&1).unwrap_or(&0) as u8,
+                    *btreemap.get(&2).unwrap_or(&0) as u8,
+                ]
+            },
+            polyoffset: polyoffset
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            multiplicity: structure.multiplicity() as u8,
+            complexity: structure.complexity() as u8,
+        }
+    } else {
+        GuideResult {
+            gs: gs
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            aggregate: {
+                let cv: CountVector<usize> = gs
+                    .iter()
+                    .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
+                let btreemap = cv.into_inner();
+                vec![
+                    *btreemap.get(&0).unwrap_or(&0) as u8,
+                    *btreemap.get(&1).unwrap_or(&0) as u8,
+                    *btreemap.get(&2).unwrap_or(&0) as u8,
+                ]
+            },
+            polyoffset: polyoffset
+                .iter()
+                .map(|cv| {
+                    let btreemap = cv.into_inner();
+                    vec![
+                        *btreemap.get(&0).unwrap_or(&0) as u8,
+                        *btreemap.get(&1).unwrap_or(&0) as u8,
+                        *btreemap.get(&2).unwrap_or(&0) as u8,
+                    ]
+                })
+                .collect(),
+            multiplicity: structure.multiplicity() as u8,
+            complexity: structure.clone().complexity() as u8,
+        }
     }
 }
 
@@ -231,34 +287,33 @@ fn get_unimodular_basis(
      */
     for structure in structures {
         if structure.multiplicity() == 1 {
-            let result = guide_frame_to_result(structure);
-            let gs = &result.gs;
-            for i in 0..gs.len() {
-                for j in i..gs.len() {
+            let structure = guide_frame_to_result(structure);
+            let gs = structure.gs.clone();
+            for i in 0..gs.clone().len() {
+                for j in i..gs.clone().len() {
                     if det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
-                        return Some((vec![gs[i].clone(), gs[j].clone()], result));
+                        return Some((vec![gs[i].clone(), gs[j].clone()], structure));
                     }
                 }
             }
-            for v in &result.polyoffset {
-                for w in gs {
-                    if det3(step_sig, v, w).abs() == 1 {
-                        return Some((vec![v.clone(), w.clone()], result));
+            let polyoffset = structure.clone().polyoffset;
+            for v in polyoffset {
+                for w in structure.clone().gs {
+                    if det3(step_sig, &v, &w).abs() == 1 {
+                        return Some((vec![v, w], structure));
                     }
                 }
             }
         } else {
             // this branch handles multiplicity > 1 scales
-            let result = guide_frame_to_result(structure);
-            if let (Some(vec_for_gs_element), Some(vec_for_offset)) =
-                (result.gs.first(), result.polyoffset.last())
-            {
-                if det3(step_sig, vec_for_gs_element, vec_for_offset).abs() == 1 {
-                    return Some((
-                        vec![vec_for_gs_element.clone(), vec_for_offset.clone()],
-                        result,
-                    ));
+            let structure = guide_frame_to_result(structure);
+            let vec_for_gs_element = structure.gs[0].clone();
+            if let Some(vec_for_offset) = structure.polyoffset.last() {
+                if det3(step_sig, &vec_for_gs_element, vec_for_offset).abs() == 1 {
+                    return Some((vec![vec_for_gs_element, vec_for_offset.clone()], structure));
                 }
+            } else {
+                return None;
             }
         }
     }
