@@ -368,7 +368,7 @@ pub fn brightest_mos_mode_and_gener(a: usize, b: usize) -> (Vec<Letter>, CountVe
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
         let count_gener_steps = modinv(b as i64, a as i64 + b as i64)
-                .expect("The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `a` times results in the s step (mod period).")
+                .expect("The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `b` times results in the L step (mod period).")
                 as usize;
         // These are the seed strings we build the brightest MOS word from.
         // The algorithm uses two subwords at each step, iteratively appending the
