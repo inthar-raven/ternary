@@ -2,15 +2,44 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 
 ![Front page screenshot](https://raw.githubusercontent.com/inthar-raven/ternary/main/static/images/front.png)
 
-# How to run
+# How to build and run
 
-Serve the project directory with any static file server. For example:
+## Prerequisites
 
+- [Rust](https://rustup.rs/) (for compiling to WebAssembly)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+
+## Build steps
+
+1. Install Node.js dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Build and serve the development server:
+   ```bash
+   npm run serve
+   ```
+   This will compile the Rust code to WASM and start a dev server at `http://localhost:8080/`.
+
+3. For a production build:
+   ```bash
+   npm run build
+   ```
+   The output will be in the `dist/` directory.
+
+## Rust development
+
+To check the Rust code compiles:
 ```bash
-python3 -m http.server 8080
+cargo check
 ```
 
-Then visit `http://localhost:8080/` in your browser.
+To run Rust tests:
+```bash
+cargo test
+```
 
 # Features
 
