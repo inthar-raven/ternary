@@ -540,15 +540,15 @@ import("./pkg").then((wasm) => {
             // Touch start - start panning or pinching
             svgTag.addEventListener("touchstart", (e) => {
               e.preventDefault();
-              if (e.touches.length === 1) {
-                isPanning = true;
-                isPinching = false;
-                startPoint = getPointInSVG(e);
-              } else if (e.touches.length === 2) {
+              if (e.touches.length === 2) {
                 isPanning = false;
                 isPinching = true;
                 initialPinchDistance = getTouchDistance(e.touches);
                 pinchCenter = getTouchCenter(e.touches);
+              } else if (e.touches.length === 1) {
+                isPanning = true;
+                isPinching = false;
+                startPoint = getPointInSVG(e);
               }
             }, { passive: false });
 
@@ -571,36 +571,48 @@ import("./pkg").then((wasm) => {
             svgTag.addEventListener("touchmove", (e) => {
               e.preventDefault();
               
-              if (isPanning && e.touches.length === 1) {
+              if (e.touches.length === 2) {
+                // Always handle 2-finger as pinch
+                if (!isPinching) {
+                  // Just started pinching
+                  isPanning = false;
+                  isPinching = true;
+                  initialPinchDistance = getTouchDistance(e.touches);
+                  pinchCenter = getTouchCenter(e.touches);
+                } else {
+                  // Continue pinching
+                  const currentDistance = getTouchDistance(e.touches);
+                  if (initialPinchDistance > 0) {
+                    const zoomFactor = initialPinchDistance / currentDistance;
+                    const center = getTouchCenter(e.touches);
+
+                    // Calculate new dimensions
+                    const newWidth = viewBox.width * zoomFactor;
+                    const newHeight = viewBox.height * zoomFactor;
+
+                    // Adjust position to zoom towards pinch center
+                    viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
+                    viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
+
+                    viewBox.width = newWidth;
+                    viewBox.height = newHeight;
+
+                    scale = 800 / viewBox.width;
+
+                    // Update for next frame
+                    initialPinchDistance = currentDistance;
+                    pinchCenter = center;
+
+                    updateViewBox();
+                  }
+                }
+              } else if (e.touches.length === 1 && isPanning) {
                 const currentPoint = getPointInSVG(e);
                 const dx = currentPoint.x - startPoint.x;
                 const dy = currentPoint.y - startPoint.y;
 
                 viewBox.x -= dx;
                 viewBox.y -= dy;
-
-                updateViewBox();
-              } else if (isPinching && e.touches.length === 2) {
-                const currentDistance = getTouchDistance(e.touches);
-                const zoomFactor = initialPinchDistance / currentDistance;
-                const center = getTouchCenter(e.touches);
-
-                // Calculate new dimensions
-                const newWidth = viewBox.width * zoomFactor;
-                const newHeight = viewBox.height * zoomFactor;
-
-                // Adjust position to zoom towards pinch center
-                viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
-                viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
-
-                viewBox.width = newWidth;
-                viewBox.height = newHeight;
-
-                scale = 800 / viewBox.width;
-
-                // Update for next frame
-                initialPinchDistance = currentDistance;
-                pinchCenter = center;
 
                 updateViewBox();
               }
