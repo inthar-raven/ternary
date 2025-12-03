@@ -101,12 +101,16 @@ impl<T> CountVector<T> {
     where
         T: Ord + Clone + Send + Sync,
     {
-        Self(
-            self.0
-                .iter()
-                .map(|(k, v)| (k.clone(), lambda * v))
-                .collect(),
-        )
+        if lambda == 0 { // Zeroed components are not allowed!
+            Self::ZERO
+        } else {
+            Self(
+                self.0
+                    .iter()
+                    .map(|(k, v)| (k.clone(), lambda * v))
+                    .collect(),
+            )
+        }
     }
 
     /// Convert a slice to a CountVector.
@@ -367,8 +371,9 @@ where
 pub fn brightest_mos_mode_and_gener(a: usize, b: usize) -> (Vec<Letter>, CountVector<Letter>) {
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
+        // The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `b` times results in the L step (mod period).
         let count_gener_steps = modinv(b as i64, a as i64 + b as i64)
-                .expect("The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `b` times results in the L step (mod period).")
+                .expect("Should be ok because gcd(a + b, b) == gcd(a, b) == 1")
                 as usize;
         // These are the seed strings we build the brightest MOS word from.
         // The algorithm uses two subwords at each step, iteratively appending the
@@ -788,9 +793,9 @@ mod tests {
         for a in 1usize..=10 {
             for b in 1usize..=10 {
                 if gcd(a as u64, b as u64) == 1 {
-                    let mos = brightest_mos_mode_and_gener(a, b).0;
-                    assert_eq!(mos, rotate(&mos, booth(&mos))); // MOS scales' brightest mode is indeed the least mode
-                    assert_eq!(maximum_variety(&mos), 2);
+                    let brightest_mos = brightest_mos_mode_and_gener(a, b).0;
+                    assert_eq!(booth(&brightest_mos), 0); // MOS scales' brightest mode is indeed the least mode
+                    assert_eq!(maximum_variety(&brightest_mos), 2);
                 }
             }
         }
