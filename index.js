@@ -531,83 +531,84 @@ import("./pkg").then((wasm) => {
               };
             }
 
-            // Mouse down - start panning
-            svgTag.addEventListener("mousedown", (e) => {
-              isPanning = true;
-              startPoint = getPointInSVG(e);
-            });
+            // Pointer event tracking for pinch-to-zoom
+            const pointers = new Map();
+            
+            function getPointerDistance() {
+              const pts = Array.from(pointers.values());
+              if (pts.length < 2) return 0;
+              const dx = pts[0].clientX - pts[1].clientX;
+              const dy = pts[0].clientY - pts[1].clientY;
+              return Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            function getPointerCenter() {
+              const pts = Array.from(pointers.values());
+              if (pts.length < 2) return { x: 0, y: 0 };
+              const CTM = svgTag.getScreenCTM();
+              const centerX = (pts[0].clientX + pts[1].clientX) / 2;
+              const centerY = (pts[0].clientY + pts[1].clientY) / 2;
+              return {
+                x: (centerX - CTM.e) / CTM.a,
+                y: (centerY - CTM.f) / CTM.d,
+              };
+            }
 
-            // Touch start - start panning or pinching
-            svgTag.addEventListener("touchstart", (e) => {
+            // Pointer down
+            svgTag.addEventListener("pointerdown", (e) => {
               e.preventDefault();
-              if (e.touches.length === 2) {
-                isPanning = false;
-                isPinching = true;
-                initialPinchDistance = getTouchDistance(e.touches);
-                pinchCenter = getTouchCenter(e.touches);
-              } else if (e.touches.length === 1) {
+              pointers.set(e.pointerId, e);
+              
+              if (pointers.size === 1) {
                 isPanning = true;
                 isPinching = false;
                 startPoint = getPointInSVG(e);
+              } else if (pointers.size === 2) {
+                isPanning = false;
+                isPinching = true;
+                initialPinchDistance = getPointerDistance();
+                pinchCenter = getPointerCenter();
               }
-            }, { passive: false });
-
-            // Mouse move - pan
-            svgTag.addEventListener("mousemove", (e) => {
-              if (!isPanning) return;
-
-              e.preventDefault();
-              const currentPoint = getPointInSVG(e);
-              const dx = currentPoint.x - startPoint.x;
-              const dy = currentPoint.y - startPoint.y;
-
-              viewBox.x -= dx;
-              viewBox.y -= dy;
-
-              updateViewBox();
             });
 
-            // Touch move - pan or pinch zoom
-            svgTag.addEventListener("touchmove", (e) => {
-              e.preventDefault();
+            // Pointer move
+            svgTag.addEventListener("pointermove", (e) => {
+              if (!pointers.has(e.pointerId)) return;
               
-              if (e.touches.length === 2) {
-                // Always handle 2-finger as pinch
-                if (!isPinching) {
-                  // Just started pinching
-                  isPanning = false;
-                  isPinching = true;
-                  initialPinchDistance = getTouchDistance(e.touches);
-                  pinchCenter = getTouchCenter(e.touches);
-                } else {
-                  // Continue pinching
-                  const currentDistance = getTouchDistance(e.touches);
-                  if (initialPinchDistance > 0) {
-                    const zoomFactor = initialPinchDistance / currentDistance;
-                    const center = getTouchCenter(e.touches);
+              e.preventDefault();
+              pointers.set(e.pointerId, e);
+              
+              if (pointers.size === 2 && isPinching) {
+                const currentDistance = getPointerDistance();
+                if (initialPinchDistance > 0 && currentDistance > 0) {
+                  const zoomFactor = initialPinchDistance / currentDistance;
+                  const center = getPointerCenter();
 
-                    // Calculate new dimensions
-                    const newWidth = viewBox.width * zoomFactor;
-                    const newHeight = viewBox.height * zoomFactor;
+                  // Calculate new dimensions
+                  const newWidth = viewBox.width * zoomFactor;
+                  const newHeight = viewBox.height * zoomFactor;
 
-                    // Adjust position to zoom towards pinch center
-                    viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
-                    viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
+                  // Adjust position to zoom towards pinch center
+                  viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
+                  viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
 
-                    viewBox.width = newWidth;
-                    viewBox.height = newHeight;
+                  viewBox.width = newWidth;
+                  viewBox.height = newHeight;
 
-                    scale = 800 / viewBox.width;
+                  scale = 800 / viewBox.width;
 
-                    // Update for next frame
-                    initialPinchDistance = currentDistance;
-                    pinchCenter = center;
+                  // Update for next frame
+                  initialPinchDistance = currentDistance;
+                  pinchCenter = center;
 
-                    updateViewBox();
-                  }
+                  updateViewBox();
                 }
-              } else if (e.touches.length === 1 && isPanning) {
-                const currentPoint = getPointInSVG(e);
+              } else if (pointers.size === 1 && isPanning) {
+                const CTM = svgTag.getScreenCTM();
+                const currentPoint = {
+                  x: (e.clientX - CTM.e) / CTM.a,
+                  y: (e.clientY - CTM.f) / CTM.d,
+                };
                 const dx = currentPoint.x - startPoint.x;
                 const dy = currentPoint.y - startPoint.y;
 
@@ -616,22 +617,32 @@ import("./pkg").then((wasm) => {
 
                 updateViewBox();
               }
-            }, { passive: false });
-
-            // Mouse up - stop panning
-            svgTag.addEventListener("mouseup", () => {
-              isPanning = false;
             });
 
-            // Touch end - stop panning/pinching
-            svgTag.addEventListener("touchend", () => {
-              isPanning = false;
-              isPinching = false;
-            });
-
-            svgTag.addEventListener("mouseleave", () => {
-              isPanning = false;
-            });
+            // Pointer up/cancel
+            function onPointerUp(e) {
+              pointers.delete(e.pointerId);
+              if (pointers.size < 2) {
+                isPinching = false;
+              }
+              if (pointers.size === 0) {
+                isPanning = false;
+              }
+              // If we went from 2 to 1 pointer, restart panning from current position
+              if (pointers.size === 1) {
+                isPanning = true;
+                const remainingPointer = Array.from(pointers.values())[0];
+                const CTM = svgTag.getScreenCTM();
+                startPoint = {
+                  x: (remainingPointer.clientX - CTM.e) / CTM.a,
+                  y: (remainingPointer.clientY - CTM.f) / CTM.d,
+                };
+              }
+            }
+            
+            svgTag.addEventListener("pointerup", onPointerUp);
+            svgTag.addEventListener("pointercancel", onPointerUp);
+            svgTag.addEventListener("pointerleave", onPointerUp);
 
             // Wheel - zoom
             svgTag.addEventListener("wheel", (e) => {
