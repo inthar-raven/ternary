@@ -3,11 +3,11 @@ use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 
-use crate::helpers::{is_sorted_strictly_desc, pairs, ScaleError};
+use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
 use crate::interval::Dyad;
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::monzo::Monzo;
-use crate::words::{rotate, CountVector};
+use crate::words::{CountVector, rotate};
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
 /// not including the unison.

@@ -22,8 +22,8 @@ use ji_ratio::RawJiRatio;
 // use nalgebra::{Matrix3, Vector3};
 // use subgroup_monzo::SubgroupMonzo;
 use wasm_bindgen::prelude::*;
-use words::{chirality, is_mos_subst};
 use words::{Chirality, Letter};
+use words::{chirality, is_mos_subst};
 
 #[wasm_bindgen]
 extern "C" {
@@ -62,10 +62,10 @@ use std::collections::HashSet;
 use serde::Serialize;
 use serde_wasm_bindgen::to_value;
 
-use guide::guide_frames;
 use guide::GuideFrame;
+use guide::guide_frames;
 // use interval::{Dyad, JiRatio};
-use words::{least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0, CountVector};
+use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
 // for the edo search
 pub const EDO_BOUND: i32 = 111;
@@ -254,13 +254,12 @@ fn get_unimodular_basis(
             let result = guide_frame_to_result(structure);
             if let (Some(vec_for_gs_element), Some(vec_for_offset)) =
                 (result.gs.first(), result.polyoffset.last())
+                && det3(step_sig, vec_for_gs_element, vec_for_offset).abs() == 1
             {
-                if det3(step_sig, vec_for_gs_element, vec_for_offset).abs() == 1 {
-                    return Some((
-                        vec![vec_for_gs_element.clone(), vec_for_offset.clone()],
-                        result,
-                    ));
-                }
+                return Some((
+                    vec![vec_for_gs_element.clone(), vec_for_offset.clone()],
+                    result,
+                ));
             }
         }
     }

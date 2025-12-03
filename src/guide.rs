@@ -16,8 +16,8 @@ use crate::{
     helpers::gcd,
     primes::factorize,
     words::{
-        dyad_on_degree, offset_vec, rotate, rotations, weak_period, word_on_degree, CountVector,
-        Letter, Subtendable,
+        CountVector, Letter, Subtendable, dyad_on_degree, offset_vec, rotate, rotations,
+        weak_period, word_on_degree,
     },
 };
 

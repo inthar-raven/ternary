@@ -1,10 +1,10 @@
 use itertools::Itertools;
 use serde::Serialize;
-use std::cmp::{max, Ordering};
+use std::cmp::{Ordering, max};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::hash::Hash;
 
-use crate::helpers::{gcd, modinv, ScaleError};
+use crate::helpers::{ScaleError, gcd, modinv};
 
 pub type Letter = usize;
 
@@ -825,7 +825,7 @@ mod tests {
         assert_eq!(maximum_variety(&[1, 1, 1, 1, 2, 1, 2]), 3); // altered diatonic has max variety 3
         assert_eq!(maximum_variety(&[0, 1, 0, 2, 0, 1, 0, 2, 0]), 3); // diasem has max variety 3
         assert_eq!(maximum_variety(&[0, 1, 0, 2, 0, 1, 0, 2, 0, 1]), 4); // blackdye has max variety 4
-                                                                         // MOS scales should be MV2.
+        // MOS scales should be MV2.
         for a in 1usize..=10 {
             for b in 1usize..=10 {
                 if gcd(a as u64, b as u64) == 1 {

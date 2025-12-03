@@ -92,13 +92,13 @@ impl SubgroupMonzo {
     }
     /// Gets a tuple of the three coefficients from a `SubgroupMonzo`.
     pub fn extract_vector(&self) -> (i32, i32, i32) {
-        (self.0 .0 .1, self.0 .1 .1, self.0 .2 .1)
+        (self.0.0.1, self.0.1.1, self.0.2.1)
     }
     /// Convert the `SubgroupMonzo` to a 79-limit `Monzo` representation
     /// by combining the basis vectors with the subgroup vector.
     pub fn to_monzo(&self) -> Monzo {
-        let (v1, v2, v3) = (self.0 .0 .0, self.0 .1 .0, self.0 .2 .0);
-        let (a1, a2, a3) = (self.0 .0 .1, self.0 .1 .1, self.0 .2 .1);
+        let (v1, v2, v3) = (self.0.0.0, self.0.1.0, self.0.2.0);
+        let (a1, a2, a3) = (self.0.0.1, self.0.1.1, self.0.2.1);
         v1 * a1 + v2 * a2 + v3 * a3
     }
 }
