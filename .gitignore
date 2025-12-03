@@ -1,3 +1,9 @@
+# Build artifacts
+/target/
+/dist/
+/pkg/
+/node_modules/
+
 # Editor files
 *.swp
 *.swo
@@ -6,3 +12,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Lock files (optional, depending on preference)
+# Cargo.lock
+# package-lock.json
