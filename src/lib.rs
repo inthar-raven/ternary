@@ -189,7 +189,7 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
     let aggregate_cv: CountVector<usize> = gs
         .iter()
         .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
-    
+
     GuideResult {
         gs: gs.iter().map(countvector_to_u8_vec).collect(),
         aggregate: countvector_to_u8_vec(&aggregate_cv),
@@ -250,11 +250,14 @@ fn get_unimodular_basis(
         } else {
             // this branch handles multiplicity > 1 scales
             let result = guide_frame_to_result(structure);
-            if let (Some(vec_for_gs_element), Some(vec_for_offset)) = 
-                (result.gs.first(), result.polyoffset.last()) 
+            if let (Some(vec_for_gs_element), Some(vec_for_offset)) =
+                (result.gs.first(), result.polyoffset.last())
             {
                 if det3(step_sig, vec_for_gs_element, vec_for_offset).abs() == 1 {
-                    return Some((vec![vec_for_gs_element.clone(), vec_for_offset.clone()], result));
+                    return Some((
+                        vec![vec_for_gs_element.clone(), vec_for_offset.clone()],
+                        result,
+                    ));
                 }
             }
         }
