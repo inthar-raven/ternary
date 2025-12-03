@@ -366,19 +366,20 @@ pub fn gs_scale(
     }
 }
 
-/// Return a well-formed necklace of `gen_class`-steps in a given JI scale.
+/// Return a well-formed necklace of `gener_class`-steps in a given JI scale.
 /// A necklace is a rotationally-invariant way to arrange generators.
 pub fn well_formed_necklace_in_ji_scale(
     scale: &[RawJiRatio],
-    gen_class: usize,
+    gener_class: usize,
 ) -> Result<Vec<RawJiRatio>, ScaleError> {
-    if gcd(scale.len() as i64, gen_class as i64) == 1 {
+    if gcd(scale.len() as i64, gener_class as i64) == 1 {
         Ok((0..(scale.len()))
             .map(|k| {
-                (scale[(gen_class * (k + 1)) % scale.len()] / scale[(gen_class * k) % scale.len()])
-                    .rd(RawJiRatio::OCTAVE)
+                (scale[(gener_class * (k + 1)) % scale.len()]
+                    / scale[(gener_class * k) % scale.len()])
+                .rd(RawJiRatio::OCTAVE)
             })
-            .collect()) // For every `k` (including the last one), get the `k`th stacked `gen_class`-step.
+            .collect()) // For every `k` (including the last one), get the `k`th stacked `gener_class`-step.
     } else {
         Err(ScaleError::NonCoprimeGenError)
     }

@@ -364,10 +364,7 @@ where
 
 /// Return the brightest mode of the MOS aLbs and the bright generator, using Bjorklund's algorithm.
 /// The brightest mode is the lexicographically first rotation.
-pub fn brightest_mos_mode_and_gener(
-    a: usize,
-    b: usize,
-) -> (Vec<Letter>, CountVector<Letter>) {
+pub fn brightest_mos_mode_and_gener(a: usize, b: usize) -> (Vec<Letter>, CountVector<Letter>) {
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
         let count_gener_steps = modinv(b as i64, a as i64 + b as i64)
