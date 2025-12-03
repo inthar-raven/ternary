@@ -60,9 +60,9 @@ jobs:
         run: find ./
       - name: Install and configure dependencies
         run: |
-          # dependencies are only needed on ubuntu as that's the only place where
-          # we make cross-compilation
-          if [[ $OS =~ ^ubuntu.*$ ]]; then
+          # Cross-compilation dependencies are only needed when cross-compiling
+          # x86_64-unknown-linux-gnu is the native target, so no cross-compilation needed
+          if [[ $OS =~ ^ubuntu.*$ && $TARGET != "x86_64-unknown-linux-gnu" ]]; then
             sudo apt-get install -qq crossbuild-essential-arm64 crossbuild-essential-armhf
           fi
       - name: Install rust target
@@ -74,6 +74,8 @@ jobs:
       - name: Archive artifact
         uses: actions/upload-artifact@v4
         with:
-          name: result
+          name: result-${{ matrix.TARGET }}
           path: |
-            ./artifacts
+            ./target/${{ matrix.TARGET }}/release/libternary*
+            ./target/${{ matrix.TARGET }}/release/ternary*
+          if-no-files-found: ignore
