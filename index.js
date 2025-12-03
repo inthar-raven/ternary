@@ -486,8 +486,29 @@ import("./pkg").then((wasm) => {
             };
 
             let isPanning = false;
+            let isPinching = false;
             let startPoint = { x: 0, y: 0 };
+            let initialPinchDistance = 0;
+            let pinchCenter = { x: 0, y: 0 };
             let scale = 1.0;
+
+            // Get distance between two touch points
+            function getTouchDistance(touches) {
+              const dx = touches[0].clientX - touches[1].clientX;
+              const dy = touches[0].clientY - touches[1].clientY;
+              return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            // Get center point between two touches in SVG coordinates
+            function getTouchCenter(touches) {
+              const CTM = svgTag.getScreenCTM();
+              const centerX = (touches[0].clientX + touches[1].clientX) / 2;
+              const centerY = (touches[0].clientY + touches[1].clientY) / 2;
+              return {
+                x: (centerX - CTM.e) / CTM.a,
+                y: (centerY - CTM.f) / CTM.d,
+              };
+            }
 
             // Update viewBox attribute
             function updateViewBox() {
@@ -516,12 +537,18 @@ import("./pkg").then((wasm) => {
               startPoint = getPointInSVG(e);
             });
 
-            // Touch start - start panning
+            // Touch start - start panning or pinching
             svgTag.addEventListener("touchstart", (e) => {
+              e.preventDefault();
               if (e.touches.length === 1) {
-                e.preventDefault();
                 isPanning = true;
+                isPinching = false;
                 startPoint = getPointInSVG(e);
+              } else if (e.touches.length === 2) {
+                isPanning = false;
+                isPinching = true;
+                initialPinchDistance = getTouchDistance(e.touches);
+                pinchCenter = getTouchCenter(e.touches);
               }
             }, { passive: false });
 
@@ -540,19 +567,43 @@ import("./pkg").then((wasm) => {
               updateViewBox();
             });
 
-            // Touch move - pan
+            // Touch move - pan or pinch zoom
             svgTag.addEventListener("touchmove", (e) => {
-              if (!isPanning || e.touches.length !== 1) return;
-
               e.preventDefault();
-              const currentPoint = getPointInSVG(e);
-              const dx = currentPoint.x - startPoint.x;
-              const dy = currentPoint.y - startPoint.y;
+              
+              if (isPanning && e.touches.length === 1) {
+                const currentPoint = getPointInSVG(e);
+                const dx = currentPoint.x - startPoint.x;
+                const dy = currentPoint.y - startPoint.y;
 
-              viewBox.x -= dx;
-              viewBox.y -= dy;
+                viewBox.x -= dx;
+                viewBox.y -= dy;
 
-              updateViewBox();
+                updateViewBox();
+              } else if (isPinching && e.touches.length === 2) {
+                const currentDistance = getTouchDistance(e.touches);
+                const zoomFactor = initialPinchDistance / currentDistance;
+                const center = getTouchCenter(e.touches);
+
+                // Calculate new dimensions
+                const newWidth = viewBox.width * zoomFactor;
+                const newHeight = viewBox.height * zoomFactor;
+
+                // Adjust position to zoom towards pinch center
+                viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
+                viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
+
+                viewBox.width = newWidth;
+                viewBox.height = newHeight;
+
+                scale = 800 / viewBox.width;
+
+                // Update for next frame
+                initialPinchDistance = currentDistance;
+                pinchCenter = center;
+
+                updateViewBox();
+              }
             }, { passive: false });
 
             // Mouse up - stop panning
@@ -560,9 +611,10 @@ import("./pkg").then((wasm) => {
               isPanning = false;
             });
 
-            // Touch end - stop panning
+            // Touch end - stop panning/pinching
             svgTag.addEventListener("touchend", () => {
               isPanning = false;
+              isPinching = false;
             });
 
             svgTag.addEventListener("mouseleave", () => {
