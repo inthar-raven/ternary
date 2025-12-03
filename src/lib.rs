@@ -516,7 +516,13 @@ pub fn word_result(query: String) -> Result<JsValue, JsValue> {
     Ok(to_value(&WordResult {
         profile: word_to_profile(&word_as_numbers),
         ji_tunings: sig_to_ji_tunings(&step_sig, RawJiRatio::OCTAVE),
-        ed_tunings: sig_to_ed_tunings(&step_sig),
+        ed_tunings: sig_to_ed_tunings(
+            &step_sig,
+            RawJiRatio::OCTAVE,
+            EDO_BOUND,
+            S_LOWER_BOUND,
+            S_UPPER_BOUND,
+        ),
     })?)
 }
 
@@ -633,23 +639,31 @@ pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<Stri
     vec![] // Return nothing until I figure out how to make this more efficient
 }
 
-pub fn sig_to_ed_tunings(step_sig: &[usize]) -> Vec<Vec<String>> {
-    let ed_tunings = crate::equal::ed_tunings_for_ternary(
-        step_sig,
-        crate::ji_ratio::RawJiRatio::OCTAVE,
-        EDO_BOUND,
-        S_LOWER_BOUND,
-        S_UPPER_BOUND,
-    );
+pub fn sig_to_ed_tunings(
+    step_sig: &[usize],
+    equave: RawJiRatio,
+    ed_bound: i32,
+    s_lower: f64,
+    s_upper: f64,
+) -> Vec<Vec<String>> {
+    let ed_tunings =
+        crate::equal::ed_tunings_for_ternary(step_sig, equave, ed_bound, s_lower, s_upper);
+    let is_octave = equave.numer() == 2 && equave.denom() == 1;
     ed_tunings
         .into_iter()
         .map(|v| {
-            let edo: i32 = v
+            let ed: i32 = v
                 .iter()
                 .enumerate()
                 .map(|(i, steps)| step_sig[i] as i32 * steps)
                 .sum();
-            v.iter().map(|i| format!("{i}\\{edo}")).collect::<Vec<_>>()
+            if is_octave {
+                v.iter().map(|i| format!("{i}\\{ed}")).collect::<Vec<_>>()
+            } else {
+                v.iter()
+                    .map(|i| format!("{i}\\{ed}<{}/{}>", equave.numer(), equave.denom()))
+                    .collect::<Vec<_>>()
+            }
         })
         .collect::<Vec<_>>()
 }
@@ -668,7 +682,14 @@ pub fn sig_result(
     mv: u8,
     mv_constraint: String,
     mos_subst: String,
+    equave_num: u32,
+    equave_den: u32,
+    ed_bound: i32,
+    s_lower: f64,
+    s_upper: f64,
 ) -> Result<JsValue, JsValue> {
+    let equave =
+        RawJiRatio::try_new(equave_num as u64, equave_den as u64).unwrap_or(RawJiRatio::OCTAVE);
     let step_sig = query;
     let filtering_cond = |scale: &[Letter]| {
         (!lm || monotone_lm(scale))
@@ -729,7 +750,7 @@ pub fn sig_result(
                 }
             })
             .collect(),
-        ji_tunings: sig_to_ji_tunings(&step_sig, RawJiRatio::OCTAVE),
-        ed_tunings: sig_to_ed_tunings(&step_sig),
+        ji_tunings: sig_to_ji_tunings(&step_sig, equave),
+        ed_tunings: sig_to_ed_tunings(&step_sig, equave, ed_bound, s_lower, s_upper),
     })?)
 }

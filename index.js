@@ -976,6 +976,11 @@ stack()`
             Number(document.getElementById("mv").value),
             document.querySelector('input[name="mv-constraint"]:checked').value,
             document.querySelector('input[name="mos-subst"]:checked').value,
+            equave.num,
+            equave.den,
+            getEdBound(),
+            getSLower(),
+            getSUpper(),
           );
           const scales = sigResultData["profiles"].map((j) => j["word"]);
           const latticeBases = sigResultData["profiles"].map(

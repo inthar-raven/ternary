@@ -25,6 +25,27 @@
       <table>
         <tr>
           <td>
+            <label for="input-equave">Equave (as a JI ratio "m/n"; default 2/1):</label>
+            <input type="text" id="input-equave" name="input-equave" value="2/1" style="width: 80px" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <label for="input-ed-bound">Max ED size:</label>
+            <input type="number" id="input-ed-bound" name="input-ed-bound" value="111" min="5" max="500" style="width: 70px" />
+            &nbsp;&nbsp;
+            <label for="input-s-lower">Min s (cents):</label>
+            <input type="number" id="input-s-lower" name="input-s-lower" value="20" min="1" max="400" style="width: 60px" />
+            &nbsp;&nbsp;
+            <label for="input-s-upper">Max s (cents):</label>
+            <input type="number" id="input-s-upper" name="input-s-upper" value="200" min="10" max="400" style="width: 60px" />
+          </td>
+        </tr>
+      </table>
+      <hr />
+      <table>
+        <tr>
+          <td>
             <p>
               Enter a specific ternary scale word using L, m, and s (use
               lowercase m for medium):
