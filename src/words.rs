@@ -459,15 +459,13 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
 }
 
 /// The mode of the MOS aLbs with a given brightness (count of bright generators up from root).
-/// Returns `Err` unless 0 <= brightness <= a + b - 1.
-pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Result<Vec<Letter>, ScaleError> {
-    if brightness >= a + b {
-        Err(ScaleError::CannotMakeScale)
-    } else {
-        let (mos, dark_gen) = darkest_mos_mode_and_gen_bresenham(a, b);
-        let dark_gen_step_count: usize = dark_gen.len();
-        Ok(rotate(&mos, brightness * dark_gen_step_count))
-    }
+/// Brightness is taken modulo (a + b), so any non-negative value is valid.
+pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Vec<Letter> {
+    let scale_len = a + b;
+    let brightness = brightness % scale_len;
+    let (mos, dark_gen) = darkest_mos_mode_and_gen_bresenham(a, b);
+    let dark_gen_step_count: usize = dark_gen.len();
+    rotate(&mos, brightness * dark_gen_step_count)
 }
 
 /// Rotate an array. Returns a Vec.
@@ -831,7 +829,7 @@ mod tests {
                 if gcd(a as u64, b as u64) == 1 {
                     for br in 0..(a + b) / (gcd(a as u64, b as u64) as usize) {
                         let mos = mos_mode(a, b, br);
-                        assert_eq!(maximum_variety(&mos.unwrap()), 2);
+                        assert_eq!(maximum_variety(&mos), 2);
                     }
                 }
             }
@@ -858,8 +856,7 @@ mod tests {
             for b in 3..=20 {
                 if gcd(a, b) == 1 {
                     for br in 0..(a + b) / gcd(a, b) {
-                        let mos = mos_mode(a as usize, b as usize, br as usize)
-                            .expect("`br` should be in range `0..(a + b)/gcd(a, b)`");
+                        let mos = mos_mode(a as usize, b as usize, br as usize);
                         assert_eq!(block_balance(&mos), 1);
                     }
                 }
