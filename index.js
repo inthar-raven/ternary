@@ -1,6 +1,9 @@
+// Import the ternary library
+import TernaryLib from "./ternary.js";
+
 // consts for the lattice view
-const LATTICE_SVG_WIDTH = 600;
-const LATTICE_SVG_HEIGHT = 600;
+const LATTICE_SVG_WIDTH = 500;
+const LATTICE_SVG_HEIGHT = 500;
 const ORIGIN_X = LATTICE_SVG_WIDTH / 2;
 const ORIGIN_Y = LATTICE_SVG_HEIGHT / 2;
 const SPACING_X = 35;
@@ -8,111 +11,107 @@ const SPACING_Y = -35;
 const UNOCCUPIED_DOT_RADIUS = 7;
 const EDGE_WIDTH = 2;
 
-const GROUND_INDIGO = "#6c00da";
-
-// global state (TODO: replace this with arguments for functions that show scale and tuning data)
-let currentWord = null;
-// let currentLCount = 0;
-// let currentMCount = 0;
-// let currentSCount = 0;
-let currentLatticeBasis = null;
-let currentTuning = null;
-let currentProfile = null;
+const GROUND_INDIGO = "#76f";
 
 const statusElement = document.getElementById("status");
 
-function countL(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "L") {
-      ++result;
-    }
-  }
-  return result;
-}
-function countM(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "m") {
-      ++result;
-    }
-  }
-  return result;
-}
-function countS(st) {
-  let result = 0;
-  for (let i = 0; i < st.length; ++i) {
-    if (st[i] === "s") {
-      ++result;
-    }
-  }
-  return result;
+/**
+ * Count occurrences of a character in a string
+ */
+function countChar(str, char) {
+  return [...str].filter(c => c === char).length;
 }
 function displayStepVector(vector) {
-  const keys = [...Object.keys(vector)];
+  const keys = Object.keys(vector);
+  if (keys.length === 0) return "0";
   const sizeIdentifiers = ["L", "m", "s"];
-  if (keys.length === 0) {
-    return "0";
-  }
-  let result = "";
-  for (let i = 0; i < keys.length; ++i) {
-    result += `${vector[keys[i]]}${sizeIdentifiers[i]}`;
-    if (i < keys.length - 1) {
-      result += "+";
-    }
-  }
-  return result;
+  return keys.map((k, i) => `${vector[k]}${sizeIdentifiers[i]}`).join("+");
 }
 
-function gcd(a, b) {
-  if (a === 0) {
-    return b;
-  } else if (b === 0) {
-    return a;
-  } else {
-    return a > b ? gcd(a % b, b) : a === b ? a : gcd(a, b % a);
+// Use gcd and mod from TernaryLib
+const { gcd, mod } = TernaryLib;
+
+/**
+ * Parse an equave ratio string (e.g., "2/1") and convert to cents
+ * Returns 1200 (octave) if parsing fails
+ */
+function parseEquaveToCents(ratioStr) {
+  const match = ratioStr.trim().match(/^(\d+)\/(\d+)$/);
+  if (!match) {
+    return 1200; // Default to octave
   }
+  const numerator = parseInt(match[1], 10);
+  const denominator = parseInt(match[2], 10);
+  if (denominator === 0 || numerator <= 0 || denominator <= 0) {
+    return 1200; // Default to octave
+  }
+  // cents = 1200 * log2(ratio)
+  return 1200 * Math.log2(numerator / denominator);
 }
 
-// Modulo that works like Python %
-function modulo(a, m) {
-  return (m + (a % m)) % m;
+/**
+ * Get the current equave ratio string from the input field (normalized)
+ * Returns { ratio: "m/n", num: m, den: n }
+ */
+function getEquaveRatio() {
+  const input = document.getElementById("input-equave");
+  if (!input) {
+    return { ratio: "2/1", num: 2, den: 1 };
+  }
+  const value = input.value.trim();
+  const match = value.match(/^(\d+)\/(\d+)$/);
+  if (!match) {
+    return { ratio: "2/1", num: 2, den: 1 };
+  }
+  const num = parseInt(match[1], 10);
+  const den = parseInt(match[2], 10);
+  const d = gcd(num, den);
+  return { ratio: `${num / d}/${den / d}`, num: num / d, den: den / d };
+}
+
+/**
+ * Get the current equave in cents from the input field
+ */
+function getEquaveCents() {
+  const input = document.getElementById("input-equave");
+  return input ? parseEquaveToCents(input.value) : 1200;
+}
+
+/**
+ * Get the ED bound from the input field
+ */
+function getEdBound() {
+  const input = document.getElementById("input-ed-bound");
+  return input ? parseInt(input.value, 10) || TernaryLib.DEFAULT_ED_BOUND : TernaryLib.DEFAULT_ED_BOUND;
+}
+
+/**
+ * Get the minimum s size in cents from the input field
+ */
+function getSLower() {
+  const input = document.getElementById("input-s-lower");
+  return input ? parseFloat(input.value) || TernaryLib.DEFAULT_S_LOWER_BOUND : TernaryLib.DEFAULT_S_LOWER_BOUND;
+}
+
+/**
+ * Get the maximum s size in cents from the input field
+ */
+function getSUpper() {
+  const input = document.getElementById("input-s-upper");
+  return input ? parseFloat(input.value) || TernaryLib.DEFAULT_S_UPPER_BOUND : TernaryLib.DEFAULT_S_UPPER_BOUND;
 }
 
 function stepVectorLength(vector) {
-  let result = 0;
-  for (let key of Object.keys(vector)) {
-    result += vector[key];
-  }
-  return result;
-}
-// The m x m identity matrix.
-function eye(m) {
-  let arr = Array(m * m);
-  for (let i = 0; i < m; i++) {
-    for (let j = 0; j < m; j++) {
-      arr[m * i + j] = i === j ? 1 : 0;
-    }
-  }
-  return arr;
+  return Object.values(vector).reduce((sum, v) => sum + v, 0);
 }
 
 // Mutates `arr` a flat array matrix, swapping rows `i1` and `i2`.
 function swapRows(arr, m, n, i1, i2) {
-  if (i1 < 0 || i1 >= m) {
-    throw new Error(
-      `switchRows(): matrix index out of bounds! i1: ${i1} but m: ${m}`,
-    );
-  }
-  if (i2 < 0 || i2 >= m) {
-    throw new Error(
-      `switchRows(): matrix index out of bounds! i2: ${i2} but m: ${m}`,
-    );
+  if (i1 < 0 || i1 >= m || i2 < 0 || i2 >= m) {
+    throw new Error(`swapRows(): matrix index out of bounds!`);
   }
   for (let j = 0; j < n; j++) {
-    const new1 = arr[n * i2 + j];
-    const new2 = arr[n * i1 + j];
-    [arr[n * i1 + j], arr[n * i2 + j]] = [new1, new2];
+    [arr[n * i1 + j], arr[n * i2 + j]] = [arr[n * i2 + j], arr[n * i1 + j]];
   }
 }
 
@@ -193,12 +192,6 @@ function gaussianElimination(left, right, m, n1, n2) {
   return rightClone;
 }
 
-// Finds the inverse of `matrix`,
-// If `matrix` is not invertible, throws an error.
-function inverseMatrix(matrix, m) {
-  return gaussianElimination(matrix, eye(m), m, m, m);
-}
-
 // Makes a table in `tableElement` with the given `data`.
 function makeTable(tableElement, data, header = "") {
   const tableViewTr = document.createElement("tr");
@@ -208,12 +201,11 @@ function makeTable(tableElement, data, header = "") {
 }
 
 // Return a new table view
-// TODO: make table entries selectable
 function tableContent(data, header = "") {
   const table = tableHead(data, header);
   const tbody = table.createTBody();
   if (data[0] instanceof Array) {
-    for (const [i, element] of data.entries()) {
+    for (const [i] of data.entries()) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
@@ -225,11 +217,11 @@ function tableContent(data, header = "") {
       }
     }
   } else if (typeof data[0] === "object") {
-    for (const [i, element] of data.entries()) {
+    for (let i = 0; i < data.length; i++) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); // row numbering
-      for (const value of Object.values(element)) {
+      for (const value of Object.values(data[i])) {
         // iterate over columns
         let td = document.createElement("td");
         td.appendChild(document.createTextNode(`${value}`));
@@ -237,7 +229,7 @@ function tableContent(data, header = "") {
       }
     }
   } else {
-    for (const [i, _] of data.entries()) {
+    for (let i = 0; i < data.length; i++) {
       let row = tbody.insertRow();
       let cell1 = row.insertCell();
       cell1.appendChild(document.createTextNode(`${i + 1}`)); //row numbering
@@ -279,7 +271,16 @@ function tableHead(data, header = "") {
   return table;
 }
 
-import("./pkg").then((wasm) => {
+// Main application code (using TernaryLib imported at top)
+(function initApp() {
+  // app state
+  const appState = {
+    word: null,
+    latticeBasis: null,
+    tuning: null,
+    profile: null,
+  };
+
   // New approach:
   // 1. draw a background 2D grid first
   // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
@@ -287,7 +288,7 @@ import("./pkg").then((wasm) => {
   // TODO: Indicate what kind of guide frame it is. (simple, multiple/interleaved)
   //
   // TODO: show a legend for the different colored lines
-  function createLatticeView() {
+  function createLatticeView(state, equave) {
     if (statusElement) {
       statusElement.innerText = "";
 
@@ -306,20 +307,25 @@ import("./pkg").then((wasm) => {
           "svg",
         );
         svgTag.setAttribute("id", "lattice");
+        svgTag.setAttribute("width", "100%");
+        svgTag.setAttribute("height", "100%");
         const svgStyle = document.createElement("style");
         svgStyle.innerHTML = `
       .small {
         font: 20px sans-serif;
         fill: black;
       }`;
-        if (currentWord) {
-          if (currentLatticeBasis) {
-            let g = currentLatticeBasis[0];
-            let h = currentLatticeBasis[1];
+        if (state.word) {
+          if (state.latticeBasis) {
+            let g = state.latticeBasis[0];
+            let h = state.latticeBasis[1];
+            // Helper to get value from array or object with string keys
+            const getVal = (v, i) =>
+              Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
             let sig = [0, 0, 0];
-            let n = currentWord.length;
+            let n = state.word.length;
             for (let i = 0; i < n; ++i) {
-              switch (currentWord[i]) {
+              switch (state.word[i]) {
                 case "L":
                   ++sig[0];
                   break;
@@ -335,7 +341,17 @@ import("./pkg").then((wasm) => {
             }
             [A, B, C, D] = [1, 0, 0, 1];
             let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
-              [g[0], g[1], g[2], h[0], h[1], h[2], sig[0], sig[1], sig[2]],
+              [
+                getVal(g, 0),
+                getVal(g, 1),
+                getVal(g, 2),
+                getVal(h, 0),
+                getVal(h, 1),
+                getVal(h, 2),
+                sig[0],
+                sig[1],
+                sig[2],
+              ],
               [A, B, C, D, 0, 0],
               3,
               3,
@@ -377,31 +393,46 @@ import("./pkg").then((wasm) => {
 
             let currentX = ORIGIN_X;
             let currentY = ORIGIN_Y;
+            // Track cumulative step counts for pitch calculation
+            let stepCounts = { L: 0, m: 0, s: 0 };
+            
             for (let deg = 0; deg < n; ++deg) {
-              svgTag.innerHTML += `<circle
-            cx="${currentX}"
-            cy="${currentY}"
-            r="${UNOCCUPIED_DOT_RADIUS}"
-            color="white"
-            stroke="black"
-            stroke-width="1"
-          />
-          <text
-            x="${currentX - 3}"
-            y="${currentY + 3}"
-            fill="white"
-            font-size="0.5em"
-          >${modulo(deg, n)}</text>`;
-              switch (currentWord[deg]) {
+              const { pitch, cents } = getPitchInfo(stepCounts, state.tuning, equave);
+              const centsRounded = Math.round(cents);
+              const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
+              
+              svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
+            <circle
+              cx="${currentX}"
+              cy="${currentY}"
+              r="${UNOCCUPIED_DOT_RADIUS}"
+              fill="white"
+              stroke="white"
+              stroke-width="1"
+            >
+              <title>${tooltipText}</title>
+            </circle>
+            <text
+              x="${currentX - 3}"
+              y="${currentY + 3}"
+              fill="black"
+              font-size="0.5em"
+              style="pointer-events: none;"
+            >${mod(deg, n)}</text>
+          </g>`;
+              switch (state.word[deg]) {
                 case "L":
+                  stepCounts.L++;
                   currentX += L_x * SPACING_X;
                   currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
                   break;
                 case "m":
+                  stepCounts.m++;
                   currentX += M_x * SPACING_X;
                   currentY += M_y * SPACING_Y;
                   break;
                 case "s":
+                  stepCounts.s++;
                   currentX += S_x * SPACING_X;
                   currentY += S_y * SPACING_Y;
                   break;
@@ -410,11 +441,9 @@ import("./pkg").then((wasm) => {
               }
             }
             // We deferred appending elements until now
-            svgTag.setAttribute(
-              "viewBox",
-              `0 0 ${LATTICE_SVG_WIDTH} ${LATTICE_SVG_HEIGHT}`,
-            );
-            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g)} and h = ${alsoInCurrentTuning(h)} are two different generators. g is horizontal, h is vertical.</small>`;
+            // Initial viewBox will be set by updateViewBox() below
+            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, state.tuning, equave)} and h = ${alsoInCurrentTuning(h, state.tuning, equave)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
             // Add zoom buttons
             latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
@@ -428,13 +457,12 @@ import("./pkg").then((wasm) => {
             const zoomInButton = document.getElementById("zoom-in");
             const zoomOutButton = document.getElementById("zoom-out");
             const resetViewButton = document.getElementById("reset-view");
-            let currentZoom = 1.0; // Initial zoom level
             const zoomLevelDisplay = document.getElementById("zoom-level");
             let viewBox = {
-              x: 0,
-              y: 0,
-              width: 800,
-              height: 600,
+              x: 150,
+              y: 150,
+              width: LATTICE_SVG_WIDTH,
+              height: LATTICE_SVG_HEIGHT,
             };
 
             let isPanning = false;
@@ -512,55 +540,45 @@ import("./pkg").then((wasm) => {
               updateViewBox();
             });
 
+            // Zoom by factor around center
+            function zoomBy(factor) {
+              const centerX = viewBox.x + viewBox.width / 2;
+              const centerY = viewBox.y + viewBox.height / 2;
+              viewBox.width *= factor;
+              viewBox.height *= factor;
+              viewBox.x = centerX - viewBox.width / 2;
+              viewBox.y = centerY - viewBox.height / 2;
+              scale = 800 / viewBox.width;
+              updateViewBox();
+            }
+
             // Button functions
-            zoomInButton.addEventListener("click", () => {
-              const centerX = viewBox.x + viewBox.width / 2;
-              const centerY = viewBox.y + viewBox.height / 2;
-
-              viewBox.width *= 0.8;
-              viewBox.height *= 0.8;
-
-              viewBox.x = centerX - viewBox.width / 2;
-              viewBox.y = centerY - viewBox.height / 2;
-
-              scale = 800 / viewBox.width;
-              updateViewBox();
-            });
-            zoomOutButton.addEventListener("click", () => {
-              const centerX = viewBox.x + viewBox.width / 2;
-              const centerY = viewBox.y + viewBox.height / 2;
-
-              viewBox.width *= 1.25;
-              viewBox.height *= 1.25;
-
-              viewBox.x = centerX - viewBox.width / 2;
-              viewBox.y = centerY - viewBox.height / 2;
-
-              scale = 800 / viewBox.width;
-              updateViewBox();
-            });
+            zoomInButton.addEventListener("click", () => zoomBy(0.8));
+            zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
-              viewBox = { x: 0, y: 0, width: 800, height: 600 };
+              viewBox = { x: 150, y: 150, width: LATTICE_SVG_WIDTH, height: LATTICE_SVG_HEIGHT };
               scale = 1;
               updateViewBox();
             });
             // Initialize
             updateViewBox();
           } else {
-            throw new Error("No suitable lattice basis");
+            // No lattice basis available - show a message instead of throwing
+            latticeElement.innerHTML = `<hr/><h2>Lattice view</h2><br/><small>No suitable lattice basis found for this scale.</small>`;
           }
         } else {
-          throw new Error("`currentWord` is null or undefined");
+          // No word selected
+          latticeElement.innerHTML = "";
         }
       }
     }
   }
 
   // Function for showing the SonicWeave code
-  function showSonicWeaveCode() {
-    if (currentWord) {
-      const arity = new Set(Array.from(currentWord)).size;
-      if (currentTuning) {
+  function showSonicWeaveCode(state) {
+    if (state.word) {
+      const arity = new Set(Array.from(state.word)).size;
+      if (state.tuning) {
         const element = document.getElementById("sw-code");
         if (element) {
           element.innerHTML = `<hr/><h2>SonicWeave code</h2>
@@ -602,22 +620,22 @@ import("./pkg").then((wasm) => {
           });
 
           let codeblock = document.getElementById("codeblock");
-          const arr = Array.from(currentWord);
+          const arr = Array.from(state.word);
           if (codeblock) {
             codeblock.innerHTML =
               arity === 3
-                ? `let L = ${currentTuning[0]}
-let m = ${currentTuning[1]}
-let s = ${currentTuning[2]}
+                ? `let L = ${state.tuning[0]}
+let m = ${state.tuning[1]}
+let s = ${state.tuning[2]}
 ${arr.join(";")};
 stack()`
                 : arity === 2
-                  ? `let L = ${currentTuning[0]}
-let s = ${currentTuning[1]}
+                  ? `let L = ${state.tuning[0]}
+let s = ${state.tuning[1]}
 ${arr.join(";")};
 stack()`
                   : arity === 1
-                    ? `let X = ${currentTuning[0]}
+                    ? `let X = ${state.tuning[0]}
 ${arr.join(";")};
 stack()`
                     : "Scales of rank > 3 are not supported";
@@ -627,83 +645,112 @@ stack()`
     }
   }
 
-  function showScaleProfile() {
+  function showScaleProfile(state, equave) {
     const el = document.getElementById("scale-profile");
     if (el) {
       el.innerHTML = "";
       const h2 = document.createElement("h2");
-      h2.innerText = `Scale profile for ${currentWord}`;
+      h2.innerText = `Scale profile for ${state.word}`;
       el.appendChild(h2);
-      if (currentProfile) {
-        // const ploidacot = currentProfile["ploidacot"];
-        const structure = currentProfile["structure"];
+      if (state.profile) {
+        // const ploidacot = state.profile["ploidacot"];
+        const structure = state.profile["structure"];
+        
+        // Guide frame info (only if structure exists)
         if (structure) {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
            " target="_blank">Guide frame</a></b><br/><small>`;
           let gsDisp =
-            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g)}`)}`.slice(
+            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
               1,
             );
           el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"])}<br/>`; // TODO prettify
-          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g))}<br/>`; // TODO prettify
+          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
+          el.innerHTML += `Offsets ${structure["polyoffset"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
           el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/>`; // TODO prettify
-          /*
-          if (ploidacot) {
-            const ploid = ploidacot["ploid"];
-            const ploidString = ploid === 1 ? "" : `${ploid}-ploid `;
-            const shear = ploidacot["shear"];
-            const shearString = shear === 0 ? "" : `${shear}-sheared `;
-            const cot = ploidacot["cot"];
-            const cotString = `${cot}-cot`;
-            el.innerHTML += `Detempered <a href="https://en.xen.wiki/w/Ploidacot" target="_blank">Ploidacot</a>: ${ploidString}${shearString}${cotString}<br/><br/>`; // TODO prettify
-          }
-          */
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/>`;
-          el.innerHTML += currentProfile["lm"] ? `L = m<br/>` : "";
-          el.innerHTML += currentProfile["ms"] ? `m = s<br/>` : "";
-          el.innerHTML += currentProfile["s0"] ? `s = 0<br/>` : "";
-          if (
-            !currentProfile["lm"] &&
-            !currentProfile["ms"] &&
-            !currentProfile["s0"]
-          ) {
-            el.innerHTML += `None<br/>`;
-          }
-          el.innerHTML += `<br/>`;
-          const a = countL(currentWord);
-          const b = countM(currentWord);
-          const c = countS(currentWord);
-
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
-          el.innerHTML += currentProfile["subst_l_ms"]
-            ? `subst ${a}L(${b}m${c}s)<br/>`
-            : "";
-          el.innerHTML += currentProfile["subst_m_ls"]
-            ? `subst ${b}m(${a}L${c}s)<br/>`
-            : "";
-          el.innerHTML += currentProfile["subst_s_lm"]
-            ? `subst ${c}s(${a}L${b}m)<br/>`
-            : "";
-
-          if (currentProfile["chirality"] === "Achiral") {
-            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
-          } else {
-            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${currentProfile["chirality"]} (reversed: ${currentProfile["reversed"]})`;
-          }
-          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blanMaximum variety</a> ${currentProfile["mv"]}</small>`;
+          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/></small>`; // TODO prettify
+        } else {
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
         }
+        
+        // Monotone MOS properties (always shown)
+        el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
+        el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
+        el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
+        el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
+        if (
+          !state.profile["lm"] &&
+          !state.profile["ms"] &&
+          !state.profile["s0"]
+        ) {
+          el.innerHTML += `None<br/>`;
+        }
+        el.innerHTML += `<br/>`;
+        
+        // MOS substitution properties (always shown)
+        const a = countChar(state.word, "L");
+        const b = countChar(state.word, "m");
+        const c = countChar(state.word, "s");
+
+        el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+        el.innerHTML += state.profile["subst_l_ms"]
+          ? `subst ${a}L(${b}m${c}s)<br/>`
+          : "";
+        el.innerHTML += state.profile["subst_m_ls"]
+          ? `subst ${b}m(${a}L${c}s)<br/>`
+          : "";
+        el.innerHTML += state.profile["subst_s_lm"]
+          ? `subst ${c}s(${a}L${b}m)<br/>`
+          : "";
+        if (
+          !state.profile["subst_l_ms"] &&
+          !state.profile["subst_m_ls"] &&
+          !state.profile["subst_s_lm"]
+        ) {
+          el.innerHTML += `None<br/>`;
+        }
+
+        // Chirality (always shown)
+        if (state.profile["chirality"] === "Achiral") {
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
+        } else {
+          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
+        }
+        
+        // Maximum variety (always shown)
+        el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
       }
     }
   }
 
   // display both the step vector in sum form and what interval it is in the current tuning
-  function alsoInCurrentTuning(v) {
-    if (currentTuning["0"].includes("/")) {
-      const [numLstr, denLstr] = currentTuning["0"].split("/");
-      const [numMstr, denMstr] = currentTuning["1"].split("/");
-      const [numSstr, denSstr] = currentTuning["2"].split("/");
+  function alsoInCurrentTuning(v, tuning, equave) {
+    if (tuning["0"].includes("\\")) {
+      if (equave.num !== 2 || equave.den !== 1) {
+        const str0 = tuning["0"].substring(0, tuning["0"].indexOf("<"));
+        const str1 = tuning["1"].substring(0, tuning["1"].indexOf("<"));
+        const str2 = tuning["2"].substring(0, tuning["2"].indexOf("<"));
+        const [numLstr, denLstr] = str0.split("\\");
+        const [numMstr, _1] = str1.split("\\");
+        const [numSstr, _2] = str2.split("\\");
+        const numL = Number(numLstr);
+        const numM = Number(numMstr);
+        const numS = Number(numSstr);
+        const ed = Number(denLstr);
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equave.num}/${equave.den}>)`;
+      } else {
+        const [numLstr, denLstr] = tuning["0"].split("\\");
+        const ed = Number(denLstr);
+        const [numMstr, _3] = tuning["1"].split("\\");
+        const [numSstr, _4] = tuning["2"].split("\\");
+        const numL = Number(numLstr);
+        const numM = Number(numMstr);
+        const numS = Number(numSstr);
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;}
+    } else if (tuning["0"].includes("/")) {
+      const [numLstr, denLstr] = tuning["0"].split("/");
+      const [numMstr, denMstr] = tuning["1"].split("/");
+      const [numSstr, denSstr] = tuning["2"].split("/");
       const numL = Number(numLstr);
       const numM = Number(numMstr);
       const numS = Number(numSstr);
@@ -720,33 +767,112 @@ stack()`
         Math.pow(denS, v["2"] ?? 0);
       const d = gcd(num, den);
       return `${displayStepVector(v)} (${num / d}/${den / d})`;
-    } else if (currentTuning["0"].includes("\\")) {
-      const [numLstr, denLstr] = currentTuning["0"].split("\\");
-      const ed = Number(denLstr);
-      const [numMstr, _1] = currentTuning["1"].split("\\");
-      const [numSstr, _2] = currentTuning["2"].split("\\");
-      const numL = Number(numLstr);
-      const numM = Number(numMstr);
-      const numS = Number(numSstr);
-      return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
     } else {
       return displayStepVector(v);
     }
   }
 
-  function escapeHtml(text) {
-    text.replaceAll("&", "&amp;");
-    text.replaceAll("<", "&lt;");
-    text.replaceAll(">", "&gt;");
-    text.replaceAll(`'`, "&#39;");
-    text.replaceAll(`"`, "&quot;");
-    return text;
+  /**
+   * Get pitch info for a scale degree given step counts
+   * @param stepCounts - Object with counts of L, m, s steps: { L: n, m: n, s: n }
+   * @param tuning - The current tuning object
+   * @param equave - The equave { num, den, ratio }
+   * @returns { pitch: string, cents: number }
+   */
+  function getPitchInfo(stepCounts, tuning, equave) {
+    if (!tuning) return { pitch: "", cents: 0 };
+    
+    const nL = stepCounts.L || 0;
+    const nM = stepCounts.m || 0;
+    const nS = stepCounts.s || 0;
+    
+    // Calculate equave in cents
+    const equaveCents = 1200 * Math.log2(equave.num / equave.den);
+    
+    if (tuning["0"].includes("\\")) {
+      // ED tuning format like "5\12" or "5\12<3/1>"
+      let str0 = tuning["0"];
+      let str1 = tuning["1"];
+      let str2 = tuning["2"];
+      
+      // Strip equave suffix if present
+      if (str0.includes("<")) {
+        str0 = str0.substring(0, str0.indexOf("<"));
+        str1 = str1.substring(0, str1.indexOf("<"));
+        str2 = str2.substring(0, str2.indexOf("<"));
+      }
+      
+      const [numLstr, denLstr] = str0.split("\\");
+      const [numMstr] = str1.split("\\");
+      const [numSstr] = str2.split("\\");
+      const stepsL = Number(numLstr);
+      const stepsM = Number(numMstr);
+      const stepsS = Number(numSstr);
+      const ed = Number(denLstr);
+      
+      const totalSteps = nL * stepsL + nM * stepsM + nS * stepsS;
+      const cents = (totalSteps / ed) * equaveCents;
+      
+      let pitch;
+      if (equave.num !== 2 || equave.den !== 1) {
+        pitch = `${totalSteps}\\${ed}<${equave.num}/${equave.den}>`;
+      } else {
+        pitch = `${totalSteps}\\${ed}`;
+      }
+      return { pitch, cents };
+    } else if (tuning["0"].includes("/")) {
+      // JI tuning format like "9/8"
+      const [numLstr, denLstr] = tuning["0"].split("/");
+      const [numMstr, denMstr] = tuning["1"].split("/");
+      const [numSstr, denSstr] = tuning["2"].split("/");
+      const numL = Number(numLstr);
+      const numM = Number(numMstr);
+      const numS = Number(numSstr);
+      const denL = Number(denLstr);
+      const denM = Number(denMstr);
+      const denS = Number(denSstr);
+      
+      const num = Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
+      const den = Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
+      const d = gcd(num, den);
+      const ratio = (num / d) / (den / d);
+      const cents = 1200 * Math.log2(ratio);
+      return { pitch: `${num / d}/${den / d}`, cents };
+    } else {
+      return { pitch: `${nL}L + ${nM}m + ${nS}s`, cents: 0 };
+    }
   }
+
+  function escapeHtml(text) {
+    return text
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll(`'`, "&#39;")
+      .replaceAll(`"`, "&quot;");
+  }
+
+  /**
+   * Clear selection from both tuning tables and select a row
+   */
+  function selectTuningRow(jiTable, edTable, row) {
+    jiTable.querySelector(`.selected`)?.classList.remove("selected");
+    edTable.querySelector(`.selected`)?.classList.remove("selected");
+    row.classList.add("selected");
+  }
+
+  // Helper to update all views
+  function updateViews(equave) {
+    showScaleProfile(appState, equave);
+    createLatticeView(appState, equave);
+    showSonicWeaveCode(appState);
+  }
+
   const RANK_LIMIT = 3;
   const NO_HIGH_RANK_SCALES = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
 
-  btnSig = document.getElementById("btn-sig");
-  btnWord = document.getElementById("btn-word");
+  const btnSig = document.getElementById("btn-sig");
+  const btnWord = document.getElementById("btn-word");
 
   btnSig.addEventListener("click", () => {
     const sigQuery = document.getElementById("input-step-sig").value;
@@ -767,10 +893,17 @@ stack()`
 
           document.getElementById("tables").innerHTML = `
       <hr /><h2>Tables</h2>
-
-      <table>
-        <tr>
-                      <td>
+      <div
+        style="
+          overflow-y: auto;
+          overflow-x: auto;
+          vertical-align: top;
+          height: 500px;
+          width: 100%;
+        "
+      >
+      <div class="tables-row">
+                      <div class="table-column">
                         Scales
                         <div
                           style="
@@ -778,13 +911,12 @@ stack()`
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 250px;
                           "
                         >
                           <table class="data" id="table-scales"></table>
                         </div>
-                      </td>
-                      <td>
+                      </div>
+                      <div class="table-column">
                         JI tunings
                         <div
                           style="
@@ -792,53 +924,60 @@ stack()`
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 250px;
                           "
                         >
                           <table class="data" id="table-ji-tunings"></table>
                         </div>
-                      </td>
-                      <td>
-                        edo tunings
+                      </div>
+                      <div class="table-column">
+                        ed(equave) tunings
                         <div
                           style="
                             overflow-y: auto;
                             overflow-x: auto;
                             vertical-align: top;
                             height: 420px;
-                            width: 200px;
                           "
                         >
                           <table class="data" id="table-ed-tunings"></table>
                         </div>
-                      </td></tr></table>`;
+                      </div></div></div>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
-          const edoTuningTable = document.getElementById("table-ed-tunings");
-          const sigResult = wasm.sig_result(
-            sig,
-            document.getElementById("monotone-lm").checked,
-            document.getElementById("monotone-ms").checked,
-            document.getElementById("monotone-s0").checked,
-            Number(document.getElementById("ggs-len").value),
-            document.querySelector('input[name="ggs-len-constraint"]:checked')
-              .value,
-            Number(document.getElementById("complexity").value),
-            document.querySelector(
+          const edTuningTable = document.getElementById("table-ed-tunings");
+          const equave = getEquaveRatio();
+          const sigResultData = TernaryLib.sigResult(sig, {
+            lm: document.getElementById("monotone-lm").checked,
+            ms: document.getElementById("monotone-ms").checked,
+            s0: document.getElementById("monotone-s0").checked,
+            ggsLen: Number(document.getElementById("ggs-len").value),
+            ggsLenConstraint: document.querySelector(
+              'input[name="ggs-len-constraint"]:checked',
+            ).value,
+            complexity: Number(document.getElementById("complexity").value),
+            complexityConstraint: document.querySelector(
               'input[name="complexity-constraint"]:checked',
             ).value,
-            Number(document.getElementById("mv").value),
-            document.querySelector('input[name="mv-constraint"]:checked').value,
-            document.querySelector('input[name="mos-subst"]:checked').value,
-          );
-          const scales = sigResult["profiles"].map((j) => j["word"]);
-          const latticeBases = sigResult["profiles"].map(
+            mv: Number(document.getElementById("mv").value),
+            mvConstraint: document.querySelector(
+              'input[name="mv-constraint"]:checked',
+            ).value,
+            mosSubst: document.querySelector('input[name="mos-subst"]:checked')
+              .value,
+            equaveCents: getEquaveCents(),
+            equaveRatio: equave.ratio,
+            edBound: getEdBound(),
+            sLower: getSLower(),
+            sUpper: getSUpper(),
+          });
+          const scales = sigResultData["profiles"].map((j) => j["word"]);
+          const latticeBases = sigResultData["profiles"].map(
             (j) => j["lattice_basis"],
           );
-          const profiles = sigResult["profiles"];
+          const profiles = sigResultData["profiles"];
 
-          const jiTunings = sigResult["ji_tunings"];
-          const edoTunings = sigResult["ed_tunings"];
+          const jiTunings = sigResultData["ji_tunings"];
+          const edTunings = sigResultData["ed_tunings"];
           let letters;
           if (arity === 3) {
             letters = ["L", "m", "s"];
@@ -855,9 +994,9 @@ stack()`
           const scaleRows = scaleTable.getElementsByTagName("tr");
           if (scaleRows.length >= 3) {
             scaleRows[2].classList.add("selected"); // For some reason 2 is the first row of a nonempty table.
-            currentWord = scales[0];
-            currentProfile = profiles[0];
-            currentLatticeBasis = currentProfile["lattice_basis"];
+            appState.word = scales[0];
+            appState.profile = profiles[0];
+            appState.latticeBasis = appState.profile["lattice_basis"];
 
             for (let i = 2; i < scaleRows.length; ++i) {
               scaleRows[i].addEventListener("click", async () => {
@@ -870,17 +1009,10 @@ stack()`
                 scaleRows[i].classList.add("selected");
                 // get scale pattern
                 let scaleWord = scales[i - 2];
-                currentProfile = profiles[i - 2];
-                currentLatticeBasis = latticeBases[i - 2];
-                currentWord = scaleWord;
-                showSonicWeaveCode();
-                showScaleProfile();
-
-                try {
-                  createLatticeView();
-                } catch (err) {
-                  statusElement.innerText = err;
-                }
+                appState.profile = profiles[i - 2];
+                appState.latticeBasis = latticeBases[i - 2];
+                appState.word = scaleWord;
+                updateViews(equave);
               });
             }
           }
@@ -890,64 +1022,32 @@ stack()`
             const thisRow = jiRows[i];
             thisRow.addEventListener("click", () => {
               if (arity >= 1 && arity <= 3) {
-                // unselect selected row in either JI tuning table or ED tuning table
-                if (jiTuningTable.querySelector(`.selected`)) {
-                  jiTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                if (edoTuningTable.querySelector(`.selected`)) {
-                  edoTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                // select the row clicked on
-                thisRow.classList.add("selected");
-                currentTuning = jiTunings[i - 2];
-                showSonicWeaveCode();
-                showScaleProfile();
-                createLatticeView();
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                appState.tuning = jiTunings[i - 2];
+                updateViews(equave);
               } else {
                 statusElement.textContent = NO_HIGH_RANK_SCALES;
               }
             });
           }
-          if (edoTunings) {
-            makeTable(edoTuningTable, edoTunings);
-            const edRows = edoTuningTable.getElementsByTagName("tr");
+          if (edTunings) {
+            makeTable(edTuningTable, edTunings);
+            const edRows = edTuningTable.getElementsByTagName("tr");
             edRows[2].classList.add("selected");
-            const edoTuning = edoTunings[0];
-            currentTuning = edoTuning;
-            showScaleProfile();
-            createLatticeView(currentWord, currentProfile["structure"]);
-            showSonicWeaveCode();
+            const edTuning = edTunings[0];
+            appState.tuning = edTuning;
+            updateViews(equave);
             for (let i = 2; i < edRows.length; ++i) {
               const thisRow = edRows[i];
               thisRow.addEventListener("click", () => {
-                // unselect selected row in either JI tuning table or ED tuning table
-                if (jiTuningTable.querySelector(`.selected`)) {
-                  jiTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                if (edoTuningTable.querySelector(`.selected`)) {
-                  edoTuningTable
-                    .querySelector(`.selected`)
-                    .classList.remove("selected");
-                }
-                // select the row clicked on
-                thisRow.classList.add("selected");
-                const edoTuning = edoTunings[i - 2];
-                currentTuning = edoTuning;
-                showScaleProfile();
-                createLatticeView();
-                showSonicWeaveCode();
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                const edTuning = edTunings[i - 2];
+                appState.tuning = edTuning;
+                updateViews(equave);
               });
             }
           }
-          showSonicWeaveCode();
-          showScaleProfile();
-          createLatticeView();
+          updateViews(equave);
         }
       }
     } catch (err) {
@@ -958,51 +1058,52 @@ stack()`
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     statusElement.textContent = "Computing...";
-    const wordResult = wasm.word_result(query);
-    const profile = wordResult["profile"];
-    const brightestMode = wordResult["profile"]["word"];
-    const jiTunings = wordResult["ji_tunings"];
-    const edoTunings = wordResult["ed_tunings"];
+    const equave = getEquaveRatio();
+    const wordResultData = TernaryLib.wordResult(query, {
+      equaveCents: getEquaveCents(),
+      equaveRatio: equave.ratio,
+      edBound: getEdBound(),
+      sLower: getSLower(),
+      sUpper: getSUpper(),
+    });
+    const profile = wordResultData["profile"];
+    const brightestMode = wordResultData["profile"]["word"];
+    const jiTunings = wordResultData["ji_tunings"];
+    const edTunings = wordResultData["ed_tunings"];
     document.getElementById("tables").innerHTML = `
-                <td>
-                  JI tunings
-                  <div
-                    style="
-                      overflow-y: auto;
-                      overflow-x: auto;
-                      vertical-align: top;
-                      height: 420px;
-                      width: 250px;
-                    "
-                  >
-                    <table class="data" id="table-ji-tunings"></table>
+                <div class="tables-row">
+                  <div class="table-column">
+                    JI tunings
+                    <div
+                      style="
+                        overflow-y: auto;
+                        overflow-x: auto;
+                        vertical-align: top;
+                        height: 420px;
+                      "
+                    >
+                      <table class="data" id="table-ji-tunings"></table>
+                    </div>
                   </div>
-                </td>
-                <td>
-                  edo tunings
-                  <div
-                    style="
-                      overflow-y: auto;
-                      overflow-x: auto;
-                      vertical-align: top;
-                      height: 420px;
-                      width: 200px;
-                    "
-                  >
-                    <table class="data" id="table-ed-tunings"></table>
+                  <div class="table-column">
+                    ed(equave) tunings
+                    <div
+                      style="
+                        overflow-y: auto;
+                        overflow-x: auto;
+                        vertical-align: top;
+                        height: 420px;
+                      "
+                    >
+                      <table class="data" id="table-ed-tunings"></table>
+                    </div>
                   </div>
-                </td>`;
+                </div>`;
     const jiTuningTable = document.getElementById("table-ji-tunings");
-    const edoTuningTable = document.getElementById("table-ed-tunings");
-    currentWord = brightestMode;
+    const edTuningTable = document.getElementById("table-ed-tunings");
+    appState.word = brightestMode;
     try {
-      statusElement.innerHTML = `<h1>Results for ${currentWord}</h1>(click on a table row to select a tuning)`;
-
-      const sig_ = { L: 0, M: 0, s: 0 };
-      for (let i = 0; i < currentWord.length; ++i) {
-        sig_[currentWord[i]] += 1;
-      }
-      const sig = Object.values(sig_); // values will be extracted ordered by the keys; for indexing by 0, 1, 2... rather than L, m, s
+      statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
 
       makeTable(jiTuningTable, jiTunings);
       const jiRows = jiTuningTable.getElementsByTagName("tr");
@@ -1010,67 +1111,34 @@ stack()`
         const thisRow = jiRows[i];
         thisRow.addEventListener("click", () => {
           if (arity >= 1 && arity <= 3) {
-            // unselect selected row in either JI tuning table or ED tuning table
-            if (jiTuningTable.querySelector(`.selected`)) {
-              jiTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            if (edoTuningTable.querySelector(`.selected`)) {
-              edoTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            // select the row clicked on
-            thisRow.classList.add("selected");
-            currentTuning = jiTunings[i - 2];
-            showScaleProfile();
-            createLatticeView();
-            showSonicWeaveCode();
+            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+            appState.tuning = jiTunings[i - 2];
+            updateViews(equave);
           } else {
             statusElement.textContent = NO_HIGH_RANK_SCALES;
           }
         });
       }
-      if (edoTunings) {
-        makeTable(edoTuningTable, edoTunings);
-        const edRows = edoTuningTable.getElementsByTagName("tr");
+      if (edTunings) {
+        makeTable(edTuningTable, edTunings);
+        const edRows = edTuningTable.getElementsByTagName("tr");
         edRows[2].classList.add("selected");
         for (let i = 2; i < edRows.length; ++i) {
           const thisRow = edRows[i];
           thisRow.addEventListener("click", () => {
-            // unselect selected row in either JI tuning table or ED tuning table
-            if (jiTuningTable.querySelector(`.selected`)) {
-              jiTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            if (edoTuningTable.querySelector(`.selected`)) {
-              edoTuningTable
-                .querySelector(`.selected`)
-                .classList.remove("selected");
-            }
-            // select the row clicked on
-            thisRow.classList.add("selected");
-            const edoTuning = edoTunings[i - 2];
-            currentTuning = edoTuning;
-            showScaleProfile();
-            createLatticeView();
-            showSonicWeaveCode();
+            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+            const edTuning = edTunings[i - 2];
+            appState.tuning = edTuning;
+            updateViews(equave);
           });
         }
       }
-      const edoTuning = edoTunings[0];
-      const ed = edoTuning["ed"];
-      currentTuning = edoTuning;
-      showSonicWeaveCode();
-      currentProfile = profile;
-      currentLatticeBasis = currentProfile["lattice_basis"];
-      showScaleProfile();
-      createLatticeView();
-      showSonicWeaveCode();
+      appState.tuning = edTunings[0];
+      appState.profile = profile;
+      appState.latticeBasis = appState.profile["lattice_basis"];
+      updateViews(equave);
     } catch (err) {
       statusElement.innerText = err;
     }
   });
-});
+})();

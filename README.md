@@ -2,37 +2,34 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 
 ![Front page screenshot](https://raw.githubusercontent.com/inthar-raven/ternary/main/static/images/front.png)
 
-# How to build and run
+# How to run
 
-1. [Install the Rust toolchain](https://www.rust-lang.org/tools/install).
-1. Run `cargo install wasm-pack`.
-1. [Install `npm`](https://nodejs.org/en/download/package-manager).
-1. Run `npm install` in the project directory.
-1. Run `npm run serve` in the project directory.
-1. Visit `http://localhost:8080/` with your browser. Your browser must support WebAssembly; all major browsers should.
+Serve the project directory with any static file server. For example:
 
-By default the WASM is compiled in release mode. To compile it in development mode, make sure that the `mode` value is set to `"development"` in the project directory's `webpack.config.js` file.
+```bash
+python3 -m http.server 8080
+```
 
-# Dev scripts
+Then visit `http://localhost:8080/` in your browser.
 
-1. `npm run build`: Build the app
-2. `npm run serve`: Deploy the app on a development server.
-3. `npm run format`: Run `prettier` on all HTML, CSS, JavaScript, and TypeScript files.
-
-# Completed features
+# Features
 
 - Get the set of all scales (up to mode) with a certain step signature.
-- Given a step signature, it gives you tuples of JI steps with bounded complexity for the scale (assuming octave equivalence).
+- ~~Given a step signature, it gives you tuples of JI steps with bounded complexity for the scale (assuming octave equivalence).~~ (JI tunings are disabled for now)
 - Given step signature, it displays the edo tunings.
 - When you select a tuning on the results page, the SonicWeave code is displayed.
 - JI-agnostic 2D lattice view for every scale.
+- Non-octave equaves are supported (enter as a JI ratio like "3/1").
+- Configurable tuning bounds:
+  - Max ED size (default 111)
+  - Min/max smallest step size in cents (default 20–200)
 - Every scale comes with a Scale Profile that shows properties of the scale selected or queried
-- - guide frame (guided generator sequence (changing with tuning); multiplicity or interleaving polyoffset; complexity)
-- - monotone MOS properties satisfied (L=M, M=s, s=0)
-- - maximum variety
+  - guide frame (guided generator sequence; multiplicity or interleaving polyoffset; complexity)
+  - monotone MOS properties satisfied (L=M, M=s, s=0)
+  - maximum variety
 - Filter for
-- - whether the scale is a MOS substitution scale
-- - length of the guided generator sequence
-- - guide frame complexity
-- - monotone MOS properties
-- - maximum variety
+  - whether the scale is a MOS substitution scale
+  - length of the guided generator sequence
+  - guide frame complexity
+  - monotone MOS properties
+  - maximum variety
