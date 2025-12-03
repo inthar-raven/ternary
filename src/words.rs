@@ -364,7 +364,7 @@ where
 
 /// Return the brightest mode of the MOS aLbs and the bright generator, using Bjorklund's algorithm.
 /// The brightest mode is the lexicographically first rotation.
-pub fn brightest_mos_mode_and_gen_bjorklund(
+pub fn brightest_mos_mode_and_gener(
     a: usize,
     b: usize,
 ) -> (Vec<Letter>, CountVector<Letter>) {
@@ -413,7 +413,7 @@ pub fn brightest_mos_mode_and_gen_bjorklund(
         let gener = CountVector::from_slice(&scale[0..count_gener_steps]);
         (scale, gener)
     } else {
-        let (primitive_mos, gener) = brightest_mos_mode_and_gen_bjorklund(a / d, b / d);
+        let (primitive_mos, gener) = brightest_mos_mode_and_gener(a / d, b / d);
         (primitive_mos.repeat(d), gener)
     }
 }
@@ -424,11 +424,11 @@ pub fn brightest_mos_mode_and_gen_bjorklund(
 pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Vec<Letter> {
     let scale_len = a + b;
     let brightness = brightness % scale_len;
-    let (mos, bright_gen) = brightest_mos_mode_and_gen_bjorklund(a, b);
-    let bright_gen_step_count: usize = bright_gen.len();
+    let (mos, bright_gener) = brightest_mos_mode_and_gener(a, b);
+    let bright_gener_step_count: usize = bright_gener.len();
     // Rotate backwards from brightest mode by (scale_len - 1 - brightness) bright generators
     // which is equivalent to rotating forward by brightness dark generators from darkest mode
-    let steps_from_brightest = (scale_len - 1 - brightness) * bright_gen_step_count;
+    let steps_from_brightest = (scale_len - 1 - brightness) * bright_gener_step_count;
     rotate(&mos, steps_from_brightest)
 }
 
@@ -534,8 +534,8 @@ pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
 /// where the template MOS is assumed to have step signature `n0*0 (n1 + n2)*X` (`X` is the slot letter)
 /// and the filling MOS has step signature `n1*1 n2*2`.
 fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<Letter>> {
-    let (template, _) = brightest_mos_mode_and_gen_bjorklund(n0, n1 + n2);
-    let (filler, gener) = brightest_mos_mode_and_gen_bjorklund(n1, n2);
+    let (template, _) = brightest_mos_mode_and_gener(n0, n1 + n2);
+    let (filler, gener) = brightest_mos_mode_and_gener(n1, n2);
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();
     let gener_size = gener.len();
     (0..(n1 + n2))
@@ -791,7 +791,7 @@ mod tests {
         for a in 1usize..=10 {
             for b in 1usize..=10 {
                 if gcd(a as u64, b as u64) == 1 {
-                    let mos = brightest_mos_mode_and_gen_bjorklund(a, b).0;
+                    let mos = brightest_mos_mode_and_gener(a, b).0;
                     assert_eq!(mos, rotate(&mos, booth(&mos))); // MOS scales' brightest mode is indeed the least mode
                     assert_eq!(maximum_variety(&mos), 2);
                 }
@@ -815,11 +815,11 @@ mod tests {
     }
 
     #[test]
-    fn test_brightest_gen_of_mos() {
-        let diatonic = brightest_mos_mode_and_gen_bjorklund(5, 2);
+    fn test_brightest_gener_of_mos() {
+        let diatonic = brightest_mos_mode_and_gener(5, 2);
         assert_eq!(diatonic.0, vec![0, 0, 0, 1, 0, 0, 1]);
         assert_eq!(diatonic.1.into_inner(), BTreeMap::from([(0, 3), (1, 1)]));
-        let oneirotonic = brightest_mos_mode_and_gen_bjorklund(5, 3);
+        let oneirotonic = brightest_mos_mode_and_gener(5, 3);
         assert_eq!(oneirotonic.0, vec![0, 0, 1, 0, 0, 1, 0, 1]);
         assert_eq!(oneirotonic.1.into_inner(), BTreeMap::from([(0, 2), (1, 1)]));
     }
