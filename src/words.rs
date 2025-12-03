@@ -362,57 +362,58 @@ where
     }
 }
 
-/// Return the darkest mode of the MOS axby and the dark generator, using the Bresenham line algorithm.
-/// We chose the darkest mode rather than the brightest because this is the mode with brightness == 0.
-pub fn darkest_mos_mode_and_gen_bresenham(
+/// Return the brightest mode of the MOS aLbs and the bright generator, using the Bresenham line algorithm.
+/// The brightest mode is the lexicographically first rotation.
+pub fn brightest_mos_mode_and_gen_bresenham(
     a: usize,
     b: usize,
 ) -> (Vec<Letter>, CountVector<Letter>) {
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
         let count_gener_steps = modinv(a as i64, a as i64 + b as i64)
-                .expect("The dark generator is a (|L|⁻¹ mod |scale|)-step, since stacking it |L| times results in the s step (mod period).")
+                .expect("The bright generator is a (|L|⁻¹ mod |scale|)-step, since stacking it |L| times results in the s step (mod period).")
                 as usize;
         let mut result_scale: Vec<usize> = vec![];
         // Start from the origin (0, 0)
         let (mut current_x, mut current_y) = (0usize, 0usize);
         while (current_x, current_y) != (a, b) {
-            if a * (current_y) >= b * (current_x + 1) {
-                // If going east (making a (1, 0) step) doesn't lead to going below the line y == b/a*x,
-                current_x += 1; // append the x step and reflect the change in the plane vector.
-                result_scale.push(0);
-            } else {
-                // Else, make a (0, 1) step.
-                current_y += 1;
+            if a * (current_y + 1) <= b * current_x {
+                // If going north (making a (0, 1) step) doesn't lead to going above the line y == b/a*x,
+                current_y += 1; // append the y step and reflect the change in the plane vector.
                 result_scale.push(1);
+            } else {
+                // Else, make a (1, 0) step.
+                current_x += 1;
+                result_scale.push(0);
             }
         }
-        // Get the dark generator. We know how many steps and that this will give the perfect generator, not the
-        // augmented one, since we just got the darkest mode.
+        // Get the bright generator. We know how many steps and that this will give the perfect generator, not the
+        // diminished one, since we just got the brightest mode.
         let result_gener = CountVector::from_slice(&result_scale[0..count_gener_steps]);
         (result_scale, result_gener)
     } else {
-        let (prim_mos, gener) = darkest_mos_mode_and_gen_bresenham(a / d, b / d);
+        let (prim_mos, gener) = brightest_mos_mode_and_gen_bresenham(a / d, b / d);
         (prim_mos.repeat(d), gener)
     }
 }
 
-/// Return the darkest mode of the MOS axby and the dark generator, using Bjorklund's algorithm.
-/// We chose the darkest mode rather than the brightest because this is the mode with brightness == 0.
-pub fn darkest_mos_mode_and_gen_bjorklund(
+/// Return the brightest mode of the MOS aLbs and the bright generator, using Bjorklund's algorithm.
+/// The brightest mode is the lexicographically first rotation.
+pub fn brightest_mos_mode_and_gen_bjorklund(
     a: usize,
     b: usize,
 ) -> (Vec<Letter>, CountVector<Letter>) {
     let d = gcd(a as u64, b as u64) as usize;
     if d == 1 {
+        let count_gener_steps = modinv(a as i64, a as i64 + b as i64)
+                .expect("The bright generator is a (|L|⁻¹ mod |scale|)-step, since stacking it |L| times results in the s step (mod period).")
+                as usize;
         // These are the seed strings we build the brightest MOS word from.
         // The algorithm uses two subwords at each step, iteratively appending the
         // lexicographically second subword to the lexicographically first subword to ensure
         // that the lexicographically first mode is returned.
-        // Since lex. order makes strict prefixes strictly "brighter",
-        // we find the brightest mode and reverse it.
         let (mut first, mut second) = (vec![0], vec![1]);
-        let (mut count_first, mut count_second) = (a, b); // axby(0) is the brightest mode of bxay with x and y swapped.
+        let (mut count_first, mut count_second) = (a, b); // aLbs(0) is the brightest mode of bsaL with L and s swapped.
         while count_second != 1 {
             // Possibly after switching, are there more copies of `first` than `second`?
             // Then all the `second`s get appended to the first `count_second` copies of `first`s,
@@ -440,32 +441,30 @@ pub fn darkest_mos_mode_and_gen_bjorklund(
             }
         }
         // At the end, we have `count_first` `first`s and 1 `second`,
-        // so first substitute 'z's for 'x's, and then
-        // return (`first`)^`count_first` `second` (in standard mathematical word notation).
-        // The dark generator is obtained by subtracting the Parikh vector of `first` form that of the MOS scale.
-        let gener = CountVector(BTreeMap::from_iter(
-            [a as i32, b as i32].into_iter().enumerate(),
-        ))
-        .add(&CountVector::from_slice(&first).neg()); // Do this before consuming `first` in the next line.
+        // so return (`first`)^`count_first` `second` (in standard mathematical word notation).
         let mut scale: Vec<usize> = first.repeat(count_first);
         scale.extend_from_slice(&second);
-        // Reverse the scale word, since Bjorklund's algorithm has given us the brightest mode.
-        scale.reverse();
+        // The bright generator is the first `count_gener_steps` of the scale.
+        let gener = CountVector::from_slice(&scale[0..count_gener_steps]);
         (scale, gener)
     } else {
-        let (primitive_mos, gener) = darkest_mos_mode_and_gen_bjorklund(a / d, b / d);
+        let (primitive_mos, gener) = brightest_mos_mode_and_gen_bjorklund(a / d, b / d);
         (primitive_mos.repeat(d), gener)
     }
 }
 
 /// The mode of the MOS aLbs with a given brightness (count of bright generators up from root).
 /// Brightness is taken modulo (a + b), so any non-negative value is valid.
+/// Brightness 0 returns the darkest mode, brightness (a + b - 1) returns the brightest mode.
 pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Vec<Letter> {
     let scale_len = a + b;
     let brightness = brightness % scale_len;
-    let (mos, dark_gen) = darkest_mos_mode_and_gen_bresenham(a, b);
-    let dark_gen_step_count: usize = dark_gen.len();
-    rotate(&mos, brightness * dark_gen_step_count)
+    let (mos, bright_gen) = brightest_mos_mode_and_gen_bresenham(a, b);
+    let bright_gen_step_count: usize = bright_gen.len();
+    // Rotate backwards from brightest mode by (scale_len - 1 - brightness) bright generators
+    // which is equivalent to rotating forward by brightness dark generators from darkest mode
+    let steps_from_brightest = (scale_len - 1 - brightness) * bright_gen_step_count;
+    rotate(&mos, steps_from_brightest)
 }
 
 /// Rotate an array. Returns a Vec.
@@ -570,8 +569,8 @@ pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
 /// where the template MOS is assumed to have step signature `n0*0 (n1 + n2)*X` (`X` is the slot letter)
 /// and the filling MOS has step signature `n1*1 n2*2`.
 fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<Letter>> {
-    let (template, _) = darkest_mos_mode_and_gen_bresenham(n0, n1 + n2);
-    let (filler, gener) = darkest_mos_mode_and_gen_bresenham(n1, n2);
+    let (template, _) = brightest_mos_mode_and_gen_bresenham(n0, n1 + n2);
+    let (filler, gener) = brightest_mos_mode_and_gen_bresenham(n1, n2);
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();
     let gener_size = gener.len();
     (0..(n1 + n2))
@@ -842,8 +841,8 @@ mod tests {
         for a in 1usize..=20 {
             for b in 1usize..=20 {
                 if gcd(a as u64, b as u64) == 1 {
-                    let mos_bjorklund = darkest_mos_mode_and_gen_bjorklund(a, b);
-                    let mos_bresenham = darkest_mos_mode_and_gen_bresenham(a, b);
+                    let mos_bjorklund = brightest_mos_mode_and_gen_bjorklund(a, b);
+                    let mos_bresenham = brightest_mos_mode_and_gen_bresenham(a, b);
                     assert_eq!(mos_bjorklund, mos_bresenham);
                 }
             }
