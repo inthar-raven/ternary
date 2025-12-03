@@ -101,7 +101,8 @@ impl<T> CountVector<T> {
     where
         T: Ord + Clone + Send + Sync,
     {
-        if lambda == 0 { // Zeroed components are not allowed!
+        if lambda == 0 {
+            // Zeroed components are not allowed!
             Self::ZERO
         } else {
             Self(
@@ -373,8 +374,8 @@ pub fn brightest_mos_mode_and_gener(a: usize, b: usize) -> (Vec<Letter>, CountVe
     if d == 1 {
         // The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `b` times results in the L step (mod period).
         let count_gener_steps = modinv(b as i64, a as i64 + b as i64)
-                .expect("Should be ok because gcd(a + b, b) == gcd(a, b) == 1")
-                as usize;
+            .expect("Should be ok because gcd(a + b, b) == gcd(a, b) == 1")
+            as usize;
         // These are the seed strings we build the brightest MOS word from.
         // The algorithm uses two subwords at each step, iteratively appending the
         // lexicographically second subword to the lexicographically first subword to ensure
