@@ -1011,7 +1011,7 @@ stack()`
     const scaleSize = sig.reduce((acc, m) => (acc += m), 0);
     try {
       if (scaleSize === 0) {
-        statusElement.textContent = "Scale is empty. This is a bug.";
+        statusElement.textContent = "No scale specified.";
       } else if (arity > RANK_LIMIT) {
         statusElement.textContent = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
       } else {
@@ -1178,82 +1178,86 @@ stack()`
   btnWord.addEventListener("click", () => {
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
-    statusElement.textContent = "Computing...";
-    const equave = getEquaveRatio();
-    const wordResultData = wasm.word_result(query);
-    const profile = wordResultData["profile"];
-    const brightestMode = wordResultData["profile"]["word"];
-    const jiTunings = wordResultData["ji_tunings"];
-    const edTunings = wordResultData["ed_tunings"];
-    document.getElementById("tables").innerHTML = `
-                <div class="tables-row">
-                  <div class="table-column">
-                    JI tunings
-                    <div
-                      style="
-                        overflow-y: auto;
-                        overflow-x: auto;
-                        vertical-align: top;
-                        height: 420px;
-                      "
-                    >
-                      <table class="data" id="table-ji-tunings"></table>
+    if (arity) {
+      statusElement.textContent = "Computing...";
+      const equave = getEquaveRatio();
+      const wordResultData = wasm.word_result(query);
+      const profile = wordResultData["profile"];
+      const brightestMode = wordResultData["profile"]["word"];
+      const jiTunings = wordResultData["ji_tunings"];
+      const edTunings = wordResultData["ed_tunings"];
+      document.getElementById("tables").innerHTML = `
+                  <div class="tables-row">
+                    <div class="table-column">
+                      JI tunings
+                      <div
+                        style="
+                          overflow-y: auto;
+                          overflow-x: auto;
+                          vertical-align: top;
+                          height: 420px;
+                        "
+                      >
+                        <table class="data" id="table-ji-tunings"></table>
+                      </div>
                     </div>
-                  </div>
-                  <div class="table-column">
-                    ed(equave) tunings
-                    <div
-                      style="
-                        overflow-y: auto;
-                        overflow-x: auto;
-                        vertical-align: top;
-                        height: 420px;
-                      "
-                    >
-                      <table class="data" id="table-ed-tunings"></table>
+                    <div class="table-column">
+                      ed(equave) tunings
+                      <div
+                        style="
+                          overflow-y: auto;
+                          overflow-x: auto;
+                          vertical-align: top;
+                          height: 420px;
+                        "
+                      >
+                        <table class="data" id="table-ed-tunings"></table>
+                      </div>
                     </div>
-                  </div>
-                </div>`;
-    const jiTuningTable = document.getElementById("table-ji-tunings");
-    const edTuningTable = document.getElementById("table-ed-tunings");
-    appState.word = brightestMode;
-    try {
-      statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
+                  </div>`;
+      const jiTuningTable = document.getElementById("table-ji-tunings");
+      const edTuningTable = document.getElementById("table-ed-tunings");
+      appState.word = brightestMode;
+      try {
+        statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
 
-      makeTable(jiTuningTable, jiTunings);
-      const jiRows = jiTuningTable.getElementsByTagName("tr");
-      for (let i = 2; i < jiRows.length; ++i) {
-        const thisRow = jiRows[i];
-        thisRow.addEventListener("click", () => {
-          if (arity >= 1 && arity <= 3) {
-            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-            appState.tuning = jiTunings[i - 2];
-            updateViews(equave);
-          } else {
-            statusElement.textContent = NO_HIGH_RANK_SCALES;
-          }
-        });
-      }
-      if (edTunings) {
-        makeTable(edTuningTable, edTunings);
-        const edRows = edTuningTable.getElementsByTagName("tr");
-        edRows[2].classList.add("selected");
-        for (let i = 2; i < edRows.length; ++i) {
-          const thisRow = edRows[i];
+        makeTable(jiTuningTable, jiTunings);
+        const jiRows = jiTuningTable.getElementsByTagName("tr");
+        for (let i = 2; i < jiRows.length; ++i) {
+          const thisRow = jiRows[i];
           thisRow.addEventListener("click", () => {
-            selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-            const edTuning = edTunings[i - 2];
-            appState.tuning = edTuning;
-            updateViews(equave);
+            if (arity >= 1 && arity <= 3) {
+              selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+              appState.tuning = jiTunings[i - 2];
+              updateViews(equave);
+            } else {
+              statusElement.textContent = NO_HIGH_RANK_SCALES;
+            }
           });
         }
+        if (edTunings) {
+          makeTable(edTuningTable, edTunings);
+          const edRows = edTuningTable.getElementsByTagName("tr");
+          edRows[2].classList.add("selected");
+          for (let i = 2; i < edRows.length; ++i) {
+            const thisRow = edRows[i];
+            thisRow.addEventListener("click", () => {
+              selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+              const edTuning = edTunings[i - 2];
+              appState.tuning = edTuning;
+              updateViews(equave);
+            });
+          }
+        }
+        appState.tuning = edTunings[0];
+        appState.profile = profile;
+        appState.latticeBasis = appState.profile["lattice_basis"];
+        updateViews(equave);
+      } catch (err) {
+        statusElement.innerText = err;
       }
-      appState.tuning = edTunings[0];
-      appState.profile = profile;
-      appState.latticeBasis = appState.profile["lattice_basis"];
-      updateViews(equave);
-    } catch (err) {
-      statusElement.innerText = err;
+    } else {
+      statusElement.textContent = "No scale word provided.";
     }
   });
 });
