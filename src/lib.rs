@@ -72,13 +72,15 @@ pub const EDO_BOUND: i32 = 111;
 pub const S_LOWER_BOUND: f64 = 20.0;
 pub const S_UPPER_BOUND: f64 = 200.0;
 
-fn det3(v0: &[u8], v1: &[u8], v2: &[u8]) -> i16 {
-    v0[0] as i16 * v1[1] as i16 * v2[2] as i16
-        + v0[1] as i16 * v1[2] as i16 * v2[0] as i16
-        + v0[2] as i16 * v1[0] as i16 * v2[1] as i16
-        - v0[2] as i16 * v1[1] as i16 * v2[0] as i16
-        - v0[1] as i16 * v1[0] as i16 * v2[2] as i16
-        - v0[0] as i16 * v1[2] as i16 * v2[1] as i16
+/// Compute the determinant of a 3x3 matrix formed by three row vectors.
+/// Used to check if vectors form a unimodular basis (determinant ±1).
+fn det3(row0: &[u8], row1: &[u8], row2: &[u8]) -> i16 {
+    row0[0] as i16 * row1[1] as i16 * row2[2] as i16
+        + row0[1] as i16 * row1[2] as i16 * row2[0] as i16
+        + row0[2] as i16 * row1[0] as i16 * row2[1] as i16
+        - row0[2] as i16 * row1[1] as i16 * row2[0] as i16
+        - row0[1] as i16 * row1[0] as i16 * row2[2] as i16
+        - row0[0] as i16 * row1[2] as i16 * row2[1] as i16
 }
 
 // A representation of a GuideFrame that should be WASM-readable
@@ -175,8 +177,8 @@ fn numbers_to_string(word: &[usize]) -> String {
 }
 
 /// Convert a CountVector to a 3-element u8 vector for serialization
-fn countvector_to_u8_vec(cv: &CountVector<usize>) -> Vec<u8> {
-    let btreemap = cv.into_inner();
+fn countvector_to_u8_vec(count_vector: &CountVector<usize>) -> Vec<u8> {
+    let btreemap = count_vector.into_inner();
     vec![
         *btreemap.get(&0).unwrap_or(&0) as u8,
         *btreemap.get(&1).unwrap_or(&0) as u8,

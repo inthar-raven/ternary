@@ -499,38 +499,48 @@ pub fn least_mode(scale: &[Letter]) -> Vec<Letter> {
 /// See Booth, K. S. (1980). Lexicographically least circular substrings.
 /// Information Processing Letters, 10(4-5), 240–242. doi:10.1016/0020-0190(80)90149-0
 pub fn booth(scale: &[Letter]) -> usize {
-    let n = scale.len();
-    // `f` is the failure function of the least rotation; `usize::MAX` is used as a null value.
+    let scale_len = scale.len();
+    // `failure_func` is the failure function of the least rotation; `usize::MAX` is used as a null value.
     // null indicates that the failure function does not point backwards in the string.
     // `usize::MAX` will behave the same way as -1 does, assuming wrapping unsigned addition
-    let mut f = vec![usize::MAX; 2 * n];
-    let mut k: usize = 0;
-    // `j` loops over `scale` twice.
-    for j in 1..2 * n {
-        let mut i = f[j - k - 1];
-        while i != usize::MAX && scale[j % n] != scale[k.wrapping_add(i).wrapping_add(1) % n] {
-            // (1) If the jth letter is less than s[(k + i + 1) % n] then change k to j - i - 1,
+    let mut failure_func = vec![usize::MAX; 2 * scale_len];
+    let mut least_rotation: usize = 0;
+    // `scan_pos` loops over `scale` twice.
+    for scan_pos in 1..2 * scale_len {
+        let mut match_len = failure_func[scan_pos - least_rotation - 1];
+        while match_len != usize::MAX
+            && scale[scan_pos % scale_len]
+                != scale[least_rotation.wrapping_add(match_len).wrapping_add(1) % scale_len]
+        {
+            // (1) If the scan_pos-th letter is less than s[(least_rotation + match_len + 1) % scale_len] then change least_rotation to scan_pos - match_len - 1,
             // in effect left-shifting the failure function and the input string.
             // This appropriately compensates for the new, shorter least substring.
-            if scale[j % n] < scale[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j.wrapping_sub(i).wrapping_sub(1);
+            if scale[scan_pos % scale_len]
+                < scale[least_rotation.wrapping_add(match_len).wrapping_add(1) % scale_len]
+            {
+                least_rotation = scan_pos.wrapping_sub(match_len).wrapping_sub(1);
             }
-            i = f[i];
+            match_len = failure_func[match_len];
         }
-        if i == usize::MAX && scale[j % n] != scale[k.wrapping_add(i).wrapping_add(1) % n] {
+        if match_len == usize::MAX
+            && scale[scan_pos % scale_len]
+                != scale[least_rotation.wrapping_add(match_len).wrapping_add(1) % scale_len]
+        {
             // See note (1) above.
-            if scale[j % n] < scale[k.wrapping_add(i).wrapping_add(1) % n] {
-                k = j;
+            if scale[scan_pos % scale_len]
+                < scale[least_rotation.wrapping_add(match_len).wrapping_add(1) % scale_len]
+            {
+                least_rotation = scan_pos;
             }
-            f[j - k] = usize::MAX;
+            failure_func[scan_pos - least_rotation] = usize::MAX;
         } else {
-            f[j - k] = i.wrapping_add(1);
+            failure_func[scan_pos - least_rotation] = match_len.wrapping_add(1);
         }
         // The induction hypothesis is that
-        // at this point `f[0..j - k]` is the failure function of `s[k..(k+j)%n]`,
-        // and `k` is the lexicographically least subword of the letters scanned so far.
+        // at this point `failure_func[0..scan_pos - least_rotation]` is the failure function of `s[least_rotation..(least_rotation+scan_pos)%scale_len]`,
+        // and `least_rotation` is the lexicographically least subword of the letters scanned so far.
     }
-    k
+    least_rotation
 }
 
 /// [Letterwise substitution](https://en.xen.wiki/w/MOS_substitution) for scale words.

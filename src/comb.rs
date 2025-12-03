@@ -124,75 +124,82 @@ pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
 // Recursive part of algorithm in Sawada (2002)
 #[allow(clippy::too_many_arguments)]
 fn sawada_mut(
-    rem_content: &mut Vec<usize>, //    Remaining content to add to the prenecklace;                Sawada's n is 0-indexed, static
-    runs: &mut Vec<usize>, //           Run of consecutive (arity - 1)s starting here in the word;  Sawada's r is 0-indexed, static
-    avail_letters: &mut Vec<Letter>, // INVARIANT TO UPHOLD: Always remove and add back the right letters in the right place
-    a: &mut Vec<Letter>, //                                                                         Sawada's a is 1-indexed, static
-    t: usize, //                        The index of `a` to which to add the new letter;            Sawada's t is 1-indexed
-    p: usize, //                        Length of the longest Lyndon prefix of `a`;                 Sawada's p
-    s: usize, //                        Start of the current run of (arity - 1)s;                   Sawada's s is 1-indexed
-    curr_coll: &mut Vec<Vec<Letter>>, // Accumulator for collection                                 Sawada "Print()"s
+    remaining_content: &mut Vec<usize>, // Remaining content to add to the prenecklace (Sawada's n)
+    max_suffix_runs: &mut Vec<usize>, // Run of consecutive (arity-1)s starting at each position (Sawada's r)
+    avail_letters: &mut Vec<Letter>,  // Available letters, maintained in descending order
+    prenecklace: &mut Vec<Letter>,    // Current prenecklace being built (Sawada's a)
+    current_pos: usize,               // Current position in prenecklace (Sawada's t)
+    lyndon_prefix_len: usize,         // Length of longest Lyndon prefix (Sawada's p)
+    run_start: usize,                 // Start of current run of (arity-1)s (Sawada's s)
+    results: &mut Vec<Vec<Letter>>,   // Accumulator for valid necklaces
 ) {
-    let scale_len = a.len();
-    let arity = rem_content.len(); // TODO: Strip any suffix of 0's
-    if rem_content[arity - 1] == scale_len - t {
+    let scale_len = prenecklace.len();
+    let arity = remaining_content.len(); // TODO: Strip any suffix of 0's
+    if remaining_content[arity - 1] == scale_len - current_pos {
         // if the only remaining letter is `arity - 1`
-        if (rem_content[arity - 1] == runs[t - p] && scale_len.is_multiple_of(p))
-            || rem_content[arity - 1] > runs[t - p]
+        if (remaining_content[arity - 1] == max_suffix_runs[current_pos - lyndon_prefix_len]
+            && scale_len.is_multiple_of(lyndon_prefix_len))
+            || remaining_content[arity - 1] > max_suffix_runs[current_pos - lyndon_prefix_len]
         {
-            let mut new_necklace: Vec<usize> = a.iter_mut().map(|x| *x).collect();
+            let mut new_necklace: Vec<usize> = prenecklace.iter_mut().map(|x| *x).collect();
             new_necklace.shrink_to_fit(); // remove any extra allocation
-            curr_coll.push(new_necklace);
-            curr_coll.shrink_to_fit();
+            results.push(new_necklace);
+            results.shrink_to_fit();
         } // else reject
-    } else if rem_content[0] != scale_len - t {
+    } else if remaining_content[0] != scale_len - current_pos {
         // else reject since it both begins and ends in a 0
-        let mb_avail_letter: Option<usize> = avail_letters.first().copied();
-        if let Some(letter) = mb_avail_letter {
-            let mut j = letter;
-            while j >= a[t - p] {
-                runs[s] = t - s; // t and s are both indices
-                if rem_content[j] == 1 {
-                    avail_letters.remove(first_index_desc(avail_letters, j).expect(
-                        "this is a bug; `avail_letters` should contain exactly the nonzero keys of `rem_content`",
+        let maybe_first_letter: Option<usize> = avail_letters.first().copied();
+        if let Some(letter) = maybe_first_letter {
+            let mut current_letter = letter;
+            while current_letter >= prenecklace[current_pos - lyndon_prefix_len] {
+                max_suffix_runs[run_start] = current_pos - run_start;
+                if remaining_content[current_letter] == 1 {
+                    avail_letters.remove(first_index_desc(avail_letters, current_letter).expect(
+                        "this is a bug; `avail_letters` should contain exactly the nonzero keys of `remaining_content`",
                     ));
                 }
-                rem_content[j] -= 1;
-                a[t] = j;
+                remaining_content[current_letter] -= 1;
+                prenecklace[current_pos] = current_letter;
                 // Yield to caller before and after recursive call
                 stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-                    // Pins
                     sawada_mut(
-                        rem_content,
-                        runs,
+                        remaining_content,
+                        max_suffix_runs,
                         avail_letters,
-                        a,
-                        t + 1,
-                        if j == a[t - p] { p } else { t + 1 },
-                        if j == arity - 1 { s } else { t + 1 },
-                        curr_coll,
+                        prenecklace,
+                        current_pos + 1,
+                        if current_letter == prenecklace[current_pos - lyndon_prefix_len] {
+                            lyndon_prefix_len
+                        } else {
+                            current_pos + 1
+                        },
+                        if current_letter == arity - 1 {
+                            run_start
+                        } else {
+                            current_pos + 1
+                        },
+                        results,
                     )
                 });
-                // If j has been removed from `avail_letters`, add `j` back.
+                // If current_letter has been removed from `avail_letters`, add it back.
                 // This is how we backtrack in the tree.
-                if rem_content[j] == 0 {
-                    // For when `avail_letters` is a Vec
-                    if let Some(fst) = first_index_smaller(avail_letters, j) {
-                        avail_letters.insert(fst, j);
+                if remaining_content[current_letter] == 0 {
+                    if let Some(insert_pos) = first_index_smaller(avail_letters, current_letter) {
+                        avail_letters.insert(insert_pos, current_letter);
                     } else {
-                        avail_letters.push(j);
+                        avail_letters.push(current_letter);
                     }
                 }
-                rem_content[j] += 1;
-                // update this accordingly, as the while condition uses it
-                if let Some(next) = first_index_smaller(avail_letters, j) {
-                    j = avail_letters[next];
+                remaining_content[current_letter] += 1;
+                // update current_letter for next iteration
+                if let Some(next_idx) = first_index_smaller(avail_letters, current_letter) {
+                    current_letter = avail_letters[next_idx];
                 } else {
                     break;
                 }
             }
         }
-        a[t] = arity - 1;
+        prenecklace[current_pos] = arity - 1;
     }
 }
 

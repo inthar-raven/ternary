@@ -45,17 +45,17 @@ where
     and where the generators in the generator sequence are distinct from any non-k-step interval.
     There is no need to check the last condition for step vectors.
 */
-fn k_step_guided_gs_list(k: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
-    guided_gs_chains(&stacked_k_steps(k, neck))
+fn step_class_guided_gs_list(step_class: usize, scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+    guided_gs_chains(&stacked_step_class(step_class, scale))
 }
 
-pub fn stacked_k_steps<T>(k: usize, neck: &[T]) -> Vec<T::Interval>
+pub fn stacked_step_class<T>(step_class: usize, scale: &[T]) -> Vec<T::Interval>
 where
     T: Subtendable + std::fmt::Debug,
 {
-    // println!("scale: {:?}", neck);
-    (0..neck.len())
-        .map(|i| word_on_degree(neck, k * i, k))
+    // println!("scale: {:?}", scale);
+    (0..scale.len())
+        .map(|i| word_on_degree(scale, step_class * i, step_class))
         .map(|subword| <T as Subtendable>::interval_from_slice(&subword))
         .collect()
 }
@@ -63,30 +63,30 @@ where
 /// TODO: To get all Guided GSes, we actually need to iterate through all the step classes, not just ones <= len / 2.
 /// All Guided GSes that generate a given abstract necklace.
 /// Guided GS: generator sequence using fixed k-steps where gcd(k, scale.len()) == 1.
-pub fn guided_gs_list(neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
-    let len = neck.len();
+pub fn guided_gs_list(scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+    let len = scale.len();
     (2..=len - 2) // Don't include 1-step GSes
-        .filter(|&k| gcd(k as u64, len as u64) == 1)
-        .flat_map(|k| k_step_guided_gs_list(k, neck))
+        .filter(|&step_class| gcd(step_class as u64, len as u64) == 1)
+        .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
         .collect()
 }
 
-/// All Guided GSes of length `l` that generate a given abstract necklace.
-pub fn guided_gs_list_of_len(l: usize, neck: &[usize]) -> Vec<Vec<CountVector<usize>>> {
-    let neck_len = neck.len();
-    (2..=neck_len / 2) // Don't include 1-step GSes
-        .filter(|&k| gcd(k as u64, neck_len as u64) == 1)
-        .flat_map(|k| k_step_guided_gs_list(k, neck))
-        .filter(|vs| l == vs.len())
+/// All Guided GSes of length `gs_length` that generate a given abstract necklace.
+pub fn guided_gs_list_of_len(gs_length: usize, scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
+    let scale_len = scale.len();
+    (2..=scale_len / 2) // Don't include 1-step GSes
+        .filter(|&step_class| gcd(step_class as u64, scale_len as u64) == 1)
+        .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
+        .filter(|vs| gs_length == vs.len())
         .collect()
 }
 
 #[allow(unused)]
-fn k_step_guided_gs_list_for_subscale(
-    k: usize,
+fn step_class_guided_gs_list_for_subscale(
+    step_class: usize,
     subscale: &[CountVector<usize>],
 ) -> Vec<Vec<CountVector<usize>>> {
-    guided_gs_chains(&stacked_k_steps(k, subscale))
+    guided_gs_chains(&stacked_step_class(step_class, subscale))
 }
 
 /// All Guided GSes of a chain which is represented as `Vec<CountVector<usize>>` rather than `Vec<usize>`.
@@ -96,8 +96,8 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
     } else {
         let len = subscale.len();
         (2..=len / 2) // Don't include 1-step GSes
-            .filter(|&k| gcd(k as u64, len as u64) == 1)
-            .flat_map(|k| k_step_guided_gs_list_for_subscale(k, subscale))
+            .filter(|&step_class| gcd(step_class as u64, len as u64) == 1)
+            .flat_map(|step_class| step_class_guided_gs_list_for_subscale(step_class, subscale))
             .collect()
     }
 }
@@ -136,11 +136,11 @@ impl GuideFrame {
         self.polyoffset.len()
     }
     /// Try to get simple or interleaved guide frames with k-step generators.
-    pub fn try_simple(scale: &[usize], k: usize) -> Vec<Self> {
-        if scale.is_empty() || gcd(scale.len() as u64, k as u64) != 1 {
+    pub fn try_simple(scale: &[usize], step_class: usize) -> Vec<Self> {
+        if scale.is_empty() || gcd(scale.len() as u64, step_class as u64) != 1 {
             vec![]
         } else {
-            k_step_guided_gs_list(k, scale)
+            step_class_guided_gs_list(step_class, scale)
                 .into_iter()
                 .map(|gs| Self {
                     gs,
@@ -151,21 +151,23 @@ impl GuideFrame {
                 .collect::<Vec<_>>()
         }
     }
-    pub fn try_multiple(scale: &[usize], multiplicity: usize, k: usize) -> Vec<Self> {
+    pub fn try_multiple(scale: &[usize], multiplicity: usize, step_class: usize) -> Vec<Self> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
         if multiplicity == 1 || scale.is_empty() || !scale.len().is_multiple_of(multiplicity) {
             vec![]
         } else {
-            let d = gcd(k as u64, scale.len() as u64) as usize;
-            let co_d = scale.len() / d;
-            if !co_d.is_multiple_of(multiplicity) {
-                if d == multiplicity {
+            let gcd_value = gcd(step_class as u64, scale.len() as u64) as usize;
+            let coprime_part = scale.len() / gcd_value;
+            if !coprime_part.is_multiple_of(multiplicity) {
+                if gcd_value == multiplicity {
                     // println!("interleaved");
                     // It's an interleaved scale.
-                    let subscales = (0..d)
+                    let subscales = (0..gcd_value)
                         .map(|degree| rotate(scale, degree))
                         .map(|rotation| {
-                            stacked_k_steps(d, &rotation[..scale.len()])[..scale.len() / d].to_vec()
+                            stacked_step_class(gcd_value, &rotation[..scale.len()])
+                                [..scale.len() / gcd_value]
+                                .to_vec()
                         })
                         .collect::<Vec<_>>();
                     let subscale_on_root = subscales
@@ -184,7 +186,11 @@ impl GuideFrame {
                         .map(|(i, subscale)| {
                             offset_vec(&subscale_on_root, &subscale).map(|offset| {
                                 // `.map()` returns `None` if the previous result is `None` and functorially applies the closure to `Some`s.
-                                CountVector::from_slice(&word_on_degree(scale, 0, offset * d + i))
+                                CountVector::from_slice(&word_on_degree(
+                                    scale,
+                                    0,
+                                    offset * gcd_value + i,
+                                ))
                             })
                         })
                         // collect returns `None` if there is any `None` returned by `map`.
@@ -234,7 +240,7 @@ impl GuideFrame {
                     let gen_chains_enumerated = (0..scale.len())
                         .map(|degree| {
                             let mode = rotate(scale, degree);
-                            stacked_k_steps(k, &mode)[0..chain_length].to_vec()
+                            stacked_step_class(step_class, &mode)[0..chain_length].to_vec()
                         })
                         .enumerate()
                         .filter(|(_, stack)| {
@@ -245,7 +251,7 @@ impl GuideFrame {
                                 .last()
                                 .expect("last exists because gs_length_limit >= 2");
                             // `init` will be nonempty, so the following check won't be vacuous.
-                            init.all(|k_step| *k_step != *last)
+                            init.all(|interval| *interval != *last)
                         });
                     let gen_chains_vec: Vec<_> = gen_chains_enumerated.collect();
                     let gses: Vec<Vec<CountVector<Letter>>> = gen_chains_vec
@@ -283,7 +289,7 @@ impl GuideFrame {
                                 .iter()
                                 .flat_map(|first| {
                                     (0..scale.len() / multiplicity)
-                                        .map(|i| (first + i * k) % scale.len())
+                                        .map(|i| (first + i * step_class) % scale.len())
                                         .collect::<Vec<_>>()
                                 })
                                 .collect();
@@ -318,18 +324,18 @@ impl GuideFrame {
         }
     }
     /// Get both Simple and Multiple guide frames.
-    fn try_all_variants(scale: &[usize], k: usize) -> Vec<Self> {
+    fn try_all_variants(scale: &[usize], step_class: usize) -> Vec<Self> {
         // Let's just do primes for now.
         let prime_factors: Vec<usize> = factorize(scale.len() as u64)
             .into_iter()
             .dedup()
-            .map(|p| p as usize)
+            .map(|prime| prime as usize)
             .collect();
-        let simple_guide_moses: Vec<GuideFrame> = Self::try_simple(scale, k);
+        let simple_guide_moses: Vec<GuideFrame> = Self::try_simple(scale, step_class);
         let multiple_guide_moses: Vec<GuideFrame> = if BTreeSet::from_iter(scale.iter()).len() > 1 {
             prime_factors
                 .into_iter()
-                .flat_map(|p| Self::try_multiple(scale, p, k))
+                .flat_map(|prime| Self::try_multiple(scale, prime, step_class))
                 .collect()
         } else {
             vec![]
@@ -345,7 +351,7 @@ impl GuideFrame {
 /// Return the collection of guide frames for the given scale word, sorted by complexity.
 pub fn guide_frames(scale: &[usize]) -> Vec<GuideFrame> {
     (2..=scale.len() / 2) // steps subtended by generator used for the guided generator sequence
-        .flat_map(|k| GuideFrame::try_all_variants(scale, k))
+        .flat_map(|step_class| GuideFrame::try_all_variants(scale, step_class))
         .sorted_by_key(GuideFrame::complexity)
         .collect()
 }
@@ -539,9 +545,9 @@ mod tests {
     }
 
     #[test]
-    fn test_stacked_k_steps() {
+    fn test_stacked_step_class() {
         let diasem: [usize; 9] = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let one_steps = stacked_k_steps(1, &diasem);
+        let one_steps = stacked_step_class(1, &diasem);
         assert_eq! {
             one_steps,
             vec![
@@ -556,7 +562,7 @@ mod tests {
                 CountVector::from_slice(&[0]),
             ]
         }
-        let two_steps = stacked_k_steps(2, &diasem);
+        let two_steps = stacked_step_class(2, &diasem);
         assert_eq! {
             two_steps,
             vec![
@@ -571,7 +577,7 @@ mod tests {
                 CountVector::from_slice(&[0, 2]),
             ]
         }
-        let three_steps = stacked_k_steps(3, &diasem);
+        let three_steps = stacked_step_class(3, &diasem);
         assert_eq! {
             three_steps,
             vec![
@@ -590,7 +596,7 @@ mod tests {
     #[test]
     fn test_guided_gs_chains() {
         let diasem: [usize; 9] = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let two_steps = stacked_k_steps(2, &diasem);
+        let two_steps = stacked_step_class(2, &diasem);
         let chains = guided_gs_chains(two_steps.as_slice());
         assert_eq!(
             chains,
@@ -599,7 +605,7 @@ mod tests {
                 CountVector::from_slice(&[0, 2]),
             ]]
         );
-        let four_steps = stacked_k_steps(4, &diasem);
+        let four_steps = stacked_step_class(4, &diasem);
         let chains = guided_gs_chains(four_steps.as_slice());
         assert_eq!(
             BTreeSet::from_iter(chains.into_iter()),
