@@ -29,7 +29,4 @@ module.exports = {
     asyncWebAssembly: true,
     syncWebAssembly: true,
   },
-  performance: {
-    hints: false,
-  },
 };
