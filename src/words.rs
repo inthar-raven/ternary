@@ -642,7 +642,7 @@ pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
 }
 
 /// The repeating portion of a slice.
-pub fn period<T>(slice: &[T]) -> Vec<T>
+pub fn period_pattern<T>(slice: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
 {
@@ -663,10 +663,8 @@ where
     slice[..l].to_vec()
 }
 
-/// The repeating portion of `slice`,
-/// but `slice` is only required to be equal to some prefix of the infinite repetition of the weak period.
-/// For example, `[0, 1]` is a weak period but not a strong period of `[0, 1, 0, 1, 0]`.
-pub fn weak_period<T>(slice: &[T]) -> Vec<T>
+/// The minimal string `x` such that `slice` is a prefix of `x^\infty`.
+pub fn weak_period_pattern<T>(slice: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone,
 {
@@ -768,18 +766,18 @@ mod tests {
         let word_012 = [0, 1, 2, 0, 1, 2, 0, 1, 2];
         let pentawood = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        assert_eq!(period(&word_012).len(), 3);
-        assert_eq!(period(&pentawood).len(), 2);
-        assert_eq!(period(&diasem).len(), 9);
+        assert_eq!(period_pattern(&word_012).len(), 3);
+        assert_eq!(period_pattern(&pentawood).len(), 2);
+        assert_eq!(period_pattern(&diasem).len(), 9);
     }
     #[test]
-    fn test_weak_period() {
+    fn test_weak_period_pattern() {
         let word_012 = [0, 1, 2, 0, 1, 2, 0, 1, 2];
         let pentawood = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        assert_eq!(weak_period(&word_012).len(), 3);
-        assert_eq!(weak_period(&pentawood).len(), 2);
-        assert_eq!(weak_period(&diasem).len(), 4);
+        assert_eq!(weak_period_pattern(&word_012).len(), 3);
+        assert_eq!(weak_period_pattern(&pentawood).len(), 2);
+        assert_eq!(weak_period_pattern(&diasem).len(), 4);
     }
     #[test]
     fn test_maximum_variety() {
