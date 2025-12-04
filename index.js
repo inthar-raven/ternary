@@ -21,7 +21,7 @@ const statusElement = document.getElementById("status");
  * Count occurrences of a character in a string
  */
 function countChar(str, char) {
-  return [...str].filter(c => c === char).length;
+  return [...str].filter((c) => c === char).length;
 }
 function displayStepVector(vector) {
   const keys = Object.keys(vector);
@@ -100,7 +100,9 @@ function getEquaveCents() {
  */
 function getEdBound() {
   const input = document.getElementById("input-ed-bound");
-  return input ? parseInt(input.value, 10) || DEFAULT_ED_BOUND : DEFAULT_ED_BOUND;
+  return input
+    ? parseInt(input.value, 10) || DEFAULT_ED_BOUND
+    : DEFAULT_ED_BOUND;
 }
 
 /**
@@ -108,7 +110,9 @@ function getEdBound() {
  */
 function getSLower() {
   const input = document.getElementById("input-s-lower");
-  return input ? parseFloat(input.value) || DEFAULT_S_LOWER_BOUND : DEFAULT_S_LOWER_BOUND;
+  return input
+    ? parseFloat(input.value) || DEFAULT_S_LOWER_BOUND
+    : DEFAULT_S_LOWER_BOUND;
 }
 
 /**
@@ -116,7 +120,9 @@ function getSLower() {
  */
 function getSUpper() {
   const input = document.getElementById("input-s-upper");
-  return input ? parseFloat(input.value) || DEFAULT_S_UPPER_BOUND : DEFAULT_S_UPPER_BOUND;
+  return input
+    ? parseFloat(input.value) || DEFAULT_S_UPPER_BOUND
+    : DEFAULT_S_UPPER_BOUND;
 }
 
 function stepVectorLength(vector) {
@@ -415,12 +421,16 @@ import("./pkg").then((wasm) => {
             let currentY = ORIGIN_Y;
             // Track cumulative step counts for pitch calculation
             let stepCounts = { L: 0, m: 0, s: 0 };
-            
+
             for (let deg = 0; deg < n; ++deg) {
-              const { pitch, cents } = getPitchInfo(stepCounts, state.tuning, equave);
+              const { pitch, cents } = getPitchInfo(
+                stepCounts,
+                state.tuning,
+                equave,
+              );
               const centsRounded = Math.round(cents);
               const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
-              
+
               svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
             <circle
               cx="${currentX}"
@@ -533,7 +543,7 @@ import("./pkg").then((wasm) => {
 
             // Pointer event tracking for pinch-to-zoom
             const pointers = new Map();
-            
+
             function getPointerDistance() {
               const pts = Array.from(pointers.values());
               if (pts.length < 2) return 0;
@@ -541,7 +551,7 @@ import("./pkg").then((wasm) => {
               const dy = pts[0].clientY - pts[1].clientY;
               return Math.sqrt(dx * dx + dy * dy);
             }
-            
+
             function getPointerCenter() {
               const pts = Array.from(pointers.values());
               if (pts.length < 2) return { x: 0, y: 0 };
@@ -558,7 +568,7 @@ import("./pkg").then((wasm) => {
             svgTag.addEventListener("pointerdown", (e) => {
               e.preventDefault();
               pointers.set(e.pointerId, e);
-              
+
               if (pointers.size === 1) {
                 isPanning = true;
                 isPinching = false;
@@ -574,10 +584,10 @@ import("./pkg").then((wasm) => {
             // Pointer move
             svgTag.addEventListener("pointermove", (e) => {
               if (!pointers.has(e.pointerId)) return;
-              
+
               e.preventDefault();
               pointers.set(e.pointerId, e);
-              
+
               if (pointers.size === 2 && isPinching) {
                 const currentDistance = getPointerDistance();
                 if (initialPinchDistance > 0 && currentDistance > 0) {
@@ -639,7 +649,7 @@ import("./pkg").then((wasm) => {
                 };
               }
             }
-            
+
             svgTag.addEventListener("pointerup", onPointerUp);
             svgTag.addEventListener("pointercancel", onPointerUp);
             svgTag.addEventListener("pointerleave", onPointerUp);
@@ -683,7 +693,12 @@ import("./pkg").then((wasm) => {
             zoomInButton.addEventListener("click", () => zoomBy(0.8));
             zoomOutButton.addEventListener("click", () => zoomBy(1.25));
             resetViewButton.addEventListener("click", () => {
-              viewBox = { x: 150, y: 150, width: LATTICE_SVG_WIDTH, height: LATTICE_SVG_HEIGHT };
+              viewBox = {
+                x: 150,
+                y: 150,
+                width: LATTICE_SVG_WIDTH,
+                height: LATTICE_SVG_HEIGHT,
+              };
               scale = 1;
               updateViewBox();
             });
@@ -782,7 +797,7 @@ stack()`
       if (state.profile) {
         // const ploidacot = state.profile["ploidacot"];
         const structure = state.profile["structure"];
-        
+
         // Guide frame info (only if structure exists)
         if (structure) {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
@@ -799,7 +814,7 @@ stack()`
         } else {
           el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
         }
-        
+
         // Monotone MOS properties (always shown)
         el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
         el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
@@ -813,7 +828,7 @@ stack()`
           el.innerHTML += `None<br/>`;
         }
         el.innerHTML += `<br/>`;
-        
+
         // MOS substitution properties (always shown)
         const a = countChar(state.word, "L");
         const b = countChar(state.word, "m");
@@ -843,7 +858,7 @@ stack()`
         } else {
           el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
         }
-        
+
         // Maximum variety (always shown)
         el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
       }
@@ -873,7 +888,8 @@ stack()`
         const numL = Number(numLstr);
         const numM = Number(numMstr);
         const numS = Number(numSstr);
-        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;}
+        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
+      }
     } else if (tuning["0"].includes("/")) {
       const [numLstr, denLstr] = tuning["0"].split("/");
       const [numMstr, denMstr] = tuning["1"].split("/");
@@ -908,27 +924,27 @@ stack()`
    */
   function getPitchInfo(stepCounts, tuning, equave) {
     if (!tuning) return { pitch: "", cents: 0 };
-    
+
     const nL = stepCounts.L || 0;
     const nM = stepCounts.m || 0;
     const nS = stepCounts.s || 0;
-    
+
     // Calculate equave in cents
     const equaveCents = 1200 * Math.log2(equave.num / equave.den);
-    
+
     if (tuning["0"].includes("\\")) {
       // ED tuning format like "5\12" or "5\12<3/1>"
       let str0 = tuning["0"];
       let str1 = tuning["1"];
       let str2 = tuning["2"];
-      
+
       // Strip equave suffix if present
       if (str0.includes("<")) {
         str0 = str0.substring(0, str0.indexOf("<"));
         str1 = str1.substring(0, str1.indexOf("<"));
         str2 = str2.substring(0, str2.indexOf("<"));
       }
-      
+
       const [numLstr, denLstr] = str0.split("\\");
       const [numMstr] = str1.split("\\");
       const [numSstr] = str2.split("\\");
@@ -936,10 +952,10 @@ stack()`
       const stepsM = Number(numMstr);
       const stepsS = Number(numSstr);
       const ed = Number(denLstr);
-      
+
       const totalSteps = nL * stepsL + nM * stepsM + nS * stepsS;
       const cents = (totalSteps / ed) * equaveCents;
-      
+
       let pitch;
       if (equave.num !== 2 || equave.den !== 1) {
         pitch = `${totalSteps}\\${ed}<${equave.num}/${equave.den}>`;
@@ -958,11 +974,11 @@ stack()`
       const denL = Number(denLstr);
       const denM = Number(denMstr);
       const denS = Number(denSstr);
-      
+
       const num = Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
       const den = Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
       const d = gcd(num, den);
-      const ratio = (num / d) / (den / d);
+      const ratio = num / d / (den / d);
       const cents = 1200 * Math.log2(ratio);
       return { pitch: `${num / d}/${den / d}`, cents };
     } else {
@@ -1079,9 +1095,12 @@ stack()`
             document.getElementById("monotone-ms").checked,
             document.getElementById("monotone-s0").checked,
             Number(document.getElementById("ggs-len").value),
-            document.querySelector('input[name="ggs-len-constraint"]:checked').value,
+            document.querySelector('input[name="ggs-len-constraint"]:checked')
+              .value,
             Number(document.getElementById("complexity").value),
-            document.querySelector('input[name="complexity-constraint"]:checked').value,
+            document.querySelector(
+              'input[name="complexity-constraint"]:checked',
+            ).value,
             Number(document.getElementById("mv").value),
             document.querySelector('input[name="mv-constraint"]:checked').value,
             document.querySelector('input[name="mos-subst"]:checked').value,
@@ -1181,7 +1200,17 @@ stack()`
     if (arity) {
       statusElement.textContent = "Computing...";
       const equave = getEquaveRatio();
-      const wordResultData = wasm.word_result(query);
+      const edBound = getEdBound();
+      const sLower = getSLower();
+      const sUpper = getSUpper();
+      const wordResultData = wasm.word_result(
+        query,
+        equave.num,
+        equave.den,
+        edBound,
+        sLower,
+        sUpper,
+      );
       const profile = wordResultData["profile"];
       const brightestMode = wordResultData["profile"]["word"];
       const jiTunings = wordResultData["ji_tunings"];

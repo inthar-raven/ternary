@@ -13,14 +13,17 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 ## Build steps
 
 1. Install Node.js dependencies:
+
    ```bash
    npm install
    ```
 
 2. Build and serve the development server:
+
    ```bash
    npm run serve
    ```
+
    This will compile the Rust code to WASM and start a dev server at `http://localhost:8080/`.
 
 3. For a production build:
@@ -32,11 +35,13 @@ A microtonal scale research app chiefly dedicated to ternary scales (scales with
 ## Rust development
 
 To check the Rust code compiles:
+
 ```bash
 cargo check
 ```
 
 To run Rust tests:
+
 ```bash
 cargo test
 ```

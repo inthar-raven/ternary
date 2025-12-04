@@ -69,11 +69,6 @@ use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, 
 
 use crate::monzo::Monzo;
 
-// for the edo search
-pub const EDO_BOUND: i32 = 111;
-pub const S_LOWER_BOUND: f64 = 20.0;
-pub const S_UPPER_BOUND: f64 = 200.0;
-
 /// Compute the determinant of a 3x3 matrix formed by three row vectors.
 /// Used to check if vectors form a unimodular basis (determinant ±1).
 fn det3(row0: &[u8], row1: &[u8], row2: &[u8]) -> i16 {
@@ -323,27 +318,21 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
 #[wasm_bindgen]
 pub fn word_result(
     query: String,
-    cents_lower_bound: f64,
-    cents_upper_bound: f64,
+    equave_num: u32,
+    equave_den: u32,
+    ed_bound: i32,
+    s_lower: f64,
+    s_upper: f64,
 ) -> Result<JsValue, JsValue> {
+    let equave =
+        RawJiRatio::try_new(equave_num as u64, equave_den as u64).unwrap_or(RawJiRatio::OCTAVE);
     let word_as_numbers = string_to_numbers(&query);
     let step_sig = word_to_sig(&word_as_numbers);
 
     Ok(to_value(&WordResult {
         profile: word_to_profile(&word_as_numbers),
-        ji_tunings: sig_to_ji_tunings(
-            &step_sig,
-            RawJiRatio::OCTAVE,
-            cents_lower_bound,
-            cents_upper_bound,
-        ),
-        ed_tunings: sig_to_ed_tunings(
-            &step_sig,
-            RawJiRatio::OCTAVE,
-            EDO_BOUND,
-            S_LOWER_BOUND,
-            S_UPPER_BOUND,
-        ),
+        ji_tunings: sig_to_ji_tunings(&step_sig, equave, s_lower, s_upper),
+        ed_tunings: sig_to_ed_tunings(&step_sig, equave, ed_bound, s_lower, s_upper),
     })?)
 }
 
