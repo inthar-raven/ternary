@@ -359,7 +359,16 @@ pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<Stri
     if let Some(equave_monzo) = equave_monzo {
         ji::solve_step_sig_81_odd_limit(step_sig, equave_monzo, false)
             .into_iter()
-            .map(|steps| steps.into_iter().map(|m| m.to_string()).collect())
+            .map(|steps| {
+                steps
+                    .into_iter()
+                    .map(|m| {
+                        m.try_to_ratio()
+                            .map(|r| r.to_string())
+                            .unwrap_or_else(|| m.to_string())
+                    })
+                    .collect()
+            })
             .collect()
     } else {
         vec![]
