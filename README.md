@@ -44,7 +44,7 @@ cargo test
 # Features
 
 - Get the set of all scales (up to mode) with a certain step signature.
-- ~~Given a step signature, it gives you tuples of JI steps with bounded complexity for the scale (assuming octave equivalence).~~ (JI tunings are disabled for now)
+- Given a step signature, it gives you tuples of JI steps with bounded complexity for the scale, assuming octave equivalence. (The complexity bound on most steps means that the search is not exhaustive.)
 - Given step signature, it displays the edo tunings.
 - When you select a tuning on the results page, the SonicWeave code is displayed.
 - JI-agnostic 2D lattice view for every scale.
