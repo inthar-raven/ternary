@@ -45,4 +45,5 @@ opt-level = "s"
 strip = true
 
 [package.metadata.wasm-pack.profile.release]
+# wasm-opt disabled due to feature compatibility issues
 wasm-opt = false
