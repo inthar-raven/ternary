@@ -7,6 +7,7 @@ use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
 use crate::interval::Dyad;
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::monzo::Monzo;
+use crate::odd_limit_81::EIGHTY_ONE_ODD_LIMIT;
 use crate::words::{CountVector, rotate};
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
@@ -55,7 +56,7 @@ pub fn solve_step_sig_81_odd_limit(
     allow_neg_aber: bool,
 ) -> Vec<Vec<Monzo>> {
     let cents_bound: f64 = 300.0;
-    let small_steps: Vec<_> = Monzo::EIGHTY_ONE_ODD_LIMIT
+    let small_steps: Vec<_> = EIGHTY_ONE_ODD_LIMIT
         .into_iter()
         .filter(|monzo| monzo.cents() < cents_bound)
         .collect();
