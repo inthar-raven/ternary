@@ -321,13 +321,22 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
 }
 
 #[wasm_bindgen]
-pub fn word_result(query: String) -> Result<JsValue, JsValue> {
+pub fn word_result(
+    query: String,
+    cents_lower_bound: f64,
+    cents_upper_bound: f64,
+) -> Result<JsValue, JsValue> {
     let word_as_numbers = string_to_numbers(&query);
     let step_sig = word_to_sig(&word_as_numbers);
 
     Ok(to_value(&WordResult {
         profile: word_to_profile(&word_as_numbers),
-        ji_tunings: sig_to_ji_tunings(&step_sig, RawJiRatio::OCTAVE),
+        ji_tunings: sig_to_ji_tunings(
+            &step_sig,
+            RawJiRatio::OCTAVE,
+            cents_lower_bound,
+            cents_upper_bound,
+        ),
         ed_tunings: sig_to_ed_tunings(
             &step_sig,
             RawJiRatio::OCTAVE,
@@ -354,22 +363,33 @@ pub fn word_to_mv(query: String) -> u8 {
 /// Get JI tunings for a step signature using 81-odd-limit intervals.
 /// This is not an exhaustive search - it only considers intervals < 300 cents
 /// and requires steps to be strictly descending in size.
-pub fn sig_to_ji_tunings(step_sig: &[usize], equave: RawJiRatio) -> Vec<Vec<String>> {
+pub fn sig_to_ji_tunings(
+    step_sig: &[usize],
+    equave: RawJiRatio,
+    cents_lower_bound: f64,
+    cents_upper_bound: f64,
+) -> Vec<Vec<String>> {
     let equave_monzo = Monzo::try_from_ratio(equave).ok();
     if let Some(equave_monzo) = equave_monzo {
-        ji::solve_step_sig_81_odd_limit(step_sig, equave_monzo, false)
-            .into_iter()
-            .map(|steps| {
-                steps
-                    .into_iter()
-                    .map(|m| {
-                        m.try_to_ratio()
-                            .map(|r| r.to_string())
-                            .unwrap_or_else(|| m.to_string())
-                    })
-                    .collect()
-            })
-            .collect()
+        ji::solve_step_sig_81_odd_limit(
+            step_sig,
+            equave_monzo,
+            cents_lower_bound,
+            cents_upper_bound,
+            false,
+        )
+        .into_iter()
+        .map(|steps| {
+            steps
+                .into_iter()
+                .map(|m| {
+                    m.try_to_ratio()
+                        .map(|r| r.to_string())
+                        .unwrap_or_else(|| m.to_string())
+                })
+                .collect()
+        })
+        .collect()
     } else {
         vec![]
     }
@@ -486,7 +506,7 @@ pub fn sig_result(
                 }
             })
             .collect(),
-        ji_tunings: sig_to_ji_tunings(&step_sig, equave),
+        ji_tunings: sig_to_ji_tunings(&step_sig, equave, s_lower, s_upper),
         ed_tunings: sig_to_ed_tunings(&step_sig, equave, ed_bound, s_lower, s_upper),
     })?)
 }

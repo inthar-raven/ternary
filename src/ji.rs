@@ -47,18 +47,19 @@ pub fn odd_limit(limit: u64) -> Vec<RawJiRatio> {
 }
 
 /// Solutions to a step signature (with decreasing step sizes).
-/// Steps are required to be smaller than 300 cents.
+/// Steps are required to be between `cents_lower_bound` and `cents_upper_bound`.
 /// All but the smallest step are required to be in the `SMALL_PRIMES`-prime-limited 81-odd-limit.
 /// If `allow_neg_aber` is `true`, then the smallest step size is allowed to be negative.
 pub fn solve_step_sig_81_odd_limit(
     step_sig: &[usize],
     equave: Monzo,
+    cents_lower_bound: f64,
+    cents_upper_bound: f64,
     allow_neg_aber: bool,
 ) -> Vec<Vec<Monzo>> {
-    let cents_bound: f64 = 300.0;
     let small_steps: Vec<_> = EIGHTY_ONE_ODD_LIMIT
         .into_iter()
-        .filter(|monzo| monzo.cents() < cents_bound)
+        .filter(|monzo| monzo.cents() > cents_lower_bound && monzo.cents() < cents_upper_bound)
         .collect();
     let prod = (0..step_sig.len() - 1)
         .map(|_| small_steps.to_vec())
@@ -629,10 +630,10 @@ mod tests {
     #[test]
     fn test_solve_81_odd_lim() {
         let diatonic_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_81_odd_limit(&[5, 2], Monzo::OCTAVE, false);
+            solve_step_sig_81_odd_limit(&[5, 2], Monzo::OCTAVE, 20.0, 300.0, false);
         assert_eq!(diatonic_solns, vec![vec![monzo![-3, 2], monzo![8, -5]]]);
         let blackdye_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_81_odd_limit(&[5, 2, 3], Monzo::OCTAVE, false);
+            solve_step_sig_81_odd_limit(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0, false);
         assert!(blackdye_solns.contains(&vec![
             monzo![1, -2, 1],
             monzo![4, -1, -1],
