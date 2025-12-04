@@ -250,7 +250,7 @@ impl std::fmt::Display for Monzo {
                 write!(f, ", ")?;
             }
         }
-        write!(f, "]")
+        write!(f, ">")
     }
 }
 
@@ -576,5 +576,12 @@ mod tests {
             );
 
         */
+    }
+
+    #[test]
+    fn test_try_to_ratio() {
+        let monzo_81_80 = monzo![-4, 4, -1];
+        let result_ratio = monzo_81_80.try_to_ratio();
+        assert_eq!(result_ratio, Some(RawJiRatio::try_new(81, 80).unwrap()));
     }
 }
