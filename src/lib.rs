@@ -8,8 +8,8 @@ pub mod ji;
 pub mod ji_ratio;
 #[macro_use]
 pub mod monzo;
-pub mod odd_limit_81;
 pub mod helpers;
+pub mod odd_limit_81;
 pub mod primes;
 pub mod vector;
 #[macro_use]
