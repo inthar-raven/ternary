@@ -345,7 +345,7 @@ where
         // Only need to check half of the step size classes.
         let floor_half: usize = scale.len() / 2;
         let distinct_letters = scale.iter().cloned().collect::<BTreeSet<T>>();
-        let mb_max = (1..=floor_half)
+        let maybe_max = (1..=floor_half)
             .flat_map(|subword_length| {
                 distinct_letters.iter().map(move |letter| {
                     let counts = CountVector::distinct_spectrum(scale, subword_length)
@@ -359,7 +359,7 @@ where
                 })
             })
             .max();
-        if let Some(max) = mb_max {
+        if let Some(max) = maybe_max {
             max as usize
         } else {
             usize::MAX
