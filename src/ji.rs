@@ -225,13 +225,13 @@ pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
     true
 }
 
-/// Compute if `polyoffset` is valid for an interleaved scale with strand `strand`.
-/// The polyoffset is given as a Vec of offsets from the unison.
+/// Compute if `offset_chord` is valid for an interleaved scale with strand `strand`.
+/// The offset chord is given as a Vec of offsets from the unison.
 /// Validates that all pairwise differences of offset notes are intervals in the strand.
-pub fn is_valid_polyoffset(strand: &[RawJiRatio], polyoffset: &[RawJiRatio]) -> bool {
-    let mut offsets_with_unison: Vec<RawJiRatio> = polyoffset.to_vec();
+pub fn is_valid_offset_chord(strand: &[RawJiRatio], offset_chord: &[RawJiRatio]) -> bool {
+    let mut offsets_with_unison: Vec<RawJiRatio> = offset_chord.to_vec();
     offsets_with_unison.push(RawJiRatio::UNISON);
-    // Check validity of every interval in the polyoffset.
+    // Check validity of every interval in the offset_chord.
     offsets_with_unison.sort_by(|a, b| (*a).cmp(b));
     for (i, ratio1) in offsets_with_unison.iter().copied().enumerate() {
         for (j, ratio2) in offsets_with_unison.iter().copied().enumerate() {
@@ -243,47 +243,47 @@ pub fn is_valid_polyoffset(strand: &[RawJiRatio], polyoffset: &[RawJiRatio]) -> 
     true
 }
 
-/// Compute the set of valid polyoffsets for an interleaved scale on harmonic series mode `m`.
-pub fn valid_polyoffsets(
+/// Compute the set of valid offset chords for an interleaved scale on harmonic series mode `m`.
+pub fn valid_offset_chords(
     strand: &[RawJiRatio],
     m: u64,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
     Ok(crate::helpers::powerset(&mode)
         .into_iter()
-        .filter(|x| is_valid_polyoffset(strand, x))
+        .filter(|x| is_valid_offset_chord(strand, x))
         .collect())
 }
 
-/// Compute the set of *maximal* valid polyoffsets for an interleaved scale on harmonic series mode `m`.
-pub fn maximal_valid_polyoffsets(
+/// Compute the set of *maximal* valid offset chords for an interleaved scale on harmonic series mode `m`.
+pub fn maximal_valid_offset_chords(
     strand: &[RawJiRatio],
     m: u64,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
     let power_set = crate::helpers::powerset(&mode);
-    let valid_polyoffsets: Vec<_> = power_set
+    let valid_offset_chords: Vec<_> = power_set
         .into_iter()
-        .filter(|x| is_valid_polyoffset(strand, x))
+        .filter(|x| is_valid_offset_chord(strand, x))
         .collect();
-    Ok(valid_polyoffsets
+    Ok(valid_offset_chords
         .iter()
-        .filter(|x| crate::helpers::is_maximal_in(x, &valid_polyoffsets))
+        .filter(|x| crate::helpers::is_maximal_in(x, &valid_offset_chords))
         .cloned()
         .collect())
 }
 
-/// Compute an interleaved scale with the given strand and polyoffset, if it is valid.
-/// A *strand* is a smaller scale that is duplicated and copies of it offset by the notes of the *polyoffset* chord.
+/// Compute an interleaved scale with the given strand and offset chord, if it is valid.
+/// A *strand* is a smaller scale that is duplicated and copies of it offset by the notes of the offset chord.
 /// The resulting scale made of interleaved strands is *interleaved* if all the strands are actually interleaved.
 /// Returns error if the combination is not valid.
 pub fn interleaved_scale_ji(
     strand: &[RawJiRatio],
-    polyoffset: &[RawJiRatio],
+    offset_chord: &[RawJiRatio],
 ) -> Result<Vec<RawJiRatio>, ScaleError> {
-    if is_valid_polyoffset(strand, polyoffset) {
+    if is_valid_offset_chord(strand, offset_chord) {
         let mut vec: Vec<RawJiRatio> = vec![];
-        for offset in polyoffset {
+        for offset in offset_chord {
             for note in strand {
                 vec.push((*offset * *note).rd(RawJiRatio::OCTAVE));
             }

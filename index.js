@@ -1060,6 +1060,19 @@ stack()`
                         </div>
                       </div>
                       <div class="table-column">
+                        ed(equave) tunings
+                        <div
+                          style="
+                            overflow-y: auto;
+                            overflow-x: auto;
+                            vertical-align: top;
+                            height: 420px;
+                          "
+                        >
+                          <table class="data" id="table-ed-tunings"></table>
+                        </div>
+                      </div>
+                      <div class="table-column">
                         JI tunings
                         <div
                           style="
@@ -1072,19 +1085,8 @@ stack()`
                           <table class="data" id="table-ji-tunings"></table>
                         </div>
                       </div>
-                      <div class="table-column">
-                        ed(equave) tunings
-                        <div
-                          style="
-                            overflow-y: auto;
-                            overflow-x: auto;
-                            vertical-align: top;
-                            height: 420px;
-                          "
-                        >
-                          <table class="data" id="table-ed-tunings"></table>
-                        </div>
-                      </div></div></div>`;
+                    </div>
+                  </div>`;
           const scaleTable = document.getElementById("table-scales");
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edTuningTable = document.getElementById("table-ed-tunings");
@@ -1218,19 +1220,6 @@ stack()`
       document.getElementById("tables").innerHTML = `
                   <div class="tables-row">
                     <div class="table-column">
-                      JI tunings
-                      <div
-                        style="
-                          overflow-y: auto;
-                          overflow-x: auto;
-                          vertical-align: top;
-                          height: 420px;
-                        "
-                      >
-                        <table class="data" id="table-ji-tunings"></table>
-                      </div>
-                    </div>
-                    <div class="table-column">
                       ed(equave) tunings
                       <div
                         style="
@@ -1241,6 +1230,19 @@ stack()`
                         "
                       >
                         <table class="data" id="table-ed-tunings"></table>
+                      </div>
+                    </div>
+                    <div class="table-column">
+                      JI tunings
+                      <div
+                        style="
+                          overflow-y: auto;
+                          overflow-x: auto;
+                          vertical-align: top;
+                          height: 420px;
+                        "
+                      >
+                        <table class="data" id="table-ji-tunings"></table>
                       </div>
                     </div>
                   </div>`;

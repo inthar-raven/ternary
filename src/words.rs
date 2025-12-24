@@ -679,7 +679,8 @@ where
     slice[..l].to_vec()
 }
 
-/// The collection of rotations of a word. Contains redundant rotations if the word is not primitive.
+/// The collection of rotations of a word, in cyclic order.
+/// Contains redundant rotations if the word is not primitive.
 pub fn rotations<T>(word: &[T]) -> Vec<Vec<T>>
 where
     T: Clone + Eq,
