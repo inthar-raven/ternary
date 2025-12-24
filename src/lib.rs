@@ -89,9 +89,9 @@ pub struct GuideResult {
     pub gs: Vec<Vec<u8>>,
     /// The aggregate generator
     pub aggregate: Vec<u8>,
-    /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes the unison.
+    /// `offset_chord` is the set of intervals that each guided generator sequence chain is based on. Always includes the unison.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
-    pub polyoffset: Vec<Vec<u8>>,
+    pub offset_chord: Vec<Vec<u8>>,
     /// complexity result
     /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-edo.
     pub multiplicity: u8,
@@ -184,7 +184,7 @@ fn countvector_to_u8_vec(count_vector: &CountVector<usize>) -> Vec<u8> {
 }
 
 fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
-    let GuideFrame { gs, polyoffset } = structure;
+    let GuideFrame { gs, offset_chord } = structure;
     let aggregate_cv: CountVector<usize> = gs
         .iter()
         .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
@@ -192,7 +192,7 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
     GuideResult {
         gs: gs.iter().map(countvector_to_u8_vec).collect(),
         aggregate: countvector_to_u8_vec(&aggregate_cv),
-        polyoffset: polyoffset.iter().map(countvector_to_u8_vec).collect(),
+        offset_chord: offset_chord.iter().map(countvector_to_u8_vec).collect(),
         multiplicity: structure.multiplicity() as u8,
         complexity: structure.complexity() as u8,
     }
@@ -204,7 +204,7 @@ fn get_unimodular_basis(
 ) -> Option<(Vec<Vec<u8>>, GuideResult)> {
     /*
     if (structure["multiplicity"] === 1) {
-      if (structure["polyoffset"].length === 1) {
+      if (structure["offset_chord"].length === 1) {
         // Check for two unequal step vectors.
         outer: for (let i = 0; i < gs.length; ++i) {
           for (let j = i; j < gs.length; ++j) {
@@ -217,7 +217,7 @@ fn get_unimodular_basis(
         }
       } else {
         g = [...Object.values(structure["aggregate"])];
-        h = [...Object.values(structure["polyoffset"][1])];
+        h = [...Object.values(structure["offset_chord"][1])];
       }
     } else {
       g = [...Object.values(structure["aggregate"])];
@@ -239,7 +239,7 @@ fn get_unimodular_basis(
                     }
                 }
             }
-            for v in &result.polyoffset {
+            for v in &result.offset_chord {
                 for w in gs {
                     if det3(step_sig, v, w).abs() == 1 {
                         return Some((vec![v.clone(), w.clone()], result));
@@ -249,14 +249,14 @@ fn get_unimodular_basis(
         } else {
             // this branch handles multiplicity > 1 scales
             let result = guide_frame_to_result(structure);
-            if let (Some(vec_for_gs_element), Some(vec_for_offset)) =
-                (result.gs.first(), result.polyoffset.last())
-                && det3(step_sig, vec_for_gs_element, vec_for_offset).abs() == 1
-            {
-                return Some((
-                    vec![vec_for_gs_element.clone(), vec_for_offset.clone()],
-                    result,
-                ));
+            let gs = &result.gs;
+            // Check all pairs from gs and offset_chord
+            for v in &result.offset_chord {
+                for w in gs {
+                    if det3(step_sig, w, v).abs() == 1 {
+                        return Some((vec![w.clone(), v.clone()], result));
+                    }
+                }
             }
         }
     }

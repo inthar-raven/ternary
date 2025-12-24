@@ -111,8 +111,8 @@ pub struct GuideFrame {
     /// Either Guided GS or multiple interleaved GSes (Guided GSes when considered individually).
     /// `gs` generates a guided generator sequence (detempered single-period_pattern MOS) subscale.
     pub gs: Vec<CountVector<usize>>,
-    /// `polyoffset` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
-    pub polyoffset: Vec<CountVector<usize>>,
+    /// `offset_chord` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
+    pub offset_chord: Vec<CountVector<usize>>,
 }
 
 impl GuideFrame {
@@ -120,20 +120,23 @@ impl GuideFrame {
     pub fn new_simple(gs: Vec<CountVector<usize>>) -> Self {
         Self {
             gs,
-            polyoffset: vec![CountVector::ZERO],
+            offset_chord: vec![CountVector::ZERO],
         }
     }
-    /// Create a multiple/interleaved guide frame (with polyoffset).
-    pub fn new_multiple(gs: Vec<CountVector<usize>>, polyoffset: Vec<CountVector<usize>>) -> Self {
-        Self { gs, polyoffset }
+    /// Create a multiple/interleaved guide frame (with offset_chord).
+    pub fn new_multiple(
+        gs: Vec<CountVector<usize>>,
+        offset_chord: Vec<CountVector<usize>>,
+    ) -> Self {
+        Self { gs, offset_chord }
     }
-    /// The complexity of a guide frame (size of generator sequence plus size of polyoffset).
+    /// The complexity of a guide frame (size of generator sequence plus size of offset_chord).
     pub fn complexity(&self) -> usize {
-        self.gs.len() * self.polyoffset.len()
+        self.gs.len() * self.offset_chord.len()
     }
     /// The multiplicity (number of times generator sequence is repeated with offsets).
     pub fn multiplicity(&self) -> usize {
-        self.polyoffset.len()
+        self.offset_chord.len()
     }
     /// Try to get simple guide frames with k-step generators.
     pub fn try_simple(scale: &[usize], step_class: usize) -> Vec<Self> {
@@ -144,7 +147,7 @@ impl GuideFrame {
                 .into_iter()
                 .map(|gs| Self {
                     gs,
-                    polyoffset: vec![CountVector::ZERO],
+                    offset_chord: vec![CountVector::ZERO],
                 })
                 .sorted()
                 .dedup()
@@ -176,7 +179,7 @@ impl GuideFrame {
 
                     // All of the subscales must be rotations of one another.
                     // `offset_vec()` returns a witness to rotational equivalence (an offset) if there is any;
-                    // the offsets are combined to form the polyoffset.
+                    // the offsets are combined to form the offset_chord.
                     // If it returns `None` for any subscale, the whole procedure fails.
                     let maybe_offsets = subscales
                         .into_iter()
@@ -198,13 +201,13 @@ impl GuideFrame {
                     // println!("maybe_offsets: {:?}", maybe_offsets);
                     if let Some(offsets) = maybe_offsets {
                         // sort list of offsets by step class
-                        // If polyoffset is {0} use multiplicity 1
+                        // If offset_chord is {0} use multiplicity 1
                         if offsets.len() == 1 {
                             guided_gs_list(scale)
                                 .into_iter()
                                 .map(|gs| Self {
                                     gs,
-                                    polyoffset: offsets.to_owned(),
+                                    offset_chord: offsets.to_owned(),
                                 })
                                 .sorted()
                                 .dedup()
@@ -216,7 +219,7 @@ impl GuideFrame {
                                 .into_iter()
                                 .map(|gs| Self {
                                     gs,
-                                    polyoffset: offsets_sorted.to_owned(),
+                                    offset_chord: offsets_sorted.to_owned(),
                                 })
                                 .sorted()
                                 .dedup()
@@ -236,7 +239,7 @@ impl GuideFrame {
                     vec![]
                 } else {
                     // For every degree of `scale`, get stack of `gs_length_limit`-many `step_class`-steps on that degree.
-                    // We'll need the enumeration index later to get the polyoffset components from each index.
+                    // We'll need the enumeration index later to get the offset_chord components from each index.
                     let gener_chains_enumerated: Vec<(usize, Vec<CountVector<usize>>)> =
                         rotations(scale)
                             .into_iter()
@@ -296,7 +299,7 @@ impl GuideFrame {
                             // println!("gs: {:?}", gs);
                             // println!("polyoffset_indices: {:?}", polyoffset_indices);
                             let first_deg = polyoffset_indices[0];
-                            let polyoffset: Vec<CountVector<Letter>> = polyoffset_indices
+                            let offset_chord: Vec<CountVector<Letter>> = polyoffset_indices
                                 .iter()
                                 .map(|degree| {
                                     dyad_on_degree(
@@ -308,7 +311,7 @@ impl GuideFrame {
                                 .collect();
                             Self {
                                 gs: gs.to_owned(),
-                                polyoffset,
+                                offset_chord,
                             }
                         })
                         .collect()
@@ -718,5 +721,39 @@ mod tests {
                     000011222 000011222 000012222 000011222 000011222 000001222 000011222 000012222 000011222 000011222 000012222
                     aabaacabaab
         */
+    }
+
+    #[test]
+    fn test_9l6m10s_unimodular_bug() {
+        // LLsmsLmsLsLmsLsmLsLsmLsms - This scale has a unimodular basis:
+        // equave: [9, 6, 10]
+        // gener_1: [3, 2, 3] (stacked 4 times)
+        // gener_2: [2, 1, 2]
+        // The determinant of these vectors is ±1, making them a unimodular basis.
+        let scale: [usize; 25] = [
+            0, 0, 2, 1, 2, 0, 1, 2, 0, 2, 0, 1, 2, 0, 2, 1, 0, 2, 0, 2, 1, 0, 2, 1, 2,
+        ];
+        let gfs = guide_frames(&scale);
+        assert!(!gfs.is_empty(), "Should find at least one guide frame");
+
+        // Check that the unimodular basis is found
+        use crate::word_to_profile;
+        let profile = word_to_profile(&scale);
+        assert!(
+            profile.structure.is_some(),
+            "Should find a unimodular basis for 9L6m10s scale LLsmsLmsLsLmsLsmLsLsmLsms"
+        );
+
+        // Verify the lattice basis contains the expected generators
+        if let Some(lattice_basis) = profile.lattice_basis {
+            // The basis should contain gener_1=[3,2,3] or gener_2=[2,1,2] or their multiples
+            let has_expected_basis = lattice_basis.iter().any(|v| {
+                (v[0] == 3 && v[1] == 2 && v[2] == 3) || (v[0] == 2 && v[1] == 1 && v[2] == 2)
+            });
+            assert!(
+                has_expected_basis,
+                "Lattice basis should contain one of the expected generators"
+            );
+        }
     }
 }

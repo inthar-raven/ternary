@@ -58,7 +58,7 @@ cargo test
   - Max ED size (default 111)
   - Min/max smallest step size in cents (default 20–200)
 - Every scale comes with a Scale Profile that shows properties of the scale selected or queried
-  - guide frame (guided generator sequence; multiplicity or interleaving polyoffset; complexity)
+  - guide frame (guided generator sequence; multiplicity or interleaving offset_chord; complexity)
   - monotone MOS properties satisfied (L=M, M=s, s=0)
   - maximum variety
 - Filter for
