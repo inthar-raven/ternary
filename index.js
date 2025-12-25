@@ -349,7 +349,7 @@ import("./pkg").then((wasm) => {
             [A, B, C, D] = [1, 0, 0, 1];
             
             // Draw coordinate grid
-            for (let i = -32; i < 32; ++i) {
+            for (let i = -64; i < 64; ++i) {
               // Lines of constant g
               const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
               const p0y = ORIGIN_X + B * SPACING_Y * i;

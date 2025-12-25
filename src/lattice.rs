@@ -402,6 +402,4 @@ mod tests {
         assert!(!is_quasi_parallelogram(&nonexample));
         assert!(!is_quasi_parallelogram(&nonexample_2));
     }
-    #[test]
-    fn test_output_quasi_parallelograms() {}
 }

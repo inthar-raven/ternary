@@ -536,7 +536,11 @@ pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
 /// Return the collection of all MOS substitution scales `subst n0 x (n1 y n2 z)`
 /// where the template MOS is assumed to have step signature `n0*0 (n1 + n2)*X` (`X` is the slot letter)
 /// and the filling MOS has step signature `n1*1 n2*2`.
-fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<Letter>> {
+pub(crate) fn mos_substitution_scales_one_perm(
+    n0: usize,
+    n1: usize,
+    n2: usize,
+) -> Vec<Vec<Letter>> {
     let (template, _) = brightest_mos_mode_and_gener(n0, n1 + n2);
     let (filler, gener) = brightest_mos_mode_and_gener(n1, n2);
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();
