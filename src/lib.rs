@@ -9,6 +9,8 @@ pub mod ji_ratio;
 #[macro_use]
 pub mod monzo;
 pub mod helpers;
+pub mod lattice;
+pub mod matrix;
 pub mod odd_limit_81;
 pub mod primes;
 pub mod vector;
@@ -67,35 +69,28 @@ use guide::GuideFrame;
 use guide::guide_frames;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
+use crate::lattice::get_unimodular_basis;
+use crate::matrix::unimodular_inv;
 use crate::monzo::Monzo;
 
 /// Compute the determinant of a 3x3 matrix formed by three row vectors.
 /// Used to check if vectors form a unimodular basis (determinant ±1).
-fn det3(row0: &[u8], row1: &[u8], row2: &[u8]) -> i16 {
-    row0[0] as i16 * row1[1] as i16 * row2[2] as i16
-        + row0[1] as i16 * row1[2] as i16 * row2[0] as i16
-        + row0[2] as i16 * row1[0] as i16 * row2[1] as i16
-        - row0[2] as i16 * row1[1] as i16 * row2[0] as i16
-        - row0[1] as i16 * row1[0] as i16 * row2[2] as i16
-        - row0[0] as i16 * row1[2] as i16 * row2[1] as i16
-}
-
 // A representation of a GuideFrame that should be WASM-readable
 #[derive(Clone, Debug, Serialize)]
 pub struct GuideResult {
     /// Either Guided GS or multiple interleaved Guided GSes
     /// `guided_gs` generates a guided generator sequence (detempered single-period MOS) subscale.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
-    pub gs: Vec<Vec<u8>>,
+    pub gs: Vec<Vec<u16>>,
     /// The aggregate generator
-    pub aggregate: Vec<u8>,
+    pub aggregate: Vec<u16>,
     /// `offset_chord` is the set of intervals that each guided generator sequence chain is based on. Always includes the unison.
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
-    pub offset_chord: Vec<Vec<u8>>,
+    pub offset_chord: Vec<Vec<u16>>,
     /// complexity result
     /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-edo.
-    pub multiplicity: u8,
-    pub complexity: u8,
+    pub multiplicity: u16,
+    pub complexity: u16,
 }
 
 /// A representation of a Scale Profile. Doesn't include tunings.
@@ -104,7 +99,7 @@ pub struct ScaleProfile {
     /// brightest word
     word: String,
     /// unimodular basis for lattice is there is one
-    lattice_basis: Option<Vec<Vec<u8>>>,
+    lattice_basis: Option<Vec<Vec<u16>>>,
     /// chirality
     chirality: Chirality,
     /// brightest mode of reversed word
@@ -124,7 +119,7 @@ pub struct ScaleProfile {
     /// whether scale is a subst cs(aLbm)
     subst_s_lm: bool,
     /// maximum variety of scale
-    mv: u8,
+    mv: u16,
 }
 
 #[derive(Debug, Serialize)]
@@ -173,13 +168,13 @@ fn numbers_to_string(word: &[usize]) -> String {
     result
 }
 
-/// Convert a CountVector to a 3-element u8 vector for serialization
-fn countvector_to_u8_vec(count_vector: &CountVector<usize>) -> Vec<u8> {
+/// Convert a CountVector to a 3-element u16 vector for serialization
+fn countvector_to_u16_vec(count_vector: &CountVector<usize>) -> Vec<u16> {
     let btreemap = count_vector.into_inner();
     vec![
-        *btreemap.get(&0).unwrap_or(&0) as u8,
-        *btreemap.get(&1).unwrap_or(&0) as u8,
-        *btreemap.get(&2).unwrap_or(&0) as u8,
+        *btreemap.get(&0).unwrap_or(&0) as u16,
+        *btreemap.get(&1).unwrap_or(&0) as u16,
+        *btreemap.get(&2).unwrap_or(&0) as u16,
     ]
 }
 
@@ -190,77 +185,12 @@ fn guide_frame_to_result(structure: &GuideFrame) -> GuideResult {
         .fold(CountVector::<usize>::ZERO, |acc, v| acc.add(v));
 
     GuideResult {
-        gs: gs.iter().map(countvector_to_u8_vec).collect(),
-        aggregate: countvector_to_u8_vec(&aggregate_cv),
-        offset_chord: offset_chord.iter().map(countvector_to_u8_vec).collect(),
-        multiplicity: structure.multiplicity() as u8,
-        complexity: structure.complexity() as u8,
+        gs: gs.iter().map(countvector_to_u16_vec).collect(),
+        aggregate: countvector_to_u16_vec(&aggregate_cv),
+        offset_chord: offset_chord.iter().map(countvector_to_u16_vec).collect(),
+        multiplicity: structure.multiplicity() as u16,
+        complexity: structure.complexity() as u16,
     }
-}
-
-fn get_unimodular_basis(
-    structures: &[GuideFrame],
-    step_sig: &[u8],
-) -> Option<(Vec<Vec<u8>>, GuideResult)> {
-    /*
-    if (structure["multiplicity"] === 1) {
-      if (structure["offset_chord"].length === 1) {
-        // Check for two unequal step vectors.
-        outer: for (let i = 0; i < gs.length; ++i) {
-          for (let j = i; j < gs.length; ++j) {
-            if (!isEqual(gs[i], gs[j])) {
-              g = [...Object.values(gs[i])];
-              h = [...Object.values(gs[j])];
-              break outer;
-            }
-          }
-        }
-      } else {
-        g = [...Object.values(structure["aggregate"])];
-        h = [...Object.values(structure["offset_chord"][1])];
-      }
-    } else {
-      g = [...Object.values(structure["aggregate"])];
-      h = [...Object.values(dyadOnDegree(
-        scaleWord,
-        scaleWord.length / structure["multiplicity"],
-        scaleWord.length / structure["multiplicity"],
-      ))];
-    }
-     */
-    for structure in structures {
-        if structure.multiplicity() == 1 {
-            let result = guide_frame_to_result(structure);
-            let gs = &result.gs;
-            for i in 0..gs.len() {
-                for j in i..gs.len() {
-                    if det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
-                        return Some((vec![gs[i].clone(), gs[j].clone()], result));
-                    }
-                }
-            }
-            for v in &result.offset_chord {
-                for w in gs {
-                    if det3(step_sig, v, w).abs() == 1 {
-                        return Some((vec![v.clone(), w.clone()], result));
-                    }
-                }
-            }
-        } else {
-            // this branch handles multiplicity > 1 scales
-            let result = guide_frame_to_result(structure);
-            let gs = &result.gs;
-            // Check all pairs from gs and offset_chord
-            for v in &result.offset_chord {
-                for w in gs {
-                    if det3(step_sig, w, v).abs() == 1 {
-                        return Some((vec![w.clone(), v.clone()], result));
-                    }
-                }
-            }
-        }
-    }
-    None
 }
 
 pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
@@ -271,11 +201,11 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let chirality = chirality(query);
     let reversed = least_mode(&query.iter().copied().rev().collect::<Vec<usize>>());
     let reversed = numbers_to_string(&reversed);
-    let mv = maximum_variety(query) as u8;
+    let mv = maximum_variety(query) as u16;
     let step_sig = word_to_sig(query)
         .iter()
-        .map(|x| *x as u8)
-        .collect::<Vec<u8>>();
+        .map(|x| *x as u16)
+        .collect::<Vec<u16>>();
     let subst_l_ms = is_mos_subst(query, 0, 1, 2);
     let subst_m_ls = is_mos_subst(query, 1, 0, 2);
     let subst_s_lm = is_mos_subst(query, 2, 0, 1);
@@ -344,9 +274,9 @@ pub fn word_to_brightest(query: String) -> String {
 }
 
 #[wasm_bindgen]
-pub fn word_to_mv(query: String) -> u8 {
+pub fn word_to_mv(query: String) -> u16 {
     let word_in_numbers = string_to_numbers(&query);
-    maximum_variety(&word_in_numbers) as u8
+    maximum_variety(&word_in_numbers) as u16
 }
 
 /// Get JI tunings for a step signature using 81-odd-limit intervals.
@@ -491,7 +421,7 @@ pub fn sig_result(
                 if let Some(guide) = &profile.structure {
                     guide.complexity
                 } else {
-                    u8::MAX
+                    u16::MAX
                 }
             })
             .collect(),

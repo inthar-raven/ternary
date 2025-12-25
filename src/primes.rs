@@ -122,7 +122,10 @@ pub fn atkin(n: u64) -> Vec<u64> {
         5 | 6 => vec![2, 3, 5],
         _ => {
             let mut primes = vec![2, 3, 5];
-            let mut status: Vec<bool> = vec![false; (n + 1) as usize];
+            // Store size as usize to avoid repeated casts for array indexing
+            // Need n + 1 since we index up to and including n
+            let n_usize = (n + 1) as usize;
+            let mut status: Vec<bool> = vec![false; n_usize];
             for i in (1..=n / 9)
                 .flat_map(|i| (1..=2 * n / 5).map(move |j| (i, 2 * j - 1)))
                 .map(|(x, y)| 4 * x * x + y * y)
@@ -130,7 +133,8 @@ pub fn atkin(n: u64) -> Vec<u64> {
             {
                 match i % 60 {
                     1 | 13 | 17 | 29 | 37 | 41 | 49 | 53 => {
-                        status[i as usize] = !status[i as usize];
+                        let idx = i as usize;
+                        status[idx] = !status[idx];
                     }
                     _ => {}
                 }
@@ -143,7 +147,8 @@ pub fn atkin(n: u64) -> Vec<u64> {
             {
                 match i % 60 {
                     7 | 19 | 31 | 43 => {
-                        status[i as usize] = !status[i as usize];
+                        let idx = i as usize;
+                        status[idx] = !status[idx];
                     }
                     _ => {}
                 }
@@ -156,7 +161,8 @@ pub fn atkin(n: u64) -> Vec<u64> {
             {
                 match i % 60 {
                     11 | 23 | 47 | 59 => {
-                        status[i as usize] = !status[i as usize];
+                        let idx = i as usize;
+                        status[idx] = !status[idx];
                     }
                     _ => {}
                 }

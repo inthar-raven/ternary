@@ -384,7 +384,7 @@ mod tests {
         );
         let diamech_4sl: [usize; 11] = [1, 0, 2, 0, 2, 0, 1, 0, 2, 0, 2];
         assert_eq!(
-            // Diamech is tricot
+            // diaslen is tricot
             Ploidacot::try_get_ploidacot(&diamech_4sl),
             Some(Ploidacot {
                 ploid: 1,
