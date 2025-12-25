@@ -284,7 +284,9 @@ pub fn word_to_mv(query: String) -> u16 {
 #[wasm_bindgen]
 pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     let word_in_numbers = string_to_numbers(&query);
-    Ok(to_value(&lattice::try_pitch_class_lattice(&word_in_numbers))?)
+    Ok(to_value(&lattice::try_pitch_class_lattice(
+        &word_in_numbers,
+    ))?)
 }
 
 /// Get JI tunings for a step signature using 81-odd-limit intervals.

@@ -17,8 +17,7 @@ pub fn det3(col0: &[u16], col1: &[u16], col2: &[u16]) -> i32 {
     let (b0, b1, b2) = (col1[0] as i32, col1[1] as i32, col1[2] as i32);
     let (c0, c1, c2) = (col2[0] as i32, col2[1] as i32, col2[2] as i32);
 
-    a0 * b1 * c2 + a1 * b2 * c0 + a2 * b0 * c1
-        - a2 * b1 * c0 - a1 * b0 * c2 - a0 * b2 * c1
+    a0 * b1 * c2 + a1 * b2 * c0 + a2 * b0 * c1 - a2 * b1 * c0 - a1 * b0 * c2 - a0 * b2 * c1
 }
 
 /// Calculate the inverse of a unimodular 3x3 matrix.

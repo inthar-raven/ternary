@@ -129,7 +129,7 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
 pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
     // If no unimodular basis, return false
     try_pitch_class_lattice(query).is_some_and(|pitch_classes| {
-        // Get all pairwise differences between distinct points and their taxicab lengths
+        // Get all pairwise differences between distinct points
         let mut pairwise_differences: Vec<Vec<i32>> = vec![];
         for i in 0..query.len() {
             for j in i + 1..query.len() {
@@ -208,7 +208,8 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             // |last x value in row - first x value in row| + 1 == last_row.len()
                             // (last_row should be sorted by *ascending* x values)
                             let last_row_is_prefix = last_row[0][0] == x_min
-                                && (last_row[last_row.len() - 1][0] - x_min + 1) as usize == last_row.len();
+                                && (last_row[last_row.len() - 1][0] - x_min + 1) as usize
+                                    == last_row.len();
                             if !last_row_is_prefix {
                                 break 'traversal1;
                             }
@@ -249,7 +250,8 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             // |last x value in row - first x value in row| + 1 == last_row.len()
                             // (last_row should be sorted by *descending* x values)
                             let last_row_is_prefix = last_row[0][0] == x_max
-                                && (x_max - last_row[last_row.len() - 1][0] + 1) as usize == last_row.len();
+                                && (x_max - last_row[last_row.len() - 1][0] + 1) as usize
+                                    == last_row.len();
                             if !last_row_is_prefix {
                                 break 'traversal2;
                             }
@@ -308,7 +310,8 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             // |last y value in row - first y value in row| + 1 == last_row.len()
                             // (last_row should be sorted by *ascending* y values)
                             let last_row_is_prefix = last_row[0][1] == y_min
-                                && (last_row[last_row.len() - 1][1] - y_min + 1) as usize == last_row.len();
+                                && (last_row[last_row.len() - 1][1] - y_min + 1) as usize
+                                    == last_row.len();
                             if !last_row_is_prefix {
                                 break 'traversal3;
                             }
@@ -349,7 +352,8 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             // |last y value in row - first y value in row| + 1 == last_row.len()
                             // (last_row should be sorted by descending y values)
                             let last_row_is_prefix = last_row[0][1] == y_max
-                                && (y_max - last_row[last_row.len() - 1][1] + 1) as usize == last_row.len();
+                                && (y_max - last_row[last_row.len() - 1][1] + 1) as usize
+                                    == last_row.len();
                             if !last_row_is_prefix {
                                 break 'traversal4;
                             }
@@ -394,6 +398,10 @@ mod tests {
         assert!(is_quasi_parallelogram(&fourth_example));
 
         let nonexample = [0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 1, 2]; // LLLLsLmLLsLLLms
+        let nonexample_2 = [0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 2, 2]; // LsLsLsmsLsLsmss
         assert!(!is_quasi_parallelogram(&nonexample));
+        assert!(!is_quasi_parallelogram(&nonexample_2));
     }
+    #[test]
+    fn test_output_quasi_parallelograms() {}
 }
