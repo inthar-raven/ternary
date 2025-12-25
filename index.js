@@ -343,47 +343,13 @@ import("./pkg").then((wasm) => {
       }`;
         if (state.word) {
           if (state.latticeBasis) {
+            let n = state.word.length;
             let g = state.latticeBasis[0];
             let h = state.latticeBasis[1];
-            // Helper to get value from array or object with string keys
-            const getVal = (v, i) =>
-              Array.isArray(v) ? v[i] : (v[String(i)] ?? v[i] ?? 0);
-            let sig = [0, 0, 0];
-            let n = state.word.length;
-            for (let i = 0; i < n; ++i) {
-              switch (state.word[i]) {
-                case "L":
-                  ++sig[0];
-                  break;
-                case "m":
-                  ++sig[1];
-                  break;
-                case "s":
-                  ++sig[2];
-                  break;
-                default:
-                  break;
-              }
-            }
             [A, B, C, D] = [1, 0, 0, 1];
-            let [L_x, L_y, M_x, M_y, S_x, S_y] = gaussianElimination(
-              [
-                getVal(g, 0),
-                getVal(g, 1),
-                getVal(g, 2),
-                getVal(h, 0),
-                getVal(h, 1),
-                getVal(h, 2),
-                sig[0],
-                sig[1],
-                sig[2],
-              ],
-              [A, B, C, D, 0, 0],
-              3,
-              3,
-              2,
-            );
-            for (let i = -20; i <= 20; ++i) {
+            
+            // Draw coordinate grid
+            for (let i = -32; i < 32; ++i) {
               // Lines of constant g
               const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
               const p0y = ORIGIN_X + B * SPACING_Y * i;
@@ -417,12 +383,16 @@ import("./pkg").then((wasm) => {
               />`;
             }
 
-            let currentX = ORIGIN_X;
-            let currentY = ORIGIN_Y;
             // Track cumulative step counts for pitch calculation
             let stepCounts = { L: 0, m: 0, s: 0 };
+            // Get lattice coordinates directly from WASM
+            const latticeCoords = wasm.word_to_lattice(state.word);
+            for (let deg = 0; deg < latticeCoords.length; ++deg) {
+              // Get coordinates directly from WASM-computed lattice
+              const [latticeX, latticeY] = latticeCoords[deg];
+              const currentX = ORIGIN_X + latticeX * SPACING_X;
+              const currentY = ORIGIN_Y + latticeY * SPACING_Y;
 
-            for (let deg = 0; deg < n; ++deg) {
               const { pitch, cents } = getPitchInfo(
                 stepCounts,
                 state.tuning,
@@ -450,25 +420,9 @@ import("./pkg").then((wasm) => {
               style="pointer-events: none;"
             >${mod(deg, n)}</text>
           </g>`;
-              switch (state.word[deg]) {
-                case "L":
-                  stepCounts.L++;
-                  currentX += L_x * SPACING_X;
-                  currentY += L_y * SPACING_Y; // SPACING_Y is negative since we represented y as positive.
-                  break;
-                case "m":
-                  stepCounts.m++;
-                  currentX += M_x * SPACING_X;
-                  currentY += M_y * SPACING_Y;
-                  break;
-                case "s":
-                  stepCounts.s++;
-                  currentX += S_x * SPACING_X;
-                  currentY += S_y * SPACING_Y;
-                  break;
-                default:
-                  throw new Error("Invalid letter");
-              }
+
+              // Update step counts for next iteration
+              stepCounts[state.word[deg]]++;
             }
             // We deferred appending elements until now
             // Initial viewBox will be set by updateViewBox() below

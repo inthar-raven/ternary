@@ -70,7 +70,6 @@ use guide::guide_frames;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
 use crate::lattice::get_unimodular_basis;
-use crate::matrix::unimodular_inv;
 use crate::monzo::Monzo;
 
 /// Compute the determinant of a 3x3 matrix formed by three row vectors.
@@ -277,6 +276,15 @@ pub fn word_to_brightest(query: String) -> String {
 pub fn word_to_mv(query: String) -> u16 {
     let word_in_numbers = string_to_numbers(&query);
     maximum_variety(&word_in_numbers) as u16
+}
+
+/// Get lattice coordinates for pitch classes if a unimodular basis exists.
+/// Returns None if no unimodular basis can be found.
+/// The coordinates are 2D projections suitable for plotting.
+#[wasm_bindgen]
+pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
+    let word_in_numbers = string_to_numbers(&query);
+    Ok(to_value(&lattice::try_pitch_class_lattice(&word_in_numbers))?)
 }
 
 /// Get JI tunings for a step signature using 81-odd-limit intervals.

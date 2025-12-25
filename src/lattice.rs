@@ -118,7 +118,7 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
 
 /// Whether a ternary scale has the "quasi-parallelogram property",
 /// i.e. its pitch classes forming a substring of a traversal
-/// ```
+/// ```text
 /// (0,0), (0,1), (0,2), ..., (0,n),
 /// (1,0), (1,1), (1,2), ..., (1,n),
 /// (2,0), (2,1), (2,2), ..., (2,n),
@@ -377,19 +377,9 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
     })
 }
 
+#[cfg(test)]
 mod tests {
-    use crate::lattice::{is_quasi_parallelogram, try_pitch_class_lattice};
-    /*
-    #[test]
-    fn test_lattice() {
-        let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        let diasem_lattice = try_pitch_class_lattice(&diasem);
-        println!("{diasem_lattice:?}");
-        let blackdye = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
-        let blackdye_lattice = try_pitch_class_lattice(&blackdye);
-        println!("{blackdye_lattice:?}");
-    }
-    */
+    use crate::lattice::is_quasi_parallelogram;
     #[test]
     fn test_quasi_parallelogram() {
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
