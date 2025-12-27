@@ -545,7 +545,7 @@ pub(crate) fn mos_substitution_scales_one_perm(
     let (filler, gener) = brightest_mos_mode_and_gener(n1, n2);
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();
     let gener_size = gener.len();
-    (0..(n1 + n2))
+    let redundant_list: Vec<_> = (0..(n1 + n2))
         .map(|i| {
             subst(
                 &template,
@@ -553,6 +553,13 @@ pub(crate) fn mos_substitution_scales_one_perm(
                 &rotate(&filler, (i * gener_size) % filler.len()),
             )
         })
+        .collect();
+    // Canonicalize every scale and remove duplicates
+    redundant_list
+        .into_iter()
+        .map(|scale| least_mode(&scale))
+        .sorted()
+        .dedup()
         .collect()
 }
 

@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use crate::GuideResult;
 use crate::countvector_to_u16_vec;
 use crate::guide::*;
@@ -7,36 +9,31 @@ use crate::matrix::unimodular_inv;
 use crate::word_to_sig;
 use crate::words::CountVector;
 
+#[allow(dead_code)]
+/// A struct representing a sub-traversal of a full row-by-row traversal of a lattice parallelogram.
+#[derive(Clone, Debug)]
+pub struct QuasiParallelogram {
+    row_count: i32,
+    full_row_len: i32,
+    first_row_len: i32,
+    last_row_len: i32,
+}
+
+impl QuasiParallelogram {
+    fn new(row_count: i32, full_row_len: i32, first_row_len: i32, last_row_len: i32) -> Self {
+        QuasiParallelogram {
+            row_count,
+            full_row_len,
+            first_row_len,
+            last_row_len,
+        }
+    }
+}
+
 pub fn get_unimodular_basis(
     structures: &[GuideFrame],
     step_sig: &[u16],
 ) -> Option<(Vec<Vec<u16>>, GuideResult)> {
-    /*
-    if (structure["multiplicity"] === 1) {
-      if (structure["offset_chord"].length === 1) {
-        // Check for two unequal step vectors.
-        outer: for (let i = 0; i < gs.length; ++i) {
-          for (let j = i; j < gs.length; ++j) {
-            if (!isEqual(gs[i], gs[j])) {
-              g = [...Object.values(gs[i])];
-              h = [...Object.values(gs[j])];
-              break outer;
-            }
-          }
-        }
-      } else {
-        g = [...Object.values(structure["aggregate"])];
-        h = [...Object.values(structure["offset_chord"][1])];
-      }
-    } else {
-      g = [...Object.values(structure["aggregate"])];
-      h = [...Object.values(dyadOnDegree(
-        scaleWord,
-        scaleWord.length / structure["multiplicity"],
-        scaleWord.length / structure["multiplicity"],
-      ))];
-    }
-     */
     for structure in structures {
         if structure.multiplicity() == 1 {
             let result = guide_frame_to_result(structure);
@@ -116,7 +113,8 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
     })
 }
 
-/// Whether a ternary scale has the "quasi-parallelogram property",
+/// Whether the result is `Some` or `None` depends on
+/// whether the ternary scale `query` has the "quasi-parallelogram property",
 /// i.e. its pitch classes forming a substring of a traversal
 /// ```text
 /// (0,0), (0,1), (0,2), ..., (0,n),
@@ -126,9 +124,11 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
 /// (m,0), (m,1), (m,2), ..., (m,n)
 /// ```
 /// under some choice of coordinate vectors (v, w).
-pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
+/// If `Some`, returns a `QuasiParallelogram` struct containing the following info:
+/// row count, length of a full row, length of first row, length of last row.
+pub fn quasi_parallelogram_info(query: &[usize]) -> Option<QuasiParallelogram> {
     // If no unimodular basis, return false
-    try_pitch_class_lattice(query).is_some_and(|pitch_classes| {
+    try_pitch_class_lattice(query).and_then(|pitch_classes| {
         // Get all pairwise differences between distinct points
         let mut pairwise_differences: Vec<Vec<i32>> = vec![];
         for i in 0..query.len() {
@@ -179,7 +179,7 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                         let mut index = 0; // index into pitch_classes_transformed
                         // Check if middle rows are fully occupied; if not break out of block early
                         let ys_middle = (y_min + 1)..=(y_max - 1);
-                        let row_len = x_max - x_min + 1; // Required length of each middle row
+                        let full_row_len = x_max - x_min + 1; // Required length of each middle row
                         for y in ys_middle {
                             let mut row_counter = 0; // Count pitches with this y value
                             while pitch_classes_transformed[index][1] < y {
@@ -189,7 +189,7 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                                 row_counter += 1;
                                 index += 1;
                             }
-                            if row_counter != row_len {
+                            if row_counter != full_row_len {
                                 break 'traversal12;
                             }
                         }
@@ -226,7 +226,19 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             let first_row_is_suffix = first_row[first_row.len() - 1][0] == x_max
                                 && (x_max - first_row[0][0] + 1) as usize == first_row.len();
                             if first_row_is_suffix {
-                                return true;
+                                let row_count = y_max - y_min + 1;
+                                let first_row_len = first_row.len() as i32;
+                                let last_row_len = last_row.len() as i32;
+                                return Some(QuasiParallelogram::new(
+                                    row_count,
+                                    if row_count == 2 {
+                                        max(first_row_len, last_row_len)
+                                    } else {
+                                        full_row_len
+                                    },
+                                    first_row_len,
+                                    last_row_len,
+                                ));
                             }
                         }
                         // Sort pitch_classes_transformed in lex order for traversal 2
@@ -268,7 +280,19 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             let first_row_is_suffix = first_row[first_row.len() - 1][0] == x_min
                                 && (first_row[0][0] - x_min + 1) as usize == first_row.len();
                             if first_row_is_suffix {
-                                return true;
+                                let row_count = y_max - y_min + 1;
+                                let first_row_len = first_row.len() as i32;
+                                let last_row_len = last_row.len() as i32;
+                                return Some(QuasiParallelogram::new(
+                                    row_count,
+                                    if row_count == 2 {
+                                        max(first_row_len, last_row_len)
+                                    } else {
+                                        full_row_len
+                                    },
+                                    first_row_len,
+                                    last_row_len,
+                                ));
                             }
                         }
                     }
@@ -281,7 +305,7 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                         let mut index = 0; // index into pitch_classes_transformed
                         // Check if middle rows are fully occupied; if not break out of block early
                         let xs_middle = (x_min + 1)..=(x_max - 1);
-                        let row_len = y_max - y_min + 1; // Required length of each middle row
+                        let full_row_len = y_max - y_min + 1; // Required length of each middle row
                         for x in xs_middle {
                             let mut row_counter = 0; // Count pitches with this y value
                             while pitch_classes_transformed[index][0] < x {
@@ -291,7 +315,7 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                                 row_counter += 1;
                                 index += 1;
                             }
-                            if row_counter != row_len {
+                            if row_counter != full_row_len {
                                 break 'traversal34;
                             }
                         }
@@ -328,7 +352,19 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             let first_row_is_suffix = first_row[first_row.len() - 1][1] == y_max
                                 && (y_max - first_row[0][1] + 1) as usize == first_row.len();
                             if first_row_is_suffix {
-                                return true;
+                                let row_count = x_max - x_min + 1;
+                                let first_row_len = first_row.len() as i32;
+                                let last_row_len = last_row.len() as i32;
+                                return Some(QuasiParallelogram::new(
+                                    row_count,
+                                    if row_count == 2 {
+                                        max(first_row_len, last_row_len)
+                                    } else {
+                                        full_row_len
+                                    },
+                                    first_row_len,
+                                    last_row_len,
+                                ));
                             }
                         }
                         // Sort pitch_classes_transformed in lex order for traversal 4
@@ -370,20 +406,36 @@ pub fn is_quasi_parallelogram(query: &[usize]) -> bool {
                             let first_row_is_suffix = first_row[first_row.len() - 1][1] == y_min
                                 && (first_row[0][1] - y_min + 1) as usize == first_row.len();
                             if first_row_is_suffix {
-                                return true;
+                                let row_count = x_max - x_min + 1;
+                                let first_row_len = first_row.len() as i32;
+                                let last_row_len = last_row.len() as i32;
+                                return Some(QuasiParallelogram::new(
+                                    row_count,
+                                    if row_count == 2 {
+                                        max(first_row_len, last_row_len)
+                                    } else {
+                                        full_row_len
+                                    },
+                                    first_row_len,
+                                    last_row_len,
+                                ));
                             }
                         }
                     }
                 }
             }
         }
-        false
+        None
     })
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::lattice::is_quasi_parallelogram;
+    use crate::{
+        // helpers::gcd,
+        lattice::quasi_parallelogram_info,
+    };
+    // use std::fs;
     #[test]
     fn test_quasi_parallelogram() {
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
@@ -392,14 +444,64 @@ mod tests {
         let fourth_example = [
             0, 0, 2, 1, 2, 0, 1, 2, 0, 2, 0, 1, 2, 0, 2, 1, 0, 2, 0, 2, 1, 0, 2, 1, 2,
         ]; // LLsmsLmsLsLmsLsmLsLsmLsms
-        assert!(is_quasi_parallelogram(&diasem));
-        assert!(is_quasi_parallelogram(&blackdye));
-        assert!(is_quasi_parallelogram(&diaslen_4sc));
-        assert!(is_quasi_parallelogram(&fourth_example));
+        assert!(quasi_parallelogram_info(&diasem).is_some());
+        assert!(quasi_parallelogram_info(&blackdye).is_some());
+        assert!(quasi_parallelogram_info(&diaslen_4sc).is_some());
+        assert!(quasi_parallelogram_info(&fourth_example).is_some());
 
         let nonexample = [0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 1, 2]; // LLLLsLmLLsLLLms
         let nonexample_2 = [0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 2, 2]; // LsLsLsmsLsLsmss
-        assert!(!is_quasi_parallelogram(&nonexample));
-        assert!(!is_quasi_parallelogram(&nonexample_2));
+        assert!(quasi_parallelogram_info(&nonexample).is_none());
+        assert!(quasi_parallelogram_info(&nonexample_2).is_none());
     }
+    /*
+    #[test]
+    fn test_() {
+        let file_path = "output.txt";
+        let mut content = "Quasi-parallelogram MOS substitution scales\n".to_string();
+        for scale_size in 7..=34 {
+            content = format!("{content}=== {scale_size} notes ===\n");
+            for a in 2..=(scale_size - 2) {
+                for b in 1..=(scale_size - a) / 2 {
+                    let c = scale_size - a - b;
+                    if gcd(a as u64, gcd(b as u64, c as u64)) == 1 {
+                        println!("Now iterating for [a, b, c] = [{a}, {b}, {c}]");
+                        let mos_subst_scales =
+                            crate::words::mos_substitution_scales_one_perm(a, b, c);
+                        for scale in mos_subst_scales {
+                            if let Some(QuasiParallelogram {
+                                row_count,
+                                full_row_len,
+                                first_row_len,
+                                last_row_len,
+                            }) = quasi_parallelogram_info(&scale)
+                            {
+                                let scale_string = {
+                                    let mut result = "".to_string();
+                                    for step in scale {
+                                        if step == 0 {
+                                            result += "x";
+                                        } else if step == 1 {
+                                            result += "y";
+                                        } else if step == 2 {
+                                            result += "z";
+                                        }
+                                    }
+                                    result
+                                };
+                                println!(
+                                    "{scale_string} is QP\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}"
+                                );
+                                content = format!(
+                                    "{content}* {a}x({b}y{c}z)\t{scale_string}\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}\n"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let _ = fs::write(file_path, content);
+    }
+    */
 }
