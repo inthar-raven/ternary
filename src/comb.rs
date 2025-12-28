@@ -66,15 +66,14 @@ fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
 
 /// Sawada (2003)'s algorithm for enumerating necklaces with a given step signature ("content"),
 /// where `content[i]` = the number of occurrences of the letter `i`.
-/// Assumes that `content` does not have any `0` entries.
 pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
-    if content.is_empty() {
+    if content.iter().all(|x| *x == 0) {
         vec![]
     } else {
         let (mut rem_content, perm) = VecPerm::sift_zeros(content);
         while *rem_content
             .last()
-            .expect("`rem_content` is a permutation of a nonempty `content`")
+            .expect("`rem_content` is a permutation of a nonempty `content` that is not all 0's")
             == 0
         {
             rem_content.pop();
