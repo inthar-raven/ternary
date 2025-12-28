@@ -92,7 +92,7 @@ pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
             avail_letters = (0..arity).rev().collect();
         }
         let mut coll: Vec<Vec<usize>> = vec![];
-        sawada_mut(
+        sawada_rec(
             &mut rem_content,
             &mut vec![0; scale_len],
             &mut avail_letters,
@@ -123,7 +123,7 @@ pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
 
 // Recursive part of algorithm in Sawada (2002)
 #[allow(clippy::too_many_arguments)]
-fn sawada_mut(
+fn sawada_rec(
     remaining_content: &mut Vec<usize>, // Remaining content to add to the prenecklace (Sawada's n)
     max_suffix_runs: &mut Vec<usize>, // Run of consecutive (arity-1)s starting at each position (Sawada's r)
     avail_letters: &mut Vec<Letter>,  // Available letters, maintained in descending order
@@ -162,7 +162,7 @@ fn sawada_mut(
                 prenecklace[current_pos] = current_letter;
                 // Yield to caller before and after recursive call
                 stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
-                    sawada_mut(
+                    sawada_rec(
                         remaining_content,
                         max_suffix_runs,
                         avail_letters,
