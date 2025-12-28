@@ -122,60 +122,51 @@ pub fn atkin(n: u64) -> Vec<u64> {
         5 | 6 => vec![2, 3, 5],
         _ => {
             let mut primes = vec![2, 3, 5];
-            // Store size as usize to avoid repeated casts for array indexing
-            // Need n + 1 since we index up to and including n
-            let n_usize = (n + 1) as usize;
-            let mut status: Vec<bool> = vec![false; n_usize];
-            for i in (1..=n / 9)
+            let mut status: Vec<bool> = vec![false; (n + 1) as usize];
+            (1..=n / 9)
                 .flat_map(|i| (1..=2 * n / 5).map(move |j| (i, 2 * j - 1)))
                 .map(|(x, y)| 4 * x * x + y * y)
                 .filter(|k| *k <= n)
-            {
-                match i % 60 {
+                .for_each(|i| match i % 60 {
                     1 | 13 | 17 | 29 | 37 | 41 | 49 | 53 => {
                         let idx = i as usize;
                         status[idx] = !status[idx];
                     }
                     _ => {}
-                }
-            }
-            for i in (1..=2 * n / 15)
+                });
+            (1..=2 * n / 15)
                 .map(|j| 2 * j - 1)
                 .flat_map(|i| (0..=2 * n / 5).map(move |j| (i, 2 * j)))
                 .map(|(x, y)| 3 * x * x + y * y)
                 .filter(|k| *k <= n)
-            {
-                match i % 60 {
+                .for_each(|i| match i % 60 {
                     7 | 19 | 31 | 43 => {
                         let idx = i as usize;
                         status[idx] = !status[idx];
                     }
                     _ => {}
-                }
-            }
-            for i in (2..=n / 6)
+                });
+            (2..=n / 6)
                 // Make a dependent Cartesian product where the range of the second element of the pair depends on the first element.
                 .flat_map(|x| (1..=x / 2).map(move |k| (x, x + 1 - 2 * k)))
                 .map(|(x, y)| 3 * x * x - y * y)
                 .filter(|k| *k <= n)
-            {
-                match i % 60 {
+                .for_each(|i| match i % 60 {
                     11 | 23 | 47 | 59 => {
                         let idx = i as usize;
                         status[idx] = !status[idx];
                     }
                     _ => {}
-                }
-            }
+                });
             for i in 7..=n {
                 if status[i as usize] {
                     primes.push(i);
-                    for j in (0..n / (i * i))
+                    (0..n / (i * i))
                         .map(|k| (2 * k + 1) * i * i)
                         .take_while(|l| *l <= n)
-                    {
-                        status[j as usize] = false;
-                    }
+                        .for_each(|j| {
+                            status[j as usize] = false;
+                        })
                 }
             }
             primes
