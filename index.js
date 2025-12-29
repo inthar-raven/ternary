@@ -377,7 +377,7 @@ import("./pkg")
         <button id="reset-view">Reset View</button>
         <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>
     </div>`;
-              latticeElement.innerHTML += `Lattice basis:<br/>(gx, gy) = (${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)}, ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)})`
+              latticeElement.innerHTML += `Lattice basis:<br/>[gx, gy] = [${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)}, ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)}]`
               latticeElement.appendChild(svgTag);
 
               // Zoom functionality
