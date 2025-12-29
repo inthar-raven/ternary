@@ -1,13 +1,38 @@
-use std::cmp::max;
+use serde::Serialize;
 
 use crate::GuideResult;
 use crate::countvector_to_u16_vec;
+use crate::equal::direct_approx;
 use crate::guide::*;
 use crate::guide_frame_to_result;
+use crate::ji_ratio::RawJiRatio;
 use crate::matrix;
 use crate::matrix::unimodular_inv;
 use crate::word_to_sig;
 use crate::words::CountVector;
+
+/// Represents a(n ordered) unimodular basis for the pitch class lattice of the scale.
+/// The basis vectors are assumed to be written in scale-step coordinates [L, m, s];
+/// it must therefore be ensured that v1 and v2 both have length 3.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct PitchClassLatticeBasis {
+    v1: Vec<i32>,
+    v2: Vec<i32>,
+}
+
+impl PitchClassLatticeBasis {
+    fn from_vecs(v1: Vec<i32>, v2: Vec<i32>) -> Self {
+        Self { v1, v2 }
+    }
+
+    pub fn v1(&self) -> &[i32] {
+        &self.v1
+    }
+
+    pub fn v2(&self) -> &[i32] {
+        &self.v2
+    }
+}
 
 #[allow(dead_code)]
 /// A struct representing a sub-traversal of a full row-by-row traversal of a lattice parallelogram.
@@ -69,9 +94,49 @@ pub fn get_unimodular_basis(
     None
 }
 
-// Try to get a lattice of pitch classes in the scale
-// using the unimodular basis found with guide_frames.
-pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
+/// Project pitch classes onto a given basis.
+/// Takes a scale (word) and a basis, and returns the pitch classes projected onto that basis.
+pub fn project_pitch_classes(
+    query: &[usize],
+    basis: &PitchClassLatticeBasis,
+) -> Option<(Vec<Vec<i32>>, PitchClassLatticeBasis)> {
+    let sig = word_to_sig(query)
+        .iter()
+        .map(|x| *x as u16)
+        .collect::<Vec<u16>>();
+
+    let (equave, gener_1, gener_2) = (
+        sig.iter().map(|x| *x as i32).collect::<Vec<_>>(),
+        basis.v1().to_vec(),
+        basis.v2().to_vec(),
+    );
+
+    // Invert [equave, gener_1, gener_2] to get basis change matrix
+    let basis_change = unimodular_inv(&equave, &gener_1, &gener_2);
+
+    // Now project all vectors to the (generator1, generator2)-plane
+    // Remove the first coordinate
+    let mut pitch_classes = vec![];
+    let mut count_vector = CountVector::ZERO;
+    for step in query {
+        // Add the current step
+        count_vector = count_vector.add(&CountVector::from_slice(&[*step]));
+        let v_i = countvector_to_u16_vec(&count_vector)
+            .iter()
+            .map(|x| *x as i32)
+            .collect::<Vec<_>>();
+        let v_i_transformed =
+            matrix::matrix_times_vector(&basis_change[0], &basis_change[1], &basis_change[2], &v_i);
+        let v_i_projected = v_i_transformed[1..3].to_vec();
+        pitch_classes.push(v_i_projected);
+    }
+    Some((pitch_classes, basis.clone()))
+}
+
+/// Try to get a lattice of pitch classes in the scale
+/// using the unimodular basis found with guide_frames.
+/// Also returns the basis in question as a `PitchClassLatticeBasis`.
+pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchClassLatticeBasis)> {
     let gfs = guide_frames(query);
     let sig = word_to_sig(query)
         .iter()
@@ -109,7 +174,10 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
             let v_i_projected = v_i_transformed[1..3].to_vec();
             pitch_classes.push(v_i_projected);
         }
-        pitch_classes
+        (
+            pitch_classes,
+            PitchClassLatticeBasis::from_vecs(gener_1, gener_2),
+        )
     })
 }
 
@@ -126,333 +194,643 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<Vec<Vec<i32>>> {
 /// under some choice of coordinate vectors (v, w).
 /// If `Some`, returns a `QuasiParallelogram` struct containing the following info:
 /// row count, length of a full row, length of first row, length of last row.
-pub fn quasi_parallelogram_info(query: &[usize]) -> Option<QuasiParallelogram> {
-    // If no unimodular basis, return false
-    try_pitch_class_lattice(query).and_then(|pitch_classes| {
-        // Get all pairwise differences between distinct points
-        let mut pairwise_differences: Vec<Vec<i32>> = vec![];
-        for i in 0..query.len() {
-            for j in i + 1..query.len() {
-                let diff = vec![
-                    pitch_classes[j][0] - pitch_classes[i][0],
-                    pitch_classes[j][1] - pitch_classes[i][1],
-                ];
-                pairwise_differences.push(diff);
-            }
+/// Also return the corresponding basis written in scale step coordinates.
+///
+/// Ideally, this function should prioritize pitch class lattice bases with a generator (whether a row generator or not)
+/// that is likely to be a fifth/fourth, provided such a basis exists for a given scale.
+pub fn quasi_parallelogram_info(
+    pitch_classes: &[&[i32]],
+    old_basis: PitchClassLatticeBasis,
+) -> Option<(QuasiParallelogram, PitchClassLatticeBasis)> {
+    let scale_size = pitch_classes.len();
+    // `basis` is written in scale step coordinates (L, m, s).
+    // The pitch classes are written in coordinates given by `basis`.
+    // Get all pairwise differences between distinct points.
+    let mut pairwise_differences: Vec<Vec<i32>> = vec![];
+    for i in 0..scale_size {
+        for j in i + 1..scale_size {
+            let diff = vec![
+                pitch_classes[j][0] - pitch_classes[i][0],
+                pitch_classes[j][1] - pitch_classes[i][1],
+            ];
+            pairwise_differences.push(diff);
         }
-        // Look for a unimodular basis that witnesses the quasi-parallelogram condition
-        for (i, v1) in pairwise_differences.iter().enumerate() {
-            for v2 in pairwise_differences.iter().skip(i + 1) {
-                if (v1[0] * v2[1] - v1[1] * v2[0]).abs() == 1 {
-                    // Change coordinates to basis (v1, v2)
-                    let basis_change: Vec<Vec<i32>> =
-                        vec![vec![v2[1], -v1[1]], vec![-v2[0], v1[0]]];
-                    let mut pitch_classes_transformed = pitch_classes
-                        .iter()
-                        .map(|v| {
-                            vec![
-                                basis_change[0][0] * v[0] + basis_change[1][0] * v[1],
-                                basis_change[0][1] * v[0] + basis_change[1][1] * v[1],
-                            ]
-                        })
-                        .collect::<Vec<_>>();
-                    // Get window dimensions: x_min, x_max, y_min, y_max
-                    let mut xs: Vec<_> = pitch_classes_transformed.iter().map(|v| v[0]).collect();
-                    let mut ys: Vec<_> = pitch_classes_transformed.iter().map(|v| v[1]).collect();
-                    xs.sort();
-                    ys.sort();
-                    let x_min = xs[0];
-                    let x_max = xs[xs.len() - 1];
-                    let y_min = ys[0];
-                    let y_max = ys[ys.len() - 1];
-                    // Check all 4 possible traversals:
-                    // 1. each row LTR (increases in x), rows go BTT (increases in y) (equivalently each row RTL, rows go TTB)
-                    // 2. each row RTL (decreases in x), rows go BTT (increases in y) (equivalently each row LTR, rows go TTB)
-                    // 3. each row BTT (increases in y), rows go LTR (increases in x) (equivalently each row TTB, rows go RTL)
-                    // 4. each row TTB (decreases in y), rows go LTR (increases in x) (equivalently each row BTT, rows go RTL)
-                    'traversal12: {
-                        // Sort pitch_classes_transformed in lex order for traversal 1
-                        pitch_classes_transformed.sort_by(|v1, v2| {
-                            // Sort by *ascending* y values, if y values are equal sort by *ascending* x values
-                            v1[1].cmp(&v2[1]).then(v1[0].cmp(&v2[0]))
-                        });
-                        let mut index = 0; // index into pitch_classes_transformed
-                        // Check if middle rows are fully occupied; if not break out of block early
-                        let ys_middle = (y_min + 1)..=(y_max - 1);
-                        let full_row_len = x_max - x_min + 1; // Required length of each middle row
-                        for y in ys_middle {
-                            let mut row_counter = 0; // Count pitches with this y value
-                            while pitch_classes_transformed[index][1] < y {
-                                index += 1;
-                            }
-                            while pitch_classes_transformed[index][1] == y {
-                                row_counter += 1;
-                                index += 1;
-                            }
-                            if row_counter != full_row_len {
-                                break 'traversal12;
-                            }
+    }
+    // Sort pairwise differences so that
+    // bases that likely have fifths or fourths (determined by patent val mapping for scale_size-edo) come first.
+    pairwise_differences.sort_by_key(|diff| {
+        let fifth_mapping =
+            direct_approx(RawJiRatio::PYTH_5TH, scale_size as f64, RawJiRatio::OCTAVE);
+        let fourth_mapping =
+            direct_approx(RawJiRatio::PYTH_4TH, scale_size as f64, RawJiRatio::OCTAVE);
+        let taxicab_len: i32 = diff.iter().map(|x| x.abs()).sum();
+        // Negate because false < true
+        !(taxicab_len == fifth_mapping || taxicab_len == fourth_mapping)
+    });
+    // Look for a unimodular basis that witnesses the quasi-parallelogram condition.
+    // If this basis turns out to work, just use the basis vectors' components as coefficients
+    // to write the basis in step size coordinates.
+    for (i, vx) in pairwise_differences.iter().enumerate() {
+        for vy in pairwise_differences.iter().skip(i + 1) {
+            if (vx[0] * vy[1] - vx[1] * vy[0]).abs() == 1 {
+                // Change coordinates to basis (v1, v2)
+                let basis_change: Vec<Vec<i32>> = vec![vec![vy[1], -vx[1]], vec![-vy[0], vx[0]]];
+                let mut pitch_classes_transformed = pitch_classes
+                    .iter()
+                    .map(|v| {
+                        vec![
+                            basis_change[0][0] * v[0] + basis_change[1][0] * v[1],
+                            basis_change[0][1] * v[0] + basis_change[1][1] * v[1],
+                        ]
+                    })
+                    .collect::<Vec<_>>();
+                // Get window dimensions: x_min, x_max, y_min, y_max
+                let mut xs: Vec<_> = pitch_classes_transformed.iter().map(|v| v[0]).collect();
+                let mut ys: Vec<_> = pitch_classes_transformed.iter().map(|v| v[1]).collect();
+                xs.sort();
+                ys.sort();
+                let x_min = xs[0];
+                let x_max = xs[xs.len() - 1];
+                let y_min = ys[0];
+                let y_max = ys[ys.len() - 1];
+                // Check all 4 possible traversals:
+                // 1. each row LTR (increases in x), rows go BTT (increases in y) (equivalently each row RTL, rows go TTB)
+                // 2. each row RTL (decreases in x), rows go BTT (increases in y) (equivalently each row LTR, rows go TTB)
+                // 3. each row BTT (increases in y), rows go LTR (increases in x) (equivalently each row TTB, rows go RTL)
+                // 4. each row TTB (decreases in y), rows go LTR (increases in x) (equivalently each row BTT, rows go RTL)
+                'traversal12: {
+                    // Sort pitch_classes_transformed in lex order for traversal 1
+                    pitch_classes_transformed.sort_by(|v1, v2| {
+                        // Sort by *ascending* y values, if y values are equal sort by *ascending* x values
+                        v1[1].cmp(&v2[1]).then(v1[0].cmp(&v2[0]))
+                    });
+                    let mut index = 0; // index into pitch_classes_transformed
+                    // Check if middle rows are fully occupied; if not break out of block early
+                    let ys_middle = (y_min + 1)..=(y_max - 1);
+                    let full_row_len = x_max - x_min + 1; // Required length of each middle row
+                    for y in ys_middle {
+                        let mut row_counter = 0; // Count pitches with this y value
+                        while pitch_classes_transformed[index][1] < y {
+                            index += 1;
                         }
-                        'traversal1: {
-                            // Check outer rows for traversal 1
-                            // Last row must be a prefix of a row traversal
-                            let mut last_row = vec![];
-                            while pitch_classes_transformed[index][1] < y_max {
-                                index += 1;
-                            }
-                            while index < pitch_classes_transformed.len() {
-                                last_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // First x value in last_row == x_min AND
-                            // |last x value in row - first x value in row| + 1 == last_row.len()
-                            // (last_row should be sorted by *ascending* x values)
-                            let last_row_is_prefix = last_row[0][0] == x_min
-                                && (last_row[last_row.len() - 1][0] - x_min + 1) as usize
-                                    == last_row.len();
-                            if !last_row_is_prefix {
-                                break 'traversal1;
-                            }
-                            // First row must be a suffix of a row traversal
-                            index = 0;
-                            let mut first_row = vec![];
-                            while pitch_classes_transformed[index][1] == y_min {
-                                first_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // Last x value in first_row == x_max AND
-                            // |last x value in row - first x value in row| + 1 == first_row.len()
-                            // (first_row should be sorted by *ascending* x values)
-                            let first_row_is_suffix = first_row[first_row.len() - 1][0] == x_max
-                                && (x_max - first_row[0][0] + 1) as usize == first_row.len();
-                            if first_row_is_suffix {
-                                let row_count = y_max - y_min + 1;
-                                let first_row_len = first_row.len() as i32;
-                                let last_row_len = last_row.len() as i32;
-                                return Some(QuasiParallelogram::new(
-                                    row_count,
-                                    if row_count == 2 {
-                                        max(first_row_len, last_row_len)
-                                    } else {
-                                        full_row_len
-                                    },
-                                    first_row_len,
-                                    last_row_len,
-                                ));
-                            }
+                        while pitch_classes_transformed[index][1] == y {
+                            row_counter += 1;
+                            index += 1;
                         }
-                        // Sort pitch_classes_transformed in lex order for traversal 2
-                        pitch_classes_transformed.sort_by(|v1, v2| {
-                            // Sort by *ascending* y values, if y values are equal sort by *descending* x values
-                            v1[1].cmp(&v2[1]).then(v1[0].cmp(&v2[0]).reverse())
-                        });
-                        'traversal2: {
-                            // Check outer rows for traversal 2
-                            // Last row must be a prefix of a row traversal
-                            let mut last_row = vec![];
-                            index = 0;
-                            while pitch_classes_transformed[index][1] > y_min {
-                                index += 1;
-                            }
-                            while index < pitch_classes_transformed.len() {
-                                last_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // First x value in last_row == x_max AND
-                            // |last x value in row - first x value in row| + 1 == last_row.len()
-                            // (last_row should be sorted by *descending* x values)
-                            let last_row_is_prefix = last_row[0][0] == x_max
-                                && (x_max - last_row[last_row.len() - 1][0] + 1) as usize
-                                    == last_row.len();
-                            if !last_row_is_prefix {
-                                break 'traversal2;
-                            }
-                            // First row must be a suffix of a row traversal
-                            index = 0;
-                            let mut first_row = vec![];
-                            while pitch_classes_transformed[index][1] == y_max {
-                                first_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // Last x value in first_row == x_min AND
-                            // |last x value in row - first x value in row| + 1 == first_row.len()
-                            // (first_row should be sorted by *descending* x values)
-                            let first_row_is_suffix = first_row[first_row.len() - 1][0] == x_min
-                                && (first_row[0][0] - x_min + 1) as usize == first_row.len();
-                            if first_row_is_suffix {
-                                let row_count = y_max - y_min + 1;
-                                let first_row_len = first_row.len() as i32;
-                                let last_row_len = last_row.len() as i32;
-                                return Some(QuasiParallelogram::new(
-                                    row_count,
-                                    if row_count == 2 {
-                                        max(first_row_len, last_row_len)
-                                    } else {
-                                        full_row_len
-                                    },
-                                    first_row_len,
-                                    last_row_len,
-                                ));
-                            }
+                        if row_counter != full_row_len {
+                            break 'traversal12;
                         }
                     }
-                    'traversal34: {
-                        // Sort pitch_classes_transformed in lex order for traversal 3
-                        pitch_classes_transformed.sort_by(|v1, v2| {
-                            // Sort by *ascending* x values, if x values are equal sort by *ascending* y values
-                            v1[0].cmp(&v2[0]).then(v1[1].cmp(&v2[1]))
-                        });
-                        let mut index = 0; // index into pitch_classes_transformed
-                        // Check if middle rows are fully occupied; if not break out of block early
-                        let xs_middle = (x_min + 1)..=(x_max - 1);
-                        let full_row_len = y_max - y_min + 1; // Required length of each middle row
-                        for x in xs_middle {
-                            let mut row_counter = 0; // Count pitches with this y value
-                            while pitch_classes_transformed[index][0] < x {
-                                index += 1;
-                            }
-                            while pitch_classes_transformed[index][0] == x {
-                                row_counter += 1;
-                                index += 1;
-                            }
-                            if row_counter != full_row_len {
-                                break 'traversal34;
-                            }
+                    'traversal1: {
+                        // Check outer rows for traversal 1
+                        // Last row must be a prefix of a row traversal
+                        let mut last_row = vec![];
+                        while pitch_classes_transformed[index][1] < y_max {
+                            index += 1;
                         }
-                        'traversal3: {
-                            // Check outer rows for traversal 3
-                            // Last row must be a prefix of a row traversal
-                            let mut last_row = vec![];
-                            while pitch_classes_transformed[index][0] < x_max {
-                                index += 1;
-                            }
-                            while index < pitch_classes_transformed.len() {
-                                last_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // First y value in last_row == y_min AND
-                            // |last y value in row - first y value in row| + 1 == last_row.len()
-                            // (last_row should be sorted by *ascending* y values)
-                            let last_row_is_prefix = last_row[0][1] == y_min
-                                && (last_row[last_row.len() - 1][1] - y_min + 1) as usize
-                                    == last_row.len();
-                            if !last_row_is_prefix {
-                                break 'traversal3;
-                            }
-                            // First row must be a suffix of a row traversal
-                            index = 0;
-                            let mut first_row = vec![];
-                            while pitch_classes_transformed[index][0] == x_min {
-                                first_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // Last y value in first_row == y_max AND
-                            // |last y value in row - first y value in row| + 1 == first_row.len()
-                            // (first_row should be sorted by *ascending* y values)
-                            let first_row_is_suffix = first_row[first_row.len() - 1][1] == y_max
-                                && (y_max - first_row[0][1] + 1) as usize == first_row.len();
-                            if first_row_is_suffix {
-                                let row_count = x_max - x_min + 1;
-                                let first_row_len = first_row.len() as i32;
-                                let last_row_len = last_row.len() as i32;
-                                return Some(QuasiParallelogram::new(
+                        while index < pitch_classes_transformed.len() {
+                            last_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // First x value in last_row == x_min AND
+                        // |last x value in row - first x value in row| + 1 == last_row.len()
+                        // (last_row should be sorted by *ascending* x values)
+                        let last_row_is_prefix = !last_row.is_empty()
+                            && last_row[0][0] == x_min
+                            && (last_row[last_row.len() - 1][0] - x_min + 1) as usize
+                                == last_row.len();
+                        if !last_row_is_prefix {
+                            break 'traversal1;
+                        }
+                        // First row must be a suffix of a row traversal
+                        index = 0;
+                        let mut first_row = vec![];
+                        while pitch_classes_transformed[index][1] == y_min {
+                            first_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // Last x value in first_row == x_max AND
+                        // |last x value in row - first x value in row| + 1 == first_row.len()
+                        // (first_row should be sorted by *ascending* x values)
+                        let first_row_is_suffix = !first_row.is_empty()
+                            && first_row[first_row.len() - 1][0] == x_max
+                            && (x_max - first_row[0][0] + 1) as usize == first_row.len();
+
+                        // IMPORTANT: When there are no middle rows,
+                        // verify that first and last rows span the same x-range.
+                        let row_count = y_max - y_min + 1;
+                        let rows_compatible = if row_count == 2 || full_row_len == 2 {
+                            // At least one row must span the full range [x_min, x_max]
+                            (first_row.len() as i32 == full_row_len)
+                                || (last_row.len() as i32 == full_row_len)
+                        } else {
+                            true // Middle rows already enforce consistency
+                        };
+
+                        if first_row_is_suffix && rows_compatible {
+                            let row_count = y_max - y_min + 1;
+                            let first_row_len = first_row.len() as i32;
+                            let last_row_len = last_row.len() as i32;
+                            let vx_lms = (0..3) // for each of L, m, s
+                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            let vy_lms = (0..3)
+                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            return Some((
+                                QuasiParallelogram::new(
                                     row_count,
-                                    if row_count == 2 {
-                                        max(first_row_len, last_row_len)
-                                    } else {
-                                        full_row_len
-                                    },
+                                    full_row_len,
                                     first_row_len,
                                     last_row_len,
-                                ));
-                            }
+                                ),
+                                // Put the row generator first
+                                PitchClassLatticeBasis::from_vecs(vx_lms, vy_lms),
+                            ));
                         }
-                        // Sort pitch_classes_transformed in lex order for traversal 4
-                        pitch_classes_transformed.sort_by(|v1, v2| {
-                            // Sort by *ascending* x values, if y values are equal sort by *descending* y values
-                            v1[0].cmp(&v2[0]).then(v1[1].cmp(&v2[1]).reverse())
-                        });
-                        'traversal4: {
-                            // Check outer rows for traversal 4
-                            // Last row must be a prefix of a row traversal
-                            let mut last_row = vec![];
-                            index = 0;
-                            while pitch_classes_transformed[index][0] > x_min {
-                                index += 1;
-                            }
-                            while index < pitch_classes_transformed.len() {
-                                last_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // First y value in last_row == y_max AND
-                            // |last y value in row - first y value in row| + 1 == last_row.len()
-                            // (last_row should be sorted by descending y values)
-                            let last_row_is_prefix = last_row[0][1] == y_max
-                                && (y_max - last_row[last_row.len() - 1][1] + 1) as usize
-                                    == last_row.len();
-                            if !last_row_is_prefix {
-                                break 'traversal4;
-                            }
-                            // First row must be a suffix of a row traversal
-                            index = 0;
-                            let mut first_row = vec![];
-                            while pitch_classes_transformed[index][1] == y_max {
-                                first_row.push(pitch_classes_transformed[index].clone());
-                                index += 1;
-                            }
-                            // Last y value in first_row == y_min AND
-                            // |last y value in row - first y value in row| + 1 == first_row.len()
-                            // (last_row should be sorted by descending x values)
-                            let first_row_is_suffix = first_row[first_row.len() - 1][1] == y_min
-                                && (first_row[0][1] - y_min + 1) as usize == first_row.len();
-                            if first_row_is_suffix {
-                                let row_count = x_max - x_min + 1;
-                                let first_row_len = first_row.len() as i32;
-                                let last_row_len = last_row.len() as i32;
-                                return Some(QuasiParallelogram::new(
+                    }
+                    // Sort pitch_classes_transformed in lex order for traversal 2
+                    pitch_classes_transformed.sort_by(|v1, v2| {
+                        // Sort by *ascending* y values, if y values are equal sort by *descending* x values
+                        v1[1].cmp(&v2[1]).then(v1[0].cmp(&v2[0]).reverse())
+                    });
+                    'traversal2: {
+                        // Check outer rows for traversal 2
+                        // Last row must be a prefix of a row traversal
+                        let mut last_row = vec![];
+                        // Only need to check at most `full_row_len` elements from end
+                        index = pitch_classes_transformed
+                            .len()
+                            .saturating_sub(full_row_len as usize);
+                        while index < pitch_classes_transformed.len()
+                            && pitch_classes_transformed[index][1] > y_min
+                        {
+                            index += 1;
+                        }
+                        while index < pitch_classes_transformed.len() {
+                            last_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // First x value in last_row == x_max AND
+                        // |last x value in row - first x value in row| + 1 == last_row.len()
+                        // (last_row should be sorted by *descending* x values)
+                        let last_row_is_prefix = !last_row.is_empty()
+                            && last_row[0][0] == x_max
+                            && (x_max - last_row[last_row.len() - 1][0] + 1) as usize
+                                == last_row.len();
+                        if !last_row_is_prefix {
+                            break 'traversal2;
+                        }
+                        // First row must be a suffix of a row traversal
+                        index = 0;
+                        let mut first_row = vec![];
+                        while pitch_classes_transformed[index][1] == y_max {
+                            first_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // Last x value in first_row == x_min AND
+                        // |last x value in row - first x value in row| + 1 == first_row.len()
+                        // (first_row should be sorted by *descending* x values)
+                        let first_row_is_suffix = !first_row.is_empty()
+                            && first_row[first_row.len() - 1][0] == x_min
+                            && (first_row[0][0] - x_min + 1) as usize == first_row.len();
+
+                        // IMPORTANT: When there are no middle rows,
+                        // verify that first and last rows span the same x-range.
+                        let row_count = y_max - y_min + 1;
+                        let rows_compatible = if row_count == 2 || full_row_len == 2 {
+                            // At least one row must span the full range [x_min, x_max]
+                            (first_row.len() as i32 == full_row_len)
+                                || (last_row.len() as i32 == full_row_len)
+                        } else {
+                            true // Middle rows already enforce consistency
+                        };
+
+                        if first_row_is_suffix && rows_compatible {
+                            let row_count = y_max - y_min + 1;
+                            let first_row_len = first_row.len() as i32;
+                            let last_row_len = last_row.len() as i32;
+                            let vx_lms = (0..3)
+                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            let vy_lms = (0..3)
+                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            return Some((
+                                QuasiParallelogram::new(
                                     row_count,
-                                    if row_count == 2 {
-                                        max(first_row_len, last_row_len)
-                                    } else {
-                                        full_row_len
-                                    },
+                                    full_row_len,
                                     first_row_len,
                                     last_row_len,
-                                ));
-                            }
+                                ),
+                                PitchClassLatticeBasis::from_vecs(vx_lms, vy_lms),
+                            ));
+                        }
+                    }
+                }
+                'traversal34: {
+                    // Sort pitch_classes_transformed in lex order for traversal 3
+                    pitch_classes_transformed.sort_by(|v1, v2| {
+                        // Sort by *ascending* x values, if x values are equal sort by *ascending* y values
+                        v1[0].cmp(&v2[0]).then(v1[1].cmp(&v2[1]))
+                    });
+                    let mut index = 0; // index into pitch_classes_transformed
+                    // Check if middle rows are fully occupied; if not break out of block early
+                    let xs_middle = (x_min + 1)..=(x_max - 1);
+                    let full_row_len = y_max - y_min + 1; // Required length of each middle row
+                    for x in xs_middle {
+                        let mut row_counter = 0; // Count pitches with this y value
+                        while pitch_classes_transformed[index][0] < x {
+                            index += 1;
+                        }
+                        while pitch_classes_transformed[index][0] == x {
+                            row_counter += 1;
+                            index += 1;
+                        }
+                        if row_counter != full_row_len {
+                            break 'traversal34;
+                        }
+                    }
+                    'traversal3: {
+                        // Check outer rows for traversal 3
+                        // Last row must be a prefix of a row traversal
+                        let mut last_row = vec![];
+                        while pitch_classes_transformed[index][0] < x_max {
+                            index += 1;
+                        }
+                        while index < pitch_classes_transformed.len() {
+                            last_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // First y value in last_row == y_min AND
+                        // |last y value in row - first y value in row| + 1 == last_row.len()
+                        // (last_row should be sorted by *ascending* y values)
+                        let last_row_is_prefix = !last_row.is_empty()
+                            && last_row[0][1] == y_min
+                            && (last_row[last_row.len() - 1][1] - y_min + 1) as usize
+                                == last_row.len();
+                        if !last_row_is_prefix {
+                            break 'traversal3;
+                        }
+                        // First row must be a suffix of a row traversal
+                        index = 0;
+                        let mut first_row = vec![];
+                        while pitch_classes_transformed[index][0] == x_min {
+                            first_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // Last y value in first_row == y_max AND
+                        // |last y value in row - first y value in row| + 1 == first_row.len()
+                        // (first_row should be sorted by *ascending* y values)
+                        let first_row_is_suffix = !first_row.is_empty()
+                            && first_row[first_row.len() - 1][1] == y_max
+                            && (y_max - first_row[0][1] + 1) as usize == first_row.len();
+
+                        // IMPORTANT: When there are no middle rows,
+                        // verify that first and last rows span the same y-range.
+                        // Otherwise we might accept two rows with overlapping but different ranges.
+                        let row_count = x_max - x_min + 1;
+                        let rows_compatible = if row_count == 2 || full_row_len == 2 {
+                            // At least one row must span the full range [y_min, y_max]
+                            (first_row.len() as i32 == full_row_len)
+                                || (last_row.len() as i32 == full_row_len)
+                        } else {
+                            true // Middle rows already enforce consistency
+                        };
+
+                        if first_row_is_suffix && rows_compatible {
+                            let row_count = x_max - x_min + 1;
+                            let first_row_len = first_row.len() as i32;
+                            let last_row_len = last_row.len() as i32;
+                            let vx_lms = (0..3)
+                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            let vy_lms = (0..3)
+                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            return Some((
+                                QuasiParallelogram::new(
+                                    row_count,
+                                    full_row_len,
+                                    first_row_len,
+                                    last_row_len,
+                                ),
+                                PitchClassLatticeBasis::from_vecs(vy_lms, vx_lms),
+                            ));
+                        }
+                    }
+                    // Sort pitch_classes_transformed in lex order for traversal 4
+                    pitch_classes_transformed.sort_by(|v1, v2| {
+                        // Sort by *ascending* x values, if y values are equal sort by *descending* y values
+                        v1[0].cmp(&v2[0]).then(v1[1].cmp(&v2[1]).reverse())
+                    });
+                    'traversal4: {
+                        // Check outer rows for traversal 4
+                        // Last row must be a prefix of a row traversal
+                        let mut last_row = vec![];
+                        // Only need to check at most `full_row_len` elements from end
+                        index = pitch_classes_transformed
+                            .len()
+                            .saturating_sub(full_row_len as usize);
+                        while index < pitch_classes_transformed.len()
+                            && pitch_classes_transformed[index][0] > x_min
+                        {
+                            index += 1;
+                        }
+                        while index < pitch_classes_transformed.len() {
+                            last_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // First y value in last_row == y_max AND
+                        // |last y value in row - first y value in row| + 1 == last_row.len()
+                        // (last_row should be sorted by descending y values)
+                        let last_row_is_prefix = !last_row.is_empty()
+                            && last_row[0][1] == y_max
+                            && (y_max - last_row[last_row.len() - 1][1] + 1) as usize
+                                == last_row.len();
+                        if !last_row_is_prefix {
+                            break 'traversal4;
+                        }
+                        // First row must be a suffix of a row traversal
+                        index = 0;
+                        let mut first_row = vec![];
+                        while pitch_classes_transformed[index][1] == y_max {
+                            first_row.push(pitch_classes_transformed[index].clone());
+                            index += 1;
+                        }
+                        // Last y value in first_row == y_min AND
+                        // |last y value in row - first y value in row| + 1 == first_row.len()
+                        // (last_row should be sorted by *descending* x values)
+                        let first_row_is_suffix = !first_row.is_empty()
+                            && first_row[first_row.len() - 1][1] == y_min
+                            && (first_row[0][1] - y_min + 1) as usize == first_row.len();
+
+                        // IMPORTANT: When there are no middle rows,
+                        // verify that first and last rows span the same y-range.
+                        let row_count = x_max - x_min + 1;
+                        let rows_compatible = if row_count == 2 || full_row_len == 2 {
+                            // At least one row must span the full range [y_min, y_max]
+                            (first_row.len() as i32 == full_row_len)
+                                || (last_row.len() as i32 == full_row_len)
+                        } else {
+                            true // Middle rows already enforce consistency
+                        };
+
+                        if first_row_is_suffix && rows_compatible {
+                            let row_count = x_max - x_min + 1;
+                            let first_row_len = first_row.len() as i32;
+                            let last_row_len = last_row.len() as i32;
+                            let vx_lms = (0..3)
+                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            let vy_lms = (0..3)
+                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .collect::<Vec<_>>();
+                            return Some((
+                                QuasiParallelogram::new(
+                                    row_count,
+                                    full_row_len,
+                                    first_row_len,
+                                    last_row_len,
+                                ),
+                                PitchClassLatticeBasis::from_vecs(vy_lms, vx_lms),
+                            ));
                         }
                     }
                 }
             }
         }
-        None
-    })
+    }
+    None
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        // helpers::gcd,
-        lattice::quasi_parallelogram_info,
-    };
+    use crate::lattice::{quasi_parallelogram_info, try_pitch_class_lattice};
     // use std::fs;
     #[test]
     fn test_quasi_parallelogram() {
-        let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+        let eps = 1e-8;
+
+        let diasem_rh = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+        let diasem_lattices_and_basis = try_pitch_class_lattice(&diasem_rh).unwrap();
+        let diasem_rh_result = quasi_parallelogram_info(
+            &crate::helpers::slicify_each(&diasem_lattices_and_basis.0),
+            diasem_lattices_and_basis.1,
+        );
+        println!("{:?}", diasem_rh_result);
+        assert!(diasem_rh_result.is_some());
+        if let Some((qp, b)) = diasem_rh_result {
+            // Diasem has this structure:
+            //   x x x x
+            //   x x x x x
+            // or
+            //   x x x x x
+            //   x x x x
+            // This is a full parallelogram with one note missing.
+            // So it can be interpreted as both of the following:
+            // 1. row_count == 2, full_row_len == 5, first and last row lengths == {5, 4}
+            // 2. row_count == 5, full_row_len == 2, first and last row lengths == {2, 1}.
+            assert!(
+                (qp.row_count == 2 && qp.full_row_len == 5)
+                    || (qp.row_count == 5 && qp.full_row_len == 2)
+            );
+
+            // Use JI diasem step sizes: L == 9/8, m == 28/27, s == 64/63
+            // Assert that basis reduces to gener: 3/2 or 4/3
+            // and offset: 7/6 (or complement) or 8/7 (or complement)
+            let three_to_two = f64::log2(3.0 / 2.0) * 1200.0;
+            let seven_to_six = f64::log2(7.0 / 6.0) * 1200.0;
+            let eight_to_seven = f64::log2(8.0 / 7.0) * 1200.0;
+
+            let nine_to_eight = f64::log2(9.0 / 8.0) * 1200.0;
+            let twenty_eight_to_twenty_seven = f64::log2(28.0 / 27.0) * 1200.0;
+            let sixty_four_to_sixty_three = f64::log2(64.0 / 63.0) * 1200.0;
+
+            let g1_in_ji = (b.v1[0] as f64) * nine_to_eight
+                + (b.v1[1] as f64) * twenty_eight_to_twenty_seven
+                + (b.v1[2] as f64) * sixty_four_to_sixty_three;
+            let g1_in_ji_reduced = f64::rem_euclid(g1_in_ji, 1200.0);
+            let g2_in_ji = (b.v2[0] as f64) * nine_to_eight
+                + (b.v2[1] as f64) * twenty_eight_to_twenty_seven
+                + (b.v2[2] as f64) * sixty_four_to_sixty_three;
+            let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
+
+            if qp.row_count == 2 && qp.full_row_len == 5 {
+                assert!(
+                    (g1_in_ji_reduced - three_to_two).abs() < eps
+                        || (g1_in_ji_reduced - (1200.0 - three_to_two)).abs() < eps
+                );
+                assert!(
+                    (g2_in_ji_reduced - seven_to_six).abs() < eps
+                        || (g2_in_ji_reduced - (1200.0 - seven_to_six)).abs() < eps
+                        || (g2_in_ji_reduced - eight_to_seven).abs() < eps
+                        || (g2_in_ji_reduced - (1200.0 - eight_to_seven)).abs() < eps
+                );
+            } else {
+                assert!(
+                    (g1_in_ji_reduced - seven_to_six).abs() < eps
+                        || (g1_in_ji_reduced - (1200.0 - seven_to_six)).abs() < eps
+                        || (g1_in_ji_reduced - eight_to_seven).abs() < eps
+                        || (g1_in_ji_reduced - (1200.0 - eight_to_seven)).abs() < eps
+                );
+                assert!(
+                    (g2_in_ji_reduced - three_to_two).abs() < eps
+                        || (g2_in_ji_reduced - (1200.0 - three_to_two)).abs() < eps
+                );
+            }
+        }
+
         let blackdye = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
+        let blackdye_lattices_and_basis = try_pitch_class_lattice(&blackdye).unwrap();
+        let blackdye_result = quasi_parallelogram_info(
+            &crate::helpers::slicify_each(&blackdye_lattices_and_basis.0),
+            blackdye_lattices_and_basis.1,
+        );
+        assert!(blackdye_result.is_some());
+        if let Some((qp, b)) = blackdye_result {
+            // Since this is a full parallelogram, the parallelogram itself doesn't give
+            // a canonical choice of which is the "generator" and which is the "offset",
+            // so we check the following:
+            assert!(
+                (qp.row_count == 2 && qp.full_row_len == 5)
+                    || (qp.row_count == 5 && qp.full_row_len == 2)
+            );
+
+            // Use JI blackdye step sizes: L == 10/9, m == 16/15, s == 81/80
+            // Assert that basis reduces to gener: 3/2 or 4/3 and offset: 10/9 or 9/5
+            let three_to_two = f64::log2(3.0 / 2.0) * 1200.0;
+            let four_to_three = f64::log2(4.0 / 3.0) * 1200.0;
+            let nine_to_five = f64::log2(9.0 / 5.0) * 1200.0;
+
+            let ten_to_nine = f64::log2(10.0 / 9.0) * 1200.0;
+            let sixteen_to_fifteen = f64::log2(16.0 / 15.0) * 1200.0;
+            let eighty_one_to_eighty = f64::log2(81.0 / 80.0) * 1200.0;
+            let g1_in_ji = (b.v1[0] as f64) * ten_to_nine
+                + (b.v1[1] as f64) * sixteen_to_fifteen
+                + (b.v1[2] as f64) * eighty_one_to_eighty;
+            let g1_in_ji_reduced = f64::rem_euclid(g1_in_ji, 1200.0);
+            let g2_in_ji = (b.v2[0] as f64) * ten_to_nine
+                + (b.v2[1] as f64) * sixteen_to_fifteen
+                + (b.v2[2] as f64) * eighty_one_to_eighty;
+            let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
+            if qp.row_count == 2 && qp.full_row_len == 5 {
+                assert!(
+                    (g1_in_ji_reduced - three_to_two).abs() < eps
+                        || (g1_in_ji_reduced - four_to_three).abs() < eps
+                );
+                assert!(
+                    (g2_in_ji_reduced - nine_to_five).abs() < eps
+                        || (g2_in_ji_reduced - ten_to_nine).abs() < eps
+                );
+            } else {
+                assert!(
+                    (g1_in_ji_reduced - nine_to_five).abs() < eps
+                        || (g1_in_ji_reduced - ten_to_nine).abs() < eps
+                );
+                assert!(
+                    (g2_in_ji_reduced - three_to_two).abs() < eps
+                        || (g2_in_ji_reduced - four_to_three).abs() < eps
+                );
+            }
+        }
+
         let diaslen_4sc = [2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 2]; // sLmLsLsLmLs
-        let fourth_example = [
+        let diaslen_lattices_and_basis = try_pitch_class_lattice(&diaslen_4sc).unwrap();
+        let diaslen_result = quasi_parallelogram_info(
+            &crate::helpers::slicify_each(&diaslen_lattices_and_basis.0),
+            diaslen_lattices_and_basis.1,
+        );
+        assert!(diaslen_result.is_some());
+        /*
+        if let Some((qp, b)) = diaslen_result {
+            // The structure we expect:
+            //   x x x x
+            //     x x x
+            //     x x x x
+            // This forces row_count == 5 and full_row_len == 3, first_row_len == 1, last_row_len == 1.
+            //
+            // However, this can still be interpreted in another way:
+            // each row goes northwest/southeast, which is still row_count == 5, full_row_len == 3, first_row_len == 1, last_row_len == 1.
+            // The latter interpretation means that each row is stacked by 32/21 and the offset is 3/2.
+            assert!((qp.row_count == 5 && qp.full_row_len == 3));
+
+            // Use JI diamech step sizes: L == 9/8, m == 49/48, s == 64/63
+            // Assert that basis reduces to gener: 3/2 or 4/3 and offset: 8/7 or 7/4
+            let three_to_two = f64::log2(3.0 / 2.0) * 1200.0;
+            let four_to_three = f64::log2(4.0 / 3.0) * 1200.0;
+            let seven_to_four = f64::log2(7.0 / 4.0) * 1200.0;
+            let eight_to_seven = f64::log2(8.0 / 7.0) * 1200.0;
+
+            let nine_to_eight = f64::log2(9.0 / 8.0) * 1200.0;
+            let forty_nine_to_forty_eight = f64::log2(49.0 / 48.0) * 1200.0;
+            let sixty_four_to_sixty_three = f64::log2(64.0 / 63.0) * 1200.0;
+
+            let g1_in_ji = (b.v1[0] as f64) * nine_to_eight
+                + (b.v1[1] as f64) * forty_nine_to_forty_eight
+                + (b.v1[2] as f64) * sixty_four_to_sixty_three;
+            let g1_in_ji_reduced = f64::rem_euclid(g1_in_ji, 1200.0);
+            let g2_in_ji = (b.v2[0] as f64) * nine_to_eight
+                + (b.v2[1] as f64) * forty_nine_to_forty_eight
+                + (b.v2[2] as f64) * sixty_four_to_sixty_three;
+            let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
+
+            // Accept either (3/2, 8/7) or (8/7, 3/2) ordering
+            let has_fifth = (g1_in_ji_reduced - three_to_two).abs() < eps
+                || (g1_in_ji_reduced - four_to_three).abs() < eps
+                || (g2_in_ji_reduced - three_to_two).abs() < eps
+                || (g2_in_ji_reduced - four_to_three).abs() < eps;
+            let has_seventh = (g1_in_ji_reduced - seven_to_four).abs() < eps
+                || (g1_in_ji_reduced - eight_to_seven).abs() < eps
+                || (g2_in_ji_reduced - seven_to_four).abs() < eps
+                || (g2_in_ji_reduced - eight_to_seven).abs() < eps;
+            assert!(
+                has_fifth && has_seventh,
+                "Expected basis with 3/2 (or 4/3) and 8/7 (or 7/4), got {:.1}¢ and {:.1}¢",
+                g1_in_ji_reduced,
+                g2_in_ji_reduced
+            );
+        }
+        */
+        let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1]; // LsLsLmsLsLsm
+        let diachrome_lattices_and_basis = try_pitch_class_lattice(&diachrome_5sc).unwrap();
+        let diachrome_result = quasi_parallelogram_info(
+            &crate::helpers::slicify_each(&diachrome_lattices_and_basis.0),
+            diachrome_lattices_and_basis.1,
+        );
+        assert!(diachrome_result.is_some());
+
+        let example_6 = [
             0, 0, 2, 1, 2, 0, 1, 2, 0, 2, 0, 1, 2, 0, 2, 1, 0, 2, 0, 2, 1, 0, 2, 1, 2,
         ]; // LLsmsLmsLsLmsLsmLsLsmLsms
-        assert!(quasi_parallelogram_info(&diasem).is_some());
-        assert!(quasi_parallelogram_info(&blackdye).is_some());
-        assert!(quasi_parallelogram_info(&diaslen_4sc).is_some());
-        assert!(quasi_parallelogram_info(&fourth_example).is_some());
+        let lattices_and_basis = try_pitch_class_lattice(&example_6).unwrap();
+        assert!(
+            quasi_parallelogram_info(
+                &crate::helpers::slicify_each(&lattices_and_basis.0),
+                lattices_and_basis.1
+            )
+            .is_some()
+        );
 
         let nonexample = [0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 1, 2]; // LLLLsLmLLsLLLms
+        let lattices_and_basis = try_pitch_class_lattice(&nonexample).unwrap();
+        assert!(
+            quasi_parallelogram_info(
+                &crate::helpers::slicify_each(&lattices_and_basis.0),
+                lattices_and_basis.1
+            )
+            .is_none()
+        );
+
         let nonexample_2 = [0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 2, 2]; // LsLsLsmsLsLsmss
-        assert!(quasi_parallelogram_info(&nonexample).is_none());
-        assert!(quasi_parallelogram_info(&nonexample_2).is_none());
+        let lattices_and_basis = try_pitch_class_lattice(&nonexample_2).unwrap();
+        assert!(
+            quasi_parallelogram_info(
+                &crate::helpers::slicify_each(&lattices_and_basis.0),
+                lattices_and_basis.1
+            )
+            .is_none()
+        );
     }
     /*
     #[test]

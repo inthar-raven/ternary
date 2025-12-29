@@ -5,7 +5,7 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 use num_traits::{CheckedDiv, CheckedMul};
 
 use crate::helpers::gcd;
-use crate::interval::Dyad;
+use crate::interval::{Dyad, JiRatio};
 
 // ERRORS
 
@@ -57,6 +57,15 @@ impl std::error::Error for BadJiArith {}
 pub struct RawJiRatio {
     numer: u64,
     denom: u64,
+}
+
+impl JiRatio for RawJiRatio {
+    fn numer(&self) -> u64 {
+        self.numer
+    }
+    fn denom(&self) -> u64 {
+        self.denom
+    }
 }
 
 impl PartialEq for RawJiRatio {
@@ -298,16 +307,6 @@ impl RawJiRatio {
                 denom: denom / d,
             })
         }
-    }
-    /// The numerator of a `RawJiRatio`.
-    #[inline(always)]
-    pub fn numer(&self) -> u64 {
-        self.numer
-    }
-    /// The denominator of a `RawJiRatio`.
-    #[inline(always)]
-    pub fn denom(&self) -> u64 {
-        self.denom
     }
     /// The reciprocal of a `RawJiRatio`.
     #[inline(always)]

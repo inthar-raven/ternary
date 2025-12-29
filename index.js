@@ -13,7 +13,7 @@ const GROUND_INDIGO = "#76f";
 // Default bounds for tuning search
 const DEFAULT_ED_BOUND = 111;
 const DEFAULT_S_LOWER_BOUND = 20.0;
-const DEFAULT_S_UPPER_BOUND = 200.0;
+const DEFAULT_S_UPPER_BOUND = 250.0;
 
 const statusElement = document.getElementById("status");
 
@@ -153,69 +153,6 @@ function addMultipleOfFirstRowToSecond(arr, _, n, i1, i2, coeff) {
   }
 }
 
-// Use Gaussian elimination to solve a linear system `left` * x = `right`.
-// Both `left` and `right` are assumed to have `m` rows;
-// `left` has `n1` columns, and `right` has `n2`.
-// The function returns the RHS after this process.
-function gaussianElimination(left, right, m, n1, n2) {
-  // Don't mutate the input
-  let leftClone = structuredClone(left);
-  let rightClone = structuredClone(right);
-  // Iterating over columns, clear all entries below the pivot
-  for (let j = 0; j < Math.min(m, n1); ++j) {
-    let i = j + 1;
-    // Try to make the (j, j) entry nonzero by swapping rows
-    while (i < m && Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
-      swapRows(leftClone, m, n1, j, i);
-      swapRows(rightClone, m, n2, j, i);
-      i++;
-    }
-    // Return null to indicate a singular matrix
-    if (Math.abs(leftClone[n1 * j + j]) < Number.EPSILON) {
-      return null;
-    }
-    // Clear lower triangle
-    const pivot = leftClone[n1 * j + j];
-    for (let i2 = j + 1; i2 < m; ++i2) {
-      const target = leftClone[n1 * i2 + j];
-      if (Math.abs(target) >= Number.EPSILON) {
-        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
-        addMultipleOfFirstRowToSecond(
-          rightClone,
-          m,
-          n2,
-          j,
-          i2,
-          -target / pivot,
-        );
-      }
-    }
-  }
-  // Clear upper triangle
-  for (let j = Math.min(m, n1) - 1; j >= 0; --j) {
-    const pivot = leftClone[n1 * j + j];
-    for (let i2 = 0; i2 < j; ++i2) {
-      const target = leftClone[n1 * i2 + j];
-      if (Math.abs(target) >= Number.EPSILON) {
-        addMultipleOfFirstRowToSecond(leftClone, m, n1, j, i2, -target / pivot);
-        addMultipleOfFirstRowToSecond(
-          rightClone,
-          m,
-          n2,
-          j,
-          i2,
-          -target / pivot,
-        );
-      }
-    }
-    // Scale rows so LHS gets 1 on diag
-    // (Mutation can happen via another alias, though not via the `const` aliases we defined above.)
-    multiplyRow(leftClone, m, n1, j, 1 / pivot);
-    multiplyRow(rightClone, m, n2, j, 1 / pivot);
-  }
-  return rightClone;
-}
-
 // Makes a table in `tableElement` with the given `data`.
 function makeTable(tableElement, data, header = "") {
   const tableViewTr = document.createElement("tr");
@@ -344,20 +281,18 @@ import("./pkg").then((wasm) => {
         if (state.word) {
           if (state.latticeBasis) {
             let n = state.word.length;
-            let g = state.latticeBasis[0];
-            let h = state.latticeBasis[1];
             [A, B, C, D] = [1, 0, 0, 1];
             
             // Draw coordinate grid
             for (let i = -64; i < 64; ++i) {
-              // Lines of constant g
-              const p0x = ORIGIN_X + A * SPACING_X * i; // ith g offset
+              // Lines of constant x
+              const p0x = ORIGIN_X + A * SPACING_X * i; // ith x offset
               const p0y = ORIGIN_X + B * SPACING_Y * i;
-              const p1x = p0x + C * SPACING_X * 100; // add a large positive h offset
+              const p1x = p0x + C * SPACING_X * 100; // add a large positive x offset
               const p1y = p0y + D * SPACING_Y * 100;
-              const p2x = p0x + C * SPACING_X * -100; // add a large negative h offset
+              const p2x = p0x + C * SPACING_X * -100; // add a large negative x offset
               const p2y = p0y + D * SPACING_Y * -100;
-              // Lines of constant h
+              // Lines of constant y
               const q0x = ORIGIN_X + C * SPACING_X * i;
               const q0y = ORIGIN_Y + D * SPACING_Y * i;
               const q1x = q0x + A * SPACING_X * 100;
@@ -365,7 +300,7 @@ import("./pkg").then((wasm) => {
               const q2x = q0x + A * SPACING_X * -100;
               const q2y = q0y + B * SPACING_Y * -100;
 
-              // draw the line of constant g
+              // draw the line of constant x
               svgTag.innerHTML += `<line
                 x1="${p1x}"
                 y1="${p1y}"
@@ -373,7 +308,7 @@ import("./pkg").then((wasm) => {
                 y2="${p2y}"
                 style="stroke:${GROUND_INDIGO}; stroke-width:${EDGE_WIDTH}"
               />`;
-              // draw the line of constant h
+              // draw the line of constant y
               svgTag.innerHTML += `<line
                 x1="${q1x}"
                 y1="${q1y}"
@@ -385,8 +320,13 @@ import("./pkg").then((wasm) => {
 
             // Track cumulative step counts for pitch calculation
             let stepCounts = { L: 0, m: 0, s: 0 };
-            // Get lattice coordinates directly from WASM
-            const latticeCoords = wasm.word_to_lattice(state.word);
+            // Get lattice coordinates and basis directly from WASM
+            const latticeResult = wasm.word_to_lattice(state.word);
+            if (latticeResult && latticeResult.basis) {
+              // Update the state with the better basis
+              state.latticeBasis = latticeResult.basis;
+            }
+            const latticeCoords = latticeResult.coordinates;
             for (let deg = 0; deg < latticeCoords.length; ++deg) {
               // Get coordinates directly from WASM-computed lattice
               const [latticeX, latticeY] = latticeCoords[deg];
@@ -426,7 +366,7 @@ import("./pkg").then((wasm) => {
             }
             // We deferred appending elements until now
             // Initial viewBox will be set by updateViewBox() below
-            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two dimensions g = ${alsoInCurrentTuning(g, state.tuning, equave)} and h = ${alsoInCurrentTuning(h, state.tuning, equave)} are two different generators. g is horizontal, h is vertical.</small>`;
+            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two generators gx = ${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)} and gy = ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)} are two independent generators.</small>`;
             latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
             // Add zoom buttons
             latticeElement.innerHTML += `<div class="controls">

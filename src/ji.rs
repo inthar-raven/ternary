@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 
 use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
-use crate::interval::Dyad;
+use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::monzo::Monzo;
 use crate::odd_limit_81::EIGHTY_ONE_ODD_LIMIT;

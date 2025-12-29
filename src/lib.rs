@@ -19,6 +19,7 @@ pub mod subgroup_monzo;
 pub mod words;
 
 // use equal::is_in_tuning_range;
+use interval::JiRatio;
 use itertools::Itertools;
 use ji_ratio::RawJiRatio;
 // use monzo::Monzo;
@@ -133,6 +134,12 @@ pub struct WordResult {
     profile: ScaleProfile,
     ji_tunings: Vec<Vec<String>>,
     ed_tunings: Vec<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LatticeResult {
+    coordinates: Vec<Vec<i32>>,
+    basis: Vec<Vec<i16>>,
 }
 
 fn string_to_numbers(word: &str) -> Vec<usize> {
@@ -281,12 +288,52 @@ pub fn word_to_mv(query: String) -> u16 {
 /// Get lattice coordinates for pitch classes if a unimodular basis exists.
 /// Returns None if no unimodular basis can be found.
 /// The coordinates are 2D projections suitable for plotting.
+/// Prioritizes the basis from quasi_parallelogram_info if one exists.
 #[wasm_bindgen]
 pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     let word_in_numbers = string_to_numbers(&query);
-    Ok(to_value(&lattice::try_pitch_class_lattice(
-        &word_in_numbers,
-    ))?)
+
+    // First get the initial lattice and basis
+    if let Some((pitch_classes, initial_basis)) = lattice::try_pitch_class_lattice(&word_in_numbers)
+    {
+        // Try to find a better basis using quasi_parallelogram_info
+        let pitch_class_refs: Vec<&[i32]> = pitch_classes.iter().map(|v| v.as_slice()).collect();
+
+        let (final_coordinates, final_basis) = if let Some((_qp, better_basis)) =
+            lattice::quasi_parallelogram_info(&pitch_class_refs, initial_basis.clone())
+        {
+            // Re-project pitch classes using the better basis
+            let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
+                .unwrap()
+                .0;
+            (coords, better_basis)
+        } else {
+            // No better basis found, use the original
+            (pitch_classes, initial_basis)
+        };
+
+        // Convert the basis to Vec<Vec<i16>> for serialization
+        let basis_as_vecs = vec![
+            vec![
+                final_basis.v1()[0] as i16,
+                final_basis.v1()[1] as i16,
+                final_basis.v1()[2] as i16,
+            ],
+            vec![
+                final_basis.v2()[0] as i16,
+                final_basis.v2()[1] as i16,
+                final_basis.v2()[2] as i16,
+            ],
+        ];
+
+        Ok(to_value(&Some(LatticeResult {
+            coordinates: final_coordinates,
+            basis: basis_as_vecs,
+        }))?)
+    } else {
+        // No unimodular basis found - return early
+        Ok(to_value(&None::<LatticeResult>)?)
+    }
 }
 
 /// Get JI tunings for a step signature using 81-odd-limit intervals.
@@ -298,6 +345,8 @@ pub fn sig_to_ji_tunings(
     cents_lower_bound: f64,
     cents_upper_bound: f64,
 ) -> Vec<Vec<String>> {
+    console_log!("DEBUG cents_lower_bound: {:?}", cents_lower_bound);
+    console_log!("DEBUG cents_upper_bound: {:?}", cents_upper_bound);
     let equave_monzo = Monzo::try_from_ratio(equave).ok();
     if let Some(equave_monzo) = equave_monzo {
         ji::solve_step_sig_81_odd_limit(
