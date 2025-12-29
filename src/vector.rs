@@ -44,10 +44,10 @@ impl Vector {
     }
 
     /// Dot product with another vector
-    pub fn dot(&self, other: &Vector) -> i64 {
-        let mut sum = 0i64;
+    pub fn dot(&self, other: &Vector) -> i32 {
+        let mut sum = 0i32;
         for i in 0..SMALL_PRIMES_COUNT {
-            sum += self.0[i] as i64 * other.0[i] as i64;
+            sum += self.0[i] * other.0[i];
         }
         sum
     }
@@ -62,8 +62,8 @@ impl Vector {
     }
 
     /// Sum of all elements
-    pub fn sum(&self) -> i64 {
-        self.0.iter().map(|x| *x as i64).sum()
+    pub fn sum(&self) -> i32 {
+        self.0.iter().sum()
     }
 
     /// Check if all elements are zero
@@ -332,10 +332,10 @@ impl RowVector {
     }
 
     /// Dot product with Vector (row * column)
-    pub fn dot(&self, other: &Vector) -> i64 {
-        let mut sum = 0i64;
+    pub fn dot(&self, other: &Vector) -> i32 {
+        let mut sum = 0i32;
         for i in 0..SMALL_PRIMES_COUNT {
-            sum += self.0[i] as i64 * other.0[i] as i64;
+            sum += self.0[i] * other.0[i];
         }
         sum
     }

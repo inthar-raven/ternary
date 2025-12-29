@@ -45,9 +45,9 @@ macro_rules! const_monzo {
 #[derive(Debug, PartialEq)]
 pub enum CantMakeMonzo {
     /// The numerator exceeded `SMALL_PRIMES`-prime limit (contains a prime factor > largest SMALL_PRIME).
-    NumerExceededPrimeLimit(Vec<u64>),
+    NumerExceededPrimeLimit(Vec<u32>),
     /// The denominator exceeded `SMALL_PRIMES`-prime limit (contains a prime factor > largest SMALL_PRIME).
-    DenomExceededPrimeLimit(Vec<u64>),
+    DenomExceededPrimeLimit(Vec<u32>),
     /// The numerator was 0 (invalid for JI ratios).
     NumerCantBeZero,
     /// The denominator was 0 (invalid for JI ratios).
@@ -103,7 +103,7 @@ impl Monzo {
 
     /// Tries to convert the JI ratio `numer`/`denom` into monzo form.
     /// Factorizes numerator and denominator, validates they fit within SMALL_PRIMES limit.
-    pub fn try_new(numer: u64, denom: u64) -> Result<Monzo, CantMakeMonzo> {
+    pub fn try_new(numer: u32, denom: u32) -> Result<Monzo, CantMakeMonzo> {
         if numer == 0 {
             return Err(CantMakeMonzo::NumerCantBeZero);
         }
@@ -111,7 +111,7 @@ impl Monzo {
             return Err(CantMakeMonzo::DenomCantBeZero);
         }
         let numer_factors = factorize(numer);
-        let numer_primes_too_big: Vec<u64> = numer_factors
+        let numer_primes_too_big: Vec<u32> = numer_factors
             .iter()
             .copied()
             .skip_while(|p| *p <= SMALL_PRIMES[SMALL_PRIMES_COUNT - 1])
@@ -120,7 +120,7 @@ impl Monzo {
             Err(CantMakeMonzo::NumerExceededPrimeLimit(numer_primes_too_big))
         } else {
             let denom_factors = factorize(denom);
-            let denom_primes_too_big: Vec<u64> = denom_factors
+            let denom_primes_too_big: Vec<u32> = denom_factors
                 .iter()
                 .copied()
                 .skip_while(|p| *p <= SMALL_PRIMES[SMALL_PRIMES_COUNT - 1])
@@ -299,7 +299,7 @@ impl Dyad for Monzo {
 }
 
 impl JiRatio for Monzo {
-    fn numer(&self) -> u64 {
+    fn numer(&self) -> u32 {
         self.0
             .into_iter()
             .enumerate()
@@ -307,7 +307,7 @@ impl JiRatio for Monzo {
             .map(|(i, exp)| SMALL_PRIMES[i].pow(exp as u32))
             .product()
     }
-    fn denom(&self) -> u64 {
+    fn denom(&self) -> u32 {
         self.0
             .into_iter()
             .enumerate()

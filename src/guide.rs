@@ -66,7 +66,7 @@ where
 pub fn guided_gs_list(scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let len = scale.len();
     (2..=len - 2) // Don't include 1-step GSes
-        .filter(|&step_class| gcd(step_class as u64, len as u64) == 1)
+        .filter(|&step_class| gcd(step_class as u32, len as u32) == 1)
         .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
         .collect()
 }
@@ -75,7 +75,7 @@ pub fn guided_gs_list(scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
 pub fn guided_gs_list_of_len(gs_length: usize, scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let scale_len = scale.len();
     (2..=scale_len / 2) // Don't include 1-step GSes
-        .filter(|&step_class| gcd(step_class as u64, scale_len as u64) == 1)
+        .filter(|&step_class| gcd(step_class as u32, scale_len as u32) == 1)
         .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
         .filter(|vs| gs_length == vs.len())
         .collect()
@@ -96,7 +96,7 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
     } else {
         let len = subscale.len();
         (2..=len / 2) // Don't include 1-step GSes
-            .filter(|&step_class| gcd(step_class as u64, len as u64) == 1)
+            .filter(|&step_class| gcd(step_class as u32, len as u32) == 1)
             .flat_map(|step_class| step_class_guided_gs_list_for_subscale(step_class, subscale))
             .collect()
     }
@@ -140,7 +140,7 @@ impl GuideFrame {
     }
     /// Try to get simple guide frames with k-step generators.
     pub fn try_simple(scale: &[usize], step_class: usize) -> Vec<Self> {
-        if scale.is_empty() || gcd(scale.len() as u64, step_class as u64) != 1 {
+        if scale.is_empty() || gcd(scale.len() as u32, step_class as u32) != 1 {
             vec![]
         } else {
             step_class_guided_gs_list(step_class, scale)
@@ -159,7 +159,7 @@ impl GuideFrame {
         if multiplicity == 1 || scale.is_empty() || !scale.len().is_multiple_of(multiplicity) {
             vec![]
         } else {
-            let gcd_value = gcd(step_class as u64, scale.len() as u64) as usize;
+            let gcd_value = gcd(step_class as u32, scale.len() as u32) as usize;
             let coprime_part = scale.len() / gcd_value;
             if !coprime_part.is_multiple_of(multiplicity) {
                 if gcd_value == multiplicity {
@@ -322,7 +322,7 @@ impl GuideFrame {
     /// Get both Simple and Multiple guide frames.
     fn try_all_variants(scale: &[usize], step_class: usize) -> Vec<Self> {
         // Let's just do primes for now.
-        let prime_factors: Vec<usize> = factorize(scale.len() as u64)
+        let prime_factors: Vec<usize> = factorize(scale.len() as u32)
             .into_iter()
             .dedup()
             .map(|prime| prime as usize)

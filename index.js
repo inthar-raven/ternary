@@ -234,6 +234,7 @@ function tableHead(data, header = "") {
 
 // Main application code - load WASM module
 import("./pkg").then((wasm) => {
+  console.log("WASM module loaded successfully!");
   // app state
   const appState = {
     word: null,
@@ -728,7 +729,7 @@ stack()`
         const b = countChar(state.word, "m");
         const c = countChar(state.word, "s");
 
-        el.innerHTML += `<b><a href="https://en.xen.wiki/w/MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+        el.innerHTML += `<b><a href="https://wiki.spoogly.website/index.php?title=MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
         el.innerHTML += state.profile["subst_l_ms"]
           ? `subst ${a}L(${b}m${c}s)<br/>`
           : "";
@@ -912,6 +913,7 @@ stack()`
   const btnWord = document.getElementById("btn-word");
 
   btnSig.addEventListener("click", () => {
+    console.log("btnSig clicked!");
     const sigQuery = document.getElementById("input-step-sig").value;
     const sig = `${sigQuery}`
       .split(" ")
@@ -985,6 +987,7 @@ stack()`
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edTuningTable = document.getElementById("table-ed-tunings");
           const equave = getEquaveRatio();
+          console.log(document.querySelector('input[name="scale-type"]:checked').value);
           const sigResultData = wasm.sig_result(
             sig,
             document.getElementById("monotone-lm").checked,
@@ -999,7 +1002,7 @@ stack()`
             ).value,
             Number(document.getElementById("mv").value),
             document.querySelector('input[name="mv-constraint"]:checked').value,
-            document.querySelector('input[name="mos-subst"]:checked').value,
+            document.querySelector('input[name="scale-type"]:checked').value,
             equave.num,
             equave.den,
             getEdBound(),
@@ -1091,6 +1094,7 @@ stack()`
     }
   });
   btnWord.addEventListener("click", () => {
+    console.log("btnWord clicked!");
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     if (arity) {
@@ -1185,4 +1189,7 @@ stack()`
       statusElement.textContent = "No scale word provided.";
     }
   });
+}).catch((err) => {
+  console.error("Failed to load WASM module:", err);
+  statusElement.textContent = "Failed to load WASM module. Check console for details.";
 });

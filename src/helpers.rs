@@ -165,13 +165,13 @@ where
 }
 
 /// Compute `n % abs(m)` (modulo with absolute value).
-fn modulo(n: i64, m: i64) -> i64 {
+fn modulo(n: i32, m: i32) -> i32 {
     ((n % m) + m) % m
 }
 
 /// Return modular inverse: find x such that (x*a) mod b = 1.
 /// Returns error if a and b are not coprime.
-pub fn modinv(a: i64, b: i64) -> Result<i64, String> {
+pub fn modinv(a: i32, b: i32) -> Result<i32, String> {
     let (gcd, x, _) = extended_gcd(a, b);
     if gcd == 1 {
         Ok(modulo(x, b))
@@ -182,7 +182,7 @@ pub fn modinv(a: i64, b: i64) -> Result<i64, String> {
 
 /// Return gcd(a, b) and the Bézout coefficients: (g, x, y) such that ax + by = g.
 /// Uses the extended Euclidean algorithm.
-pub fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
+pub fn extended_gcd(a: i32, b: i32) -> (i32, i32, i32) {
     let (mut r, mut old_r) = (a, b);
     let (mut s, mut old_s) = (1, 0);
     let (mut t, mut old_t) = (0, 1);
@@ -197,7 +197,7 @@ pub fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
 
 /// Gives the greatest common divisor of the two inputs.
 /// Uses the binary GCD algorithm (Stein's algorithm) for efficiency.
-pub fn gcd(mut u: u64, mut v: u64) -> u64 {
+pub fn gcd(mut u: u32, mut v: u32) -> u32 {
     // Base cases: gcd(n, 0) = gcd(0, n) = n
     if u == 0 {
         return v;
@@ -237,7 +237,7 @@ pub fn gcd(mut u: u64, mut v: u64) -> u64 {
 }
 
 /// Find the lcm (least common multiple) of two numbers.
-pub fn lcm(m: u64, n: u64) -> u64 {
+pub fn lcm(m: u32, n: u32) -> u32 {
     m * n / gcd(m, n)
 }
 
@@ -249,17 +249,14 @@ pub fn bezout(coeffs: &[i32]) -> (i32, Vec<i32>) {
     if coeffs.len() == 1 {
         (coeffs[0], vec![1])
     } else if coeffs.len() == 2 {
-        let (d, x, y) = extended_gcd(coeffs[0] as i64, coeffs[1] as i64);
-        (d as i32, vec![x as i32, y as i32])
+        let (d, x, y) = extended_gcd(coeffs[0], coeffs[1]);
+        (d, vec![x, y])
     } else {
         let (d_, xs) = bezout(&coeffs[..coeffs.len() - 1]);
-        let (d, x, t) = extended_gcd(
-            *coeffs.last().expect("ok because coeffs.len() > 3") as i64,
-            d_ as i64,
-        );
-        let mut result_vec = xs.into_iter().map(|x| (t as i32) * x).collect::<Vec<i32>>();
-        result_vec.push(x as i32);
-        (d as i32, result_vec)
+        let (d, x, t) = extended_gcd(*coeffs.last().expect("ok because coeffs.len() > 3"), d_);
+        let mut result_vec = xs.into_iter().map(|x| t * x).collect::<Vec<i32>>();
+        result_vec.push(x);
+        (d, result_vec)
     }
 }
 

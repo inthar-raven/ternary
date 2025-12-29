@@ -33,7 +33,7 @@ impl Val {
     /// Find how many steps a given val maps a monzo (a prime-factorized JI ratio) to.
     /// Computes the dot product of the val with the monzo.
     pub fn evaluate(&self, monzo: Monzo) -> i32 {
-        (self.0.dot(&monzo.into_inner())) as i32
+        self.0.dot(&monzo.into_inner())
     }
 }
 
@@ -138,7 +138,7 @@ pub fn relative_error(monzo: Monzo, edo: f64) -> f64 {
 }
 
 /// L^1 error on a specified odd limit.
-pub fn odd_limit_l1_error(odd: u64, edo: f64) -> f64 {
+pub fn odd_limit_l1_error(odd: u32, edo: f64) -> f64 {
     odd_limit(odd)
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
@@ -148,7 +148,7 @@ pub fn odd_limit_l1_error(odd: u64, edo: f64) -> f64 {
 }
 
 /// L^2 error on a specified odd limit.
-pub fn odd_limit_l2_error(odd: u64, edo: f64) -> f64 {
+pub fn odd_limit_l2_error(odd: u32, edo: f64) -> f64 {
     odd_limit(odd)
         .into_iter()
         .filter(|&r| r * r < RawJiRatio::OCTAVE)
