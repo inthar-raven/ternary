@@ -913,7 +913,6 @@ stack()`
   const btnWord = document.getElementById("btn-word");
 
   btnSig.addEventListener("click", () => {
-    console.log("btnSig clicked!");
     const sigQuery = document.getElementById("input-step-sig").value;
     const sig = `${sigQuery}`
       .split(" ")
@@ -987,7 +986,6 @@ stack()`
           const jiTuningTable = document.getElementById("table-ji-tunings");
           const edTuningTable = document.getElementById("table-ed-tunings");
           const equave = getEquaveRatio();
-          console.log(document.querySelector('input[name="scale-type"]:checked').value);
           const sigResultData = wasm.sig_result(
             sig,
             document.getElementById("monotone-lm").checked,
@@ -1094,7 +1092,6 @@ stack()`
     }
   });
   btnWord.addEventListener("click", () => {
-    console.log("btnWord clicked!");
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
     if (arity) {
