@@ -368,7 +368,7 @@ import("./pkg")
               }
               // We deferred appending elements until now
               // Initial viewBox will be set by updateViewBox() below
-              latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two generators gx = ${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)} and gy = ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)} are two independent generators.</small>`;
+              latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.</small>`;
               latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
               // Add zoom buttons
               latticeElement.innerHTML += `<div class="controls">
@@ -377,6 +377,7 @@ import("./pkg")
         <button id="reset-view">Reset View</button>
         <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>
     </div>`;
+              latticeElement.innerHTML += `Lattice basis:<br/>(gx, gy) = (${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)}, ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)})`
               latticeElement.appendChild(svgTag);
 
               // Zoom functionality
