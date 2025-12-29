@@ -238,9 +238,12 @@ pub fn quasi_parallelogram_info(
             direct_approx(RawJiRatio::PYTH_5TH, scale_size as f64, RawJiRatio::OCTAVE);
         let fourth_mapping =
             direct_approx(RawJiRatio::PYTH_4TH, scale_size as f64, RawJiRatio::OCTAVE);
-        let taxicab_len: i32 = diff.iter().map(|x| x.abs()).sum();
+        let taxicab_len_lms: i32 = (0..3)
+            .map(|i| (diff[0] * old_basis.v1[i] + diff[1] * old_basis.v2[i]).abs())
+            .sum();
         // Negate because false < true
-        !(taxicab_len == fifth_mapping || taxicab_len == fourth_mapping)
+        !(taxicab_len_lms % scale_size as i32 == fifth_mapping
+            || taxicab_len_lms % scale_size as i32 == fourth_mapping)
     });
     // Look for a unimodular basis that witnesses the quasi-parallelogram condition.
     // If this basis turns out to work, just use the basis vectors' components as coefficients
