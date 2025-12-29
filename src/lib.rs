@@ -320,9 +320,9 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
                     new_v
                 })
                 .collect::<Vec<_>>();
-            let better_basis = lattice::PitchClassLatticeBasis::from_vecs(
-                better_vectors[0].clone(),
-                better_vectors[1].clone(),
+            let better_basis = lattice::PitchClassLatticeBasis::from_slices(
+                &better_vectors[0],
+                &better_vectors[1],
             );
             (coords, better_basis)
         } else {

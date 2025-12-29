@@ -23,8 +23,11 @@ pub struct PitchClassLatticeBasis {
 }
 
 impl PitchClassLatticeBasis {
-    pub fn from_vecs(v1: Vec<i32>, v2: Vec<i32>) -> Self {
-        Self { v1, v2 }
+    pub fn from_slices(v1: &[i32], v2: &[i32]) -> Self {
+        Self {
+            v1: v1.to_vec(),
+            v2: v2.to_vec(),
+        }
     }
 
     pub fn v1(&self) -> &[i32] {
@@ -188,7 +191,7 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchC
         }
         (
             pitch_classes,
-            PitchClassLatticeBasis::from_vecs(gener_1, gener_2),
+            PitchClassLatticeBasis::from_slices(&gener_1, &gener_2),
         )
     })
 }
@@ -357,7 +360,7 @@ pub fn quasi_parallelogram_info(
                                     last_row_len,
                                 ),
                                 // Put the row generator first
-                                PitchClassLatticeBasis::from_vecs(vx_lms, vy_lms),
+                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms),
                             ));
                         }
                     }
@@ -435,7 +438,7 @@ pub fn quasi_parallelogram_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_vecs(vx_lms, vy_lms),
+                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms),
                             ));
                         }
                     }
@@ -527,7 +530,7 @@ pub fn quasi_parallelogram_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_vecs(vy_lms, vx_lms),
+                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms),
                             ));
                         }
                     }
@@ -605,7 +608,7 @@ pub fn quasi_parallelogram_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_vecs(vy_lms, vx_lms),
+                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms),
                             ));
                         }
                     }
