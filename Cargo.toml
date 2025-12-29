@@ -4,7 +4,6 @@ version = "0.4.0"
 authors = ["inthar-raven <serotoceprafen@gmail.com>"]
 edition = "2024"
 
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -40,8 +39,9 @@ features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window']
 wasm-bindgen-test = "0.3.34"
 
 [profile.release]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
+opt-level = 'z'  # Optimize for size, not speed
+lto = true       # Enable Link Time Optimization
+codegen-units = 1 # Helps LTO perform better (can increase compile time)
 strip = true
 
 [package.metadata.wasm-pack.profile.release]

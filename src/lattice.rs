@@ -1,3 +1,5 @@
+use std::iter::IntoIterator;
+
 use serde::Serialize;
 
 use crate::GuideResult;
@@ -21,7 +23,7 @@ pub struct PitchClassLatticeBasis {
 }
 
 impl PitchClassLatticeBasis {
-    fn from_vecs(v1: Vec<i32>, v2: Vec<i32>) -> Self {
+    pub fn from_vecs(v1: Vec<i32>, v2: Vec<i32>) -> Self {
         Self { v1, v2 }
     }
 
@@ -31,6 +33,16 @@ impl PitchClassLatticeBasis {
 
     pub fn v2(&self) -> &[i32] {
         &self.v2
+    }
+}
+
+impl IntoIterator for PitchClassLatticeBasis {
+    type Item = Vec<i32>;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        vec![self.v1, self.v2].into_iter()
     }
 }
 

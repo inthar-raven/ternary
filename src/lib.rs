@@ -292,7 +292,10 @@ pub fn word_to_mv(query: String) -> u16 {
 #[wasm_bindgen]
 pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     let word_in_numbers = string_to_numbers(&query);
-
+    let step_sig = word_to_sig(&word_in_numbers)
+        .iter()
+        .map(|x| *x as i32)
+        .collect::<Vec<i32>>();
     // First get the initial lattice and basis
     if let Some((pitch_classes, initial_basis)) = lattice::try_pitch_class_lattice(&word_in_numbers)
     {
@@ -306,6 +309,21 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
             let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
                 .unwrap()
                 .0;
+            // Keep stacking equaves until negative coordinates are eliminated
+            let better_vectors = better_basis
+                .into_iter()
+                .map(|v| {
+                    let mut new_v = v;
+                    while new_v.iter().any(|v_i| *v_i < 0) {
+                        (0..3).for_each(|i| new_v[i] += step_sig[i]);
+                    }
+                    new_v
+                })
+                .collect::<Vec<_>>();
+            let better_basis = lattice::PitchClassLatticeBasis::from_vecs(
+                better_vectors[0].clone(),
+                better_vectors[1].clone(),
+            );
             (coords, better_basis)
         } else {
             // No better basis found, use the original
@@ -345,8 +363,6 @@ pub fn sig_to_ji_tunings(
     cents_lower_bound: f64,
     cents_upper_bound: f64,
 ) -> Vec<Vec<String>> {
-    console_log!("DEBUG cents_lower_bound: {:?}", cents_lower_bound);
-    console_log!("DEBUG cents_upper_bound: {:?}", cents_upper_bound);
     let equave_monzo = Monzo::try_from_ratio(equave).ok();
     if let Some(equave_monzo) = equave_monzo {
         ji::solve_step_sig_81_odd_limit(
