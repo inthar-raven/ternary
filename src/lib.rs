@@ -309,13 +309,16 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
             let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
                 .unwrap()
                 .0;
-            // Keep stacking equaves until negative coordinates are eliminated
+            // Equave reduce
             let better_vectors = better_basis
                 .into_iter()
                 .map(|v| {
                     let mut new_v = v;
                     while new_v.iter().any(|v_i| *v_i < 0) {
                         (0..3).for_each(|i| new_v[i] += step_sig[i]);
+                    }
+                    while (0..3).any(|i| new_v[i] > step_sig[i]) {
+                        (0..3).for_each(|i| new_v[i] -= step_sig[i]);
                     }
                     new_v
                 })
