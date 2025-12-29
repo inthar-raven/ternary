@@ -233,116 +233,117 @@ function tableHead(data, header = "") {
 }
 
 // Main application code - load WASM module
-import("./pkg").then((wasm) => {
-  console.log("WASM module loaded successfully!");
-  // app state
-  const appState = {
-    word: null,
-    latticeBasis: null,
-    tuning: null,
-    profile: null,
-  };
+import("./pkg")
+  .then((wasm) => {
+    console.log("WASM module loaded successfully!");
+    // app state
+    const appState = {
+      word: null,
+      latticeBasis: null,
+      tuning: null,
+      profile: null,
+    };
 
-  // New approach:
-  // 1. draw a background 2D grid first
-  // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
-  // 3. choose a zero point
-  // TODO: Indicate what kind of guide frame it is. (simple, multiple/interleaved)
-  //
-  // TODO: show a legend for the different colored lines
-  function createLatticeView(state, equave) {
-    if (statusElement) {
-      statusElement.innerText = "";
+    // New approach:
+    // 1. draw a background 2D grid first
+    // 2. represent x and y directions as generator and offset, whichever way fits better on the screen
+    // 3. choose a zero point
+    // TODO: Indicate what kind of guide frame it is. (simple, multiple/interleaved)
+    //
+    // TODO: show a legend for the different colored lines
+    function createLatticeView(state, equave) {
+      if (statusElement) {
+        statusElement.innerText = "";
 
-      let A;
-      let B;
-      let C;
-      let D;
+        let A;
+        let B;
+        let C;
+        let D;
 
-      // Create lattice visualization
-      const latticeElement = document.getElementById("lattice-vis");
-      if (latticeElement) {
-        latticeElement.innerHTML = "";
-        latticeElement.setAttribute("style", "vertical-align: text-top;");
-        const svgTag = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "svg",
-        );
-        svgTag.setAttribute("id", "lattice");
-        svgTag.setAttribute("width", "100%");
-        svgTag.setAttribute("height", "400");
-        svgTag.style.touchAction = "none";
-        svgTag.style.cursor = "grab";
-        const svgStyle = document.createElement("style");
-        svgStyle.innerHTML = `
+        // Create lattice visualization
+        const latticeElement = document.getElementById("lattice-vis");
+        if (latticeElement) {
+          latticeElement.innerHTML = "";
+          latticeElement.setAttribute("style", "vertical-align: text-top;");
+          const svgTag = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg",
+          );
+          svgTag.setAttribute("id", "lattice");
+          svgTag.setAttribute("width", "100%");
+          svgTag.setAttribute("height", "400");
+          svgTag.style.touchAction = "none";
+          svgTag.style.cursor = "grab";
+          const svgStyle = document.createElement("style");
+          svgStyle.innerHTML = `
       .small {
         font: 20px sans-serif;
         fill: black;
       }`;
-        if (state.word) {
-          if (state.latticeBasis) {
-            let n = state.word.length;
-            [A, B, C, D] = [1, 0, 0, 1];
-            
-            // Draw coordinate grid
-            for (let i = -64; i < 64; ++i) {
-              // Lines of constant x
-              const p0x = ORIGIN_X + A * SPACING_X * i; // ith x offset
-              const p0y = ORIGIN_X + B * SPACING_Y * i;
-              const p1x = p0x + C * SPACING_X * 100; // add a large positive x offset
-              const p1y = p0y + D * SPACING_Y * 100;
-              const p2x = p0x + C * SPACING_X * -100; // add a large negative x offset
-              const p2y = p0y + D * SPACING_Y * -100;
-              // Lines of constant y
-              const q0x = ORIGIN_X + C * SPACING_X * i;
-              const q0y = ORIGIN_Y + D * SPACING_Y * i;
-              const q1x = q0x + A * SPACING_X * 100;
-              const q1y = q0y + B * SPACING_Y * 100;
-              const q2x = q0x + A * SPACING_X * -100;
-              const q2y = q0y + B * SPACING_Y * -100;
+          if (state.word) {
+            if (state.latticeBasis) {
+              let n = state.word.length;
+              [A, B, C, D] = [1, 0, 0, 1];
 
-              // draw the line of constant x
-              svgTag.innerHTML += `<line
+              // Draw coordinate grid
+              for (let i = -64; i < 64; ++i) {
+                // Lines of constant x
+                const p0x = ORIGIN_X + A * SPACING_X * i; // ith x offset
+                const p0y = ORIGIN_X + B * SPACING_Y * i;
+                const p1x = p0x + C * SPACING_X * 100; // add a large positive x offset
+                const p1y = p0y + D * SPACING_Y * 100;
+                const p2x = p0x + C * SPACING_X * -100; // add a large negative x offset
+                const p2y = p0y + D * SPACING_Y * -100;
+                // Lines of constant y
+                const q0x = ORIGIN_X + C * SPACING_X * i;
+                const q0y = ORIGIN_Y + D * SPACING_Y * i;
+                const q1x = q0x + A * SPACING_X * 100;
+                const q1y = q0y + B * SPACING_Y * 100;
+                const q2x = q0x + A * SPACING_X * -100;
+                const q2y = q0y + B * SPACING_Y * -100;
+
+                // draw the line of constant x
+                svgTag.innerHTML += `<line
                 x1="${p1x}"
                 y1="${p1y}"
                 x2="${p2x}"
                 y2="${p2y}"
                 style="stroke:${GROUND_INDIGO}; stroke-width:${EDGE_WIDTH}"
               />`;
-              // draw the line of constant y
-              svgTag.innerHTML += `<line
+                // draw the line of constant y
+                svgTag.innerHTML += `<line
                 x1="${q1x}"
                 y1="${q1y}"
                 x2="${q2x}"
                 y2="${q2y}"
                 style="stroke:gray; stroke-width:${EDGE_WIDTH}"
               />`;
-            }
+              }
 
-            // Track cumulative step counts for pitch calculation
-            let stepCounts = { L: 0, m: 0, s: 0 };
-            // Get lattice coordinates and basis directly from WASM
-            const latticeResult = wasm.word_to_lattice(state.word);
-            if (latticeResult && latticeResult.basis) {
-              // Update the state with the better basis
-              state.latticeBasis = latticeResult.basis;
-            }
-            const latticeCoords = latticeResult.coordinates;
-            for (let deg = 0; deg < latticeCoords.length; ++deg) {
-              // Get coordinates directly from WASM-computed lattice
-              const [latticeX, latticeY] = latticeCoords[deg];
-              const currentX = ORIGIN_X + latticeX * SPACING_X;
-              const currentY = ORIGIN_Y + latticeY * SPACING_Y;
+              // Track cumulative step counts for pitch calculation
+              let stepCounts = { L: 0, m: 0, s: 0 };
+              // Get lattice coordinates and basis directly from WASM
+              const latticeResult = wasm.word_to_lattice(state.word);
+              if (latticeResult && latticeResult.basis) {
+                // Update the state with the better basis
+                state.latticeBasis = latticeResult.basis;
+              }
+              const latticeCoords = latticeResult.coordinates;
+              for (let deg = 0; deg < latticeCoords.length; ++deg) {
+                // Get coordinates directly from WASM-computed lattice
+                const [latticeX, latticeY] = latticeCoords[deg];
+                const currentX = ORIGIN_X + latticeX * SPACING_X;
+                const currentY = ORIGIN_Y + latticeY * SPACING_Y;
 
-              const { pitch, cents } = getPitchInfo(
-                stepCounts,
-                state.tuning,
-                equave,
-              );
-              const centsRounded = Math.round(cents);
-              const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
+                const { pitch, cents } = getPitchInfo(
+                  stepCounts,
+                  state.tuning,
+                  equave,
+                );
+                const centsRounded = Math.round(cents);
+                const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
 
-              svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
+                svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
             <circle
               cx="${currentX}"
               cy="${currentY}"
@@ -362,576 +363,584 @@ import("./pkg").then((wasm) => {
             >${mod(deg, n)}</text>
           </g>`;
 
-              // Update step counts for next iteration
-              stepCounts[state.word[deg]]++;
-            }
-            // We deferred appending elements until now
-            // Initial viewBox will be set by updateViewBox() below
-            latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two generators gx = ${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)} and gy = ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)} are two independent generators.</small>`;
-            latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
-            // Add zoom buttons
-            latticeElement.innerHTML += `<div class="controls">
+                // Update step counts for next iteration
+                stepCounts[state.word[deg]]++;
+              }
+              // We deferred appending elements until now
+              // Initial viewBox will be set by updateViewBox() below
+              latticeElement.innerHTML += `<hr/><h2>Lattice view</h2><br/><small>Ternary scales are special in that they admit a JI-agnostic 2D lattice representation.<br/>Here the two generators gx = ${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)} and gy = ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)} are two independent generators.</small>`;
+              latticeElement.innerHTML += `<br/><small>Hover over the dots to see pitch information. Click and drag to pan, use mouse wheel or buttons to zoom.</small>`;
+              // Add zoom buttons
+              latticeElement.innerHTML += `<div class="controls">
         <button id="zoom-in">Zoom In (+)</button>
         <button id="zoom-out">Zoom Out (-)</button>
         <button id="reset-view">Reset View</button>
         <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>
     </div>`;
-            latticeElement.appendChild(svgTag);
+              latticeElement.appendChild(svgTag);
 
-            // Zoom functionality
-            const zoomInButton = document.getElementById("zoom-in");
-            const zoomOutButton = document.getElementById("zoom-out");
-            const resetViewButton = document.getElementById("reset-view");
-            const zoomLevelDisplay = document.getElementById("zoom-level");
-            let viewBox = {
-              x: 150,
-              y: 150,
-              width: LATTICE_SVG_WIDTH,
-              height: LATTICE_SVG_HEIGHT,
-            };
-
-            let isPanning = false;
-            let isPinching = false;
-            let startPoint = { x: 0, y: 0 };
-            let initialPinchDistance = 0;
-            let pinchCenter = { x: 0, y: 0 };
-            let scale = 1.0;
-
-            // Get distance between two touch points
-            function getTouchDistance(touches) {
-              const dx = touches[0].clientX - touches[1].clientX;
-              const dy = touches[0].clientY - touches[1].clientY;
-              return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            // Get center point between two touches in SVG coordinates
-            function getTouchCenter(touches) {
-              const CTM = svgTag.getScreenCTM();
-              const centerX = (touches[0].clientX + touches[1].clientX) / 2;
-              const centerY = (touches[0].clientY + touches[1].clientY) / 2;
-              return {
-                x: (centerX - CTM.e) / CTM.a,
-                y: (centerY - CTM.f) / CTM.d,
-              };
-            }
-
-            // Update viewBox attribute
-            function updateViewBox() {
-              svgTag.setAttribute(
-                "viewBox",
-                `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`,
-              );
-              zoomLevelDisplay.textContent = Math.round(scale * 100) + "%";
-            }
-
-            // Convert screen coordinates to SVG coordinates
-            function getPointInSVG(e) {
-              const CTM = svgTag.getScreenCTM();
-              // Handle both mouse and touch events
-              const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-              const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-              return {
-                x: (clientX - CTM.e) / CTM.a,
-                y: (clientY - CTM.f) / CTM.d,
-              };
-            }
-
-            // Pointer event tracking for pinch-to-zoom
-            const pointers = new Map();
-
-            function getPointerDistance() {
-              const pts = Array.from(pointers.values());
-              if (pts.length < 2) return 0;
-              const dx = pts[0].clientX - pts[1].clientX;
-              const dy = pts[0].clientY - pts[1].clientY;
-              return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            function getPointerCenter() {
-              const pts = Array.from(pointers.values());
-              if (pts.length < 2) return { x: 0, y: 0 };
-              const CTM = svgTag.getScreenCTM();
-              const centerX = (pts[0].clientX + pts[1].clientX) / 2;
-              const centerY = (pts[0].clientY + pts[1].clientY) / 2;
-              return {
-                x: (centerX - CTM.e) / CTM.a,
-                y: (centerY - CTM.f) / CTM.d,
-              };
-            }
-
-            // Pointer down
-            svgTag.addEventListener("pointerdown", (e) => {
-              e.preventDefault();
-              pointers.set(e.pointerId, e);
-
-              if (pointers.size === 1) {
-                isPanning = true;
-                isPinching = false;
-                startPoint = getPointInSVG(e);
-              } else if (pointers.size === 2) {
-                isPanning = false;
-                isPinching = true;
-                initialPinchDistance = getPointerDistance();
-                pinchCenter = getPointerCenter();
-              }
-            });
-
-            // Pointer move
-            svgTag.addEventListener("pointermove", (e) => {
-              if (!pointers.has(e.pointerId)) return;
-
-              e.preventDefault();
-              pointers.set(e.pointerId, e);
-
-              if (pointers.size === 2 && isPinching) {
-                const currentDistance = getPointerDistance();
-                if (initialPinchDistance > 0 && currentDistance > 0) {
-                  const zoomFactor = initialPinchDistance / currentDistance;
-                  const center = getPointerCenter();
-
-                  // Calculate new dimensions
-                  const newWidth = viewBox.width * zoomFactor;
-                  const newHeight = viewBox.height * zoomFactor;
-
-                  // Adjust position to zoom towards pinch center
-                  viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
-                  viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
-
-                  viewBox.width = newWidth;
-                  viewBox.height = newHeight;
-
-                  scale = 800 / viewBox.width;
-
-                  // Update for next frame
-                  initialPinchDistance = currentDistance;
-                  pinchCenter = center;
-
-                  updateViewBox();
-                }
-              } else if (pointers.size === 1 && isPanning) {
-                const CTM = svgTag.getScreenCTM();
-                const currentPoint = {
-                  x: (e.clientX - CTM.e) / CTM.a,
-                  y: (e.clientY - CTM.f) / CTM.d,
-                };
-                const dx = currentPoint.x - startPoint.x;
-                const dy = currentPoint.y - startPoint.y;
-
-                viewBox.x -= dx;
-                viewBox.y -= dy;
-
-                updateViewBox();
-              }
-            });
-
-            // Pointer up/cancel
-            function onPointerUp(e) {
-              pointers.delete(e.pointerId);
-              if (pointers.size < 2) {
-                isPinching = false;
-              }
-              if (pointers.size === 0) {
-                isPanning = false;
-              }
-              // If we went from 2 to 1 pointer, restart panning from current position
-              if (pointers.size === 1) {
-                isPanning = true;
-                const remainingPointer = Array.from(pointers.values())[0];
-                const CTM = svgTag.getScreenCTM();
-                startPoint = {
-                  x: (remainingPointer.clientX - CTM.e) / CTM.a,
-                  y: (remainingPointer.clientY - CTM.f) / CTM.d,
-                };
-              }
-            }
-
-            svgTag.addEventListener("pointerup", onPointerUp);
-            svgTag.addEventListener("pointercancel", onPointerUp);
-            svgTag.addEventListener("pointerleave", onPointerUp);
-
-            // Wheel - zoom
-            svgTag.addEventListener("wheel", (e) => {
-              e.preventDefault();
-
-              const point = getPointInSVG(e);
-              const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
-
-              // Calculate new dimensions
-              const newWidth = viewBox.width * zoomFactor;
-              const newHeight = viewBox.height * zoomFactor;
-
-              // Adjust position to zoom towards mouse cursor
-              viewBox.x += (point.x - viewBox.x) * (1 - zoomFactor);
-              viewBox.y += (point.y - viewBox.y) * (1 - zoomFactor);
-
-              viewBox.width = newWidth;
-              viewBox.height = newHeight;
-
-              scale = 800 / viewBox.width;
-
-              updateViewBox();
-            });
-
-            // Zoom by factor around center
-            function zoomBy(factor) {
-              const centerX = viewBox.x + viewBox.width / 2;
-              const centerY = viewBox.y + viewBox.height / 2;
-              viewBox.width *= factor;
-              viewBox.height *= factor;
-              viewBox.x = centerX - viewBox.width / 2;
-              viewBox.y = centerY - viewBox.height / 2;
-              scale = 800 / viewBox.width;
-              updateViewBox();
-            }
-
-            // Button functions
-            zoomInButton.addEventListener("click", () => zoomBy(0.8));
-            zoomOutButton.addEventListener("click", () => zoomBy(1.25));
-            resetViewButton.addEventListener("click", () => {
-              viewBox = {
+              // Zoom functionality
+              const zoomInButton = document.getElementById("zoom-in");
+              const zoomOutButton = document.getElementById("zoom-out");
+              const resetViewButton = document.getElementById("reset-view");
+              const zoomLevelDisplay = document.getElementById("zoom-level");
+              let viewBox = {
                 x: 150,
                 y: 150,
                 width: LATTICE_SVG_WIDTH,
                 height: LATTICE_SVG_HEIGHT,
               };
-              scale = 1;
+
+              let isPanning = false;
+              let isPinching = false;
+              let startPoint = { x: 0, y: 0 };
+              let initialPinchDistance = 0;
+              let pinchCenter = { x: 0, y: 0 };
+              let scale = 1.0;
+
+              // Get distance between two touch points
+              function getTouchDistance(touches) {
+                const dx = touches[0].clientX - touches[1].clientX;
+                const dy = touches[0].clientY - touches[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+              }
+
+              // Get center point between two touches in SVG coordinates
+              function getTouchCenter(touches) {
+                const CTM = svgTag.getScreenCTM();
+                const centerX = (touches[0].clientX + touches[1].clientX) / 2;
+                const centerY = (touches[0].clientY + touches[1].clientY) / 2;
+                return {
+                  x: (centerX - CTM.e) / CTM.a,
+                  y: (centerY - CTM.f) / CTM.d,
+                };
+              }
+
+              // Update viewBox attribute
+              function updateViewBox() {
+                svgTag.setAttribute(
+                  "viewBox",
+                  `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`,
+                );
+                zoomLevelDisplay.textContent = Math.round(scale * 100) + "%";
+              }
+
+              // Convert screen coordinates to SVG coordinates
+              function getPointInSVG(e) {
+                const CTM = svgTag.getScreenCTM();
+                // Handle both mouse and touch events
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                  x: (clientX - CTM.e) / CTM.a,
+                  y: (clientY - CTM.f) / CTM.d,
+                };
+              }
+
+              // Pointer event tracking for pinch-to-zoom
+              const pointers = new Map();
+
+              function getPointerDistance() {
+                const pts = Array.from(pointers.values());
+                if (pts.length < 2) return 0;
+                const dx = pts[0].clientX - pts[1].clientX;
+                const dy = pts[0].clientY - pts[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+              }
+
+              function getPointerCenter() {
+                const pts = Array.from(pointers.values());
+                if (pts.length < 2) return { x: 0, y: 0 };
+                const CTM = svgTag.getScreenCTM();
+                const centerX = (pts[0].clientX + pts[1].clientX) / 2;
+                const centerY = (pts[0].clientY + pts[1].clientY) / 2;
+                return {
+                  x: (centerX - CTM.e) / CTM.a,
+                  y: (centerY - CTM.f) / CTM.d,
+                };
+              }
+
+              // Pointer down
+              svgTag.addEventListener("pointerdown", (e) => {
+                e.preventDefault();
+                pointers.set(e.pointerId, e);
+
+                if (pointers.size === 1) {
+                  isPanning = true;
+                  isPinching = false;
+                  startPoint = getPointInSVG(e);
+                } else if (pointers.size === 2) {
+                  isPanning = false;
+                  isPinching = true;
+                  initialPinchDistance = getPointerDistance();
+                  pinchCenter = getPointerCenter();
+                }
+              });
+
+              // Pointer move
+              svgTag.addEventListener("pointermove", (e) => {
+                if (!pointers.has(e.pointerId)) return;
+
+                e.preventDefault();
+                pointers.set(e.pointerId, e);
+
+                if (pointers.size === 2 && isPinching) {
+                  const currentDistance = getPointerDistance();
+                  if (initialPinchDistance > 0 && currentDistance > 0) {
+                    const zoomFactor = initialPinchDistance / currentDistance;
+                    const center = getPointerCenter();
+
+                    // Calculate new dimensions
+                    const newWidth = viewBox.width * zoomFactor;
+                    const newHeight = viewBox.height * zoomFactor;
+
+                    // Adjust position to zoom towards pinch center
+                    viewBox.x += (pinchCenter.x - viewBox.x) * (1 - zoomFactor);
+                    viewBox.y += (pinchCenter.y - viewBox.y) * (1 - zoomFactor);
+
+                    viewBox.width = newWidth;
+                    viewBox.height = newHeight;
+
+                    scale = 800 / viewBox.width;
+
+                    // Update for next frame
+                    initialPinchDistance = currentDistance;
+                    pinchCenter = center;
+
+                    updateViewBox();
+                  }
+                } else if (pointers.size === 1 && isPanning) {
+                  const CTM = svgTag.getScreenCTM();
+                  const currentPoint = {
+                    x: (e.clientX - CTM.e) / CTM.a,
+                    y: (e.clientY - CTM.f) / CTM.d,
+                  };
+                  const dx = currentPoint.x - startPoint.x;
+                  const dy = currentPoint.y - startPoint.y;
+
+                  viewBox.x -= dx;
+                  viewBox.y -= dy;
+
+                  updateViewBox();
+                }
+              });
+
+              // Pointer up/cancel
+              function onPointerUp(e) {
+                pointers.delete(e.pointerId);
+                if (pointers.size < 2) {
+                  isPinching = false;
+                }
+                if (pointers.size === 0) {
+                  isPanning = false;
+                }
+                // If we went from 2 to 1 pointer, restart panning from current position
+                if (pointers.size === 1) {
+                  isPanning = true;
+                  const remainingPointer = Array.from(pointers.values())[0];
+                  const CTM = svgTag.getScreenCTM();
+                  startPoint = {
+                    x: (remainingPointer.clientX - CTM.e) / CTM.a,
+                    y: (remainingPointer.clientY - CTM.f) / CTM.d,
+                  };
+                }
+              }
+
+              svgTag.addEventListener("pointerup", onPointerUp);
+              svgTag.addEventListener("pointercancel", onPointerUp);
+              svgTag.addEventListener("pointerleave", onPointerUp);
+
+              // Wheel - zoom
+              svgTag.addEventListener("wheel", (e) => {
+                e.preventDefault();
+
+                const point = getPointInSVG(e);
+                const zoomFactor = e.deltaY < 0 ? 0.9 : 1.1;
+
+                // Calculate new dimensions
+                const newWidth = viewBox.width * zoomFactor;
+                const newHeight = viewBox.height * zoomFactor;
+
+                // Adjust position to zoom towards mouse cursor
+                viewBox.x += (point.x - viewBox.x) * (1 - zoomFactor);
+                viewBox.y += (point.y - viewBox.y) * (1 - zoomFactor);
+
+                viewBox.width = newWidth;
+                viewBox.height = newHeight;
+
+                scale = 800 / viewBox.width;
+
+                updateViewBox();
+              });
+
+              // Zoom by factor around center
+              function zoomBy(factor) {
+                const centerX = viewBox.x + viewBox.width / 2;
+                const centerY = viewBox.y + viewBox.height / 2;
+                viewBox.width *= factor;
+                viewBox.height *= factor;
+                viewBox.x = centerX - viewBox.width / 2;
+                viewBox.y = centerY - viewBox.height / 2;
+                scale = 800 / viewBox.width;
+                updateViewBox();
+              }
+
+              // Button functions
+              zoomInButton.addEventListener("click", () => zoomBy(0.8));
+              zoomOutButton.addEventListener("click", () => zoomBy(1.25));
+              resetViewButton.addEventListener("click", () => {
+                viewBox = {
+                  x: 150,
+                  y: 150,
+                  width: LATTICE_SVG_WIDTH,
+                  height: LATTICE_SVG_HEIGHT,
+                };
+                scale = 1;
+                updateViewBox();
+              });
+              // Initialize
               updateViewBox();
-            });
-            // Initialize
-            updateViewBox();
+            } else {
+              // No lattice basis available - show a message instead of throwing
+              latticeElement.innerHTML = `<hr/><h2>Lattice view</h2><br/><small>No suitable lattice basis found for this scale.</small>`;
+            }
           } else {
-            // No lattice basis available - show a message instead of throwing
-            latticeElement.innerHTML = `<hr/><h2>Lattice view</h2><br/><small>No suitable lattice basis found for this scale.</small>`;
+            // No word selected
+            latticeElement.innerHTML = "";
           }
-        } else {
-          // No word selected
-          latticeElement.innerHTML = "";
         }
       }
     }
-  }
 
-  // Function for showing the SonicWeave code
-  function showSonicWeaveCode(state) {
-    if (state.word) {
-      const arity = new Set(Array.from(state.word)).size;
-      if (state.tuning) {
-        const element = document.getElementById("sw-code");
-        if (element) {
-          element.innerHTML = `<hr/><h2>SonicWeave code</h2>
+    // Function for showing the SonicWeave code
+    function showSonicWeaveCode(state) {
+      if (state.word) {
+        const arity = new Set(Array.from(state.word)).size;
+        if (state.tuning) {
+          const element = document.getElementById("sw-code");
+          if (element) {
+            element.innerHTML = `<hr/><h2>SonicWeave code</h2>
         (for <a href="https://sw3.lumipakkanen.com/" target="_blank">Scale Workshop 3</a>)<br/>`;
-          element.innerHTML += `<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>`;
+            element.innerHTML += `<pre class="language-ocaml"><code class="language-ocaml" id="codeblock"></code></pre>`;
 
-          // Make a "copy to clipboard" button
-          const copyButtonLabel = "Copy";
+            // Make a "copy to clipboard" button
+            const copyButtonLabel = "Copy";
 
-          async function copyCode(block, button) {
-            let code = block.querySelector("code");
-            let text = code.innerText;
+            async function copyCode(block, button) {
+              let code = block.querySelector("code");
+              let text = code.innerText;
 
-            await navigator.clipboard.writeText(text);
+              await navigator.clipboard.writeText(text);
 
-            // visual feedback that task is completed
-            button.innerText = "Copied!";
+              // visual feedback that task is completed
+              button.innerText = "Copied!";
 
-            setTimeout(() => {
-              button.innerText = copyButtonLabel;
-            }, 700);
-          }
-
-          // use a class selector if available
-          let blocks = document.querySelectorAll("pre");
-
-          blocks.forEach((block) => {
-            // only add button if browser supports Clipboard API
-            if (navigator.clipboard) {
-              let button = document.createElement("button");
-
-              button.innerText = copyButtonLabel;
-              block.appendChild(button);
-
-              button.addEventListener("click", async () => {
-                await copyCode(block, button);
-              });
+              setTimeout(() => {
+                button.innerText = copyButtonLabel;
+              }, 700);
             }
-          });
 
-          let codeblock = document.getElementById("codeblock");
-          const arr = Array.from(state.word);
-          if (codeblock) {
-            codeblock.innerHTML =
-              arity === 3
-                ? `let L = ${state.tuning[0]}
+            // use a class selector if available
+            let blocks = document.querySelectorAll("pre");
+
+            blocks.forEach((block) => {
+              // only add button if browser supports Clipboard API
+              if (navigator.clipboard) {
+                let button = document.createElement("button");
+
+                button.innerText = copyButtonLabel;
+                block.appendChild(button);
+
+                button.addEventListener("click", async () => {
+                  await copyCode(block, button);
+                });
+              }
+            });
+
+            let codeblock = document.getElementById("codeblock");
+            const arr = Array.from(state.word);
+            if (codeblock) {
+              codeblock.innerHTML =
+                arity === 3
+                  ? `let L = ${state.tuning[0]}
 let m = ${state.tuning[1]}
 let s = ${state.tuning[2]}
 ${arr.join(";")};
 stack()`
-                : arity === 2
-                  ? `let L = ${state.tuning[0]}
+                  : arity === 2
+                    ? `let L = ${state.tuning[0]}
 let s = ${state.tuning[1]}
 ${arr.join(";")};
 stack()`
-                  : arity === 1
-                    ? `let X = ${state.tuning[0]}
+                    : arity === 1
+                      ? `let X = ${state.tuning[0]}
 ${arr.join(";")};
 stack()`
-                    : "Scales of rank > 3 are not supported";
+                      : "Scales of rank > 3 are not supported";
+            }
           }
         }
       }
     }
-  }
 
-  function showScaleProfile(state, equave) {
-    const el = document.getElementById("scale-profile");
-    if (el) {
-      el.innerHTML = "";
-      const h2 = document.createElement("h2");
-      h2.innerText = `Scale profile for ${state.word}`;
-      el.appendChild(h2);
-      if (state.profile) {
-        // const ploidacot = state.profile["ploidacot"];
-        const structure = state.profile["structure"];
+    function showScaleProfile(state, equave) {
+      const el = document.getElementById("scale-profile");
+      if (el) {
+        el.innerHTML = "";
+        const h2 = document.createElement("h2");
+        h2.innerText = `Scale profile for ${state.word}`;
+        el.appendChild(h2);
+        if (state.profile) {
+          // const ploidacot = state.profile["ploidacot"];
+          const structure = state.profile["structure"];
 
-        // Guide frame info (only if structure exists)
-        if (structure) {
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
+          // Guide frame info (only if structure exists)
+          if (structure) {
+            el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
            " target="_blank">Guide frame</a></b><br/><small>`;
-          let gsDisp =
-            `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
-              1,
-            );
-          el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-          el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
-          el.innerHTML += `Offsets ${structure["offset_chord"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
-          el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-          el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/></small>`; // TODO prettify
-        } else {
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
+            let gsDisp =
+              `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
+                1,
+              );
+            el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
+            el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
+            el.innerHTML += `Offsets ${structure["offset_chord"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
+            el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
+            el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/></small>`; // TODO prettify
+          } else {
+            el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
+          }
+
+          // Monotone MOS properties (always shown)
+          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
+          el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
+          el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
+          el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
+          if (
+            !state.profile["lm"] &&
+            !state.profile["ms"] &&
+            !state.profile["s0"]
+          ) {
+            el.innerHTML += `None<br/>`;
+          }
+          el.innerHTML += `<br/>`;
+
+          // MOS substitution properties (always shown)
+          const a = countChar(state.word, "L");
+          const b = countChar(state.word, "m");
+          const c = countChar(state.word, "s");
+
+          el.innerHTML += `<b><a href="https://wiki.spoogly.website/index.php?title=MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+          el.innerHTML += state.profile["subst_l_ms"]
+            ? `subst ${a}L(${b}m${c}s)<br/>`
+            : "";
+          el.innerHTML += state.profile["subst_m_ls"]
+            ? `subst ${b}m(${a}L${c}s)<br/>`
+            : "";
+          el.innerHTML += state.profile["subst_s_lm"]
+            ? `subst ${c}s(${a}L${b}m)<br/>`
+            : "";
+          if (
+            !state.profile["subst_l_ms"] &&
+            !state.profile["subst_m_ls"] &&
+            !state.profile["subst_s_lm"]
+          ) {
+            el.innerHTML += `None<br/>`;
+          }
+
+          // Chirality (always shown)
+          if (state.profile["chirality"] === "Achiral") {
+            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
+          } else {
+            el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
+          }
+
+          // Maximum variety (always shown)
+          el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
         }
-
-        // Monotone MOS properties (always shown)
-        el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
-        el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
-        el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
-        el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
-        if (
-          !state.profile["lm"] &&
-          !state.profile["ms"] &&
-          !state.profile["s0"]
-        ) {
-          el.innerHTML += `None<br/>`;
-        }
-        el.innerHTML += `<br/>`;
-
-        // MOS substitution properties (always shown)
-        const a = countChar(state.word, "L");
-        const b = countChar(state.word, "m");
-        const c = countChar(state.word, "s");
-
-        el.innerHTML += `<b><a href="https://wiki.spoogly.website/index.php?title=MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
-        el.innerHTML += state.profile["subst_l_ms"]
-          ? `subst ${a}L(${b}m${c}s)<br/>`
-          : "";
-        el.innerHTML += state.profile["subst_m_ls"]
-          ? `subst ${b}m(${a}L${c}s)<br/>`
-          : "";
-        el.innerHTML += state.profile["subst_s_lm"]
-          ? `subst ${c}s(${a}L${b}m)<br/>`
-          : "";
-        if (
-          !state.profile["subst_l_ms"] &&
-          !state.profile["subst_m_ls"] &&
-          !state.profile["subst_s_lm"]
-        ) {
-          el.innerHTML += `None<br/>`;
-        }
-
-        // Chirality (always shown)
-        if (state.profile["chirality"] === "Achiral") {
-          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
-        } else {
-          el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: ${state.profile["chirality"]} (reversed: ${state.profile["reversed"]})`;
-        }
-
-        // Maximum variety (always shown)
-        el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
       }
     }
-  }
 
-  // display both the step vector in sum form and what interval it is in the current tuning
-  function alsoInCurrentTuning(v, tuning, equave) {
-    if (tuning["0"].includes("\\")) {
-      if (equave.num !== 2 || equave.den !== 1) {
-        const str0 = tuning["0"].substring(0, tuning["0"].indexOf("<"));
-        const str1 = tuning["1"].substring(0, tuning["1"].indexOf("<"));
-        const str2 = tuning["2"].substring(0, tuning["2"].indexOf("<"));
+    // display both the step vector in sum form and what interval it is in the current tuning
+    function alsoInCurrentTuning(v, tuning, equave) {
+      if (tuning["0"].includes("\\")) {
+        if (equave.num !== 2 || equave.den !== 1) {
+          const str0 = tuning["0"].substring(0, tuning["0"].indexOf("<"));
+          const str1 = tuning["1"].substring(0, tuning["1"].indexOf("<"));
+          const str2 = tuning["2"].substring(0, tuning["2"].indexOf("<"));
+          const [numLstr, denLstr] = str0.split("\\");
+          const [numMstr, _1] = str1.split("\\");
+          const [numSstr, _2] = str2.split("\\");
+          const numL = Number(numLstr);
+          const numM = Number(numMstr);
+          const numS = Number(numSstr);
+          const ed = Number(denLstr);
+          return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equave.num}/${equave.den}>)`;
+        } else {
+          const [numLstr, denLstr] = tuning["0"].split("\\");
+          const ed = Number(denLstr);
+          const [numMstr, _3] = tuning["1"].split("\\");
+          const [numSstr, _4] = tuning["2"].split("\\");
+          const numL = Number(numLstr);
+          const numM = Number(numMstr);
+          const numS = Number(numSstr);
+          return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
+        }
+      } else if (tuning["0"].includes("/")) {
+        const [numLstr, denLstr] = tuning["0"].split("/");
+        const [numMstr, denMstr] = tuning["1"].split("/");
+        const [numSstr, denSstr] = tuning["2"].split("/");
+        const numL = Number(numLstr);
+        const numM = Number(numMstr);
+        const numS = Number(numSstr);
+        const denL = Number(denLstr);
+        const denM = Number(denMstr);
+        const denS = Number(denSstr);
+        const num =
+          Math.pow(numL, v["0"] ?? 0) *
+          Math.pow(numM, v["1"] ?? 0) *
+          Math.pow(numS, v["2"] ?? 0);
+        const den =
+          Math.pow(denL, v["0"] ?? 0) *
+          Math.pow(denM, v["1"] ?? 0) *
+          Math.pow(denS, v["2"] ?? 0);
+        const d = gcd(num, den);
+        return `${displayStepVector(v)} (${num / d}/${den / d})`;
+      } else {
+        return displayStepVector(v);
+      }
+    }
+
+    /**
+     * Get pitch info for a scale degree given step counts
+     * @param stepCounts - Object with counts of L, m, s steps: { L: n, m: n, s: n }
+     * @param tuning - The current tuning object
+     * @param equave - The equave { num, den, ratio }
+     * @returns { pitch: string, cents: number }
+     */
+    function getPitchInfo(stepCounts, tuning, equave) {
+      if (!tuning) return { pitch: "", cents: 0 };
+
+      const nL = stepCounts.L || 0;
+      const nM = stepCounts.m || 0;
+      const nS = stepCounts.s || 0;
+
+      // Calculate equave in cents
+      const equaveCents = 1200 * Math.log2(equave.num / equave.den);
+
+      if (tuning["0"].includes("\\")) {
+        // ED tuning format like "5\12" or "5\12<3/1>"
+        let str0 = tuning["0"];
+        let str1 = tuning["1"];
+        let str2 = tuning["2"];
+
+        // Strip equave suffix if present
+        if (str0.includes("<")) {
+          str0 = str0.substring(0, str0.indexOf("<"));
+          str1 = str1.substring(0, str1.indexOf("<"));
+          str2 = str2.substring(0, str2.indexOf("<"));
+        }
+
         const [numLstr, denLstr] = str0.split("\\");
-        const [numMstr, _1] = str1.split("\\");
-        const [numSstr, _2] = str2.split("\\");
+        const [numMstr] = str1.split("\\");
+        const [numSstr] = str2.split("\\");
+        const stepsL = Number(numLstr);
+        const stepsM = Number(numMstr);
+        const stepsS = Number(numSstr);
+        const ed = Number(denLstr);
+
+        const totalSteps = nL * stepsL + nM * stepsM + nS * stepsS;
+        const cents = (totalSteps / ed) * equaveCents;
+
+        let pitch;
+        if (equave.num !== 2 || equave.den !== 1) {
+          pitch = `${totalSteps}\\${ed}<${equave.num}/${equave.den}>`;
+        } else {
+          pitch = `${totalSteps}\\${ed}`;
+        }
+        return { pitch, cents };
+      } else if (tuning["0"].includes("/")) {
+        // JI tuning format like "9/8"
+        const [numLstr, denLstr] = tuning["0"].split("/");
+        const [numMstr, denMstr] = tuning["1"].split("/");
+        const [numSstr, denSstr] = tuning["2"].split("/");
         const numL = Number(numLstr);
         const numM = Number(numMstr);
         const numS = Number(numSstr);
-        const ed = Number(denLstr);
-        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed}<${equave.num}/${equave.den}>)`;
+        const denL = Number(denLstr);
+        const denM = Number(denMstr);
+        const denS = Number(denSstr);
+
+        const num =
+          Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
+        const den =
+          Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
+        const d = gcd(num, den);
+        const ratio = num / d / (den / d);
+        const cents = 1200 * Math.log2(ratio);
+        return { pitch: `${num / d}/${den / d}`, cents };
       } else {
-        const [numLstr, denLstr] = tuning["0"].split("\\");
-        const ed = Number(denLstr);
-        const [numMstr, _3] = tuning["1"].split("\\");
-        const [numSstr, _4] = tuning["2"].split("\\");
-        const numL = Number(numLstr);
-        const numM = Number(numMstr);
-        const numS = Number(numSstr);
-        return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
+        return { pitch: `${nL}L + ${nM}m + ${nS}s`, cents: 0 };
       }
-    } else if (tuning["0"].includes("/")) {
-      const [numLstr, denLstr] = tuning["0"].split("/");
-      const [numMstr, denMstr] = tuning["1"].split("/");
-      const [numSstr, denSstr] = tuning["2"].split("/");
-      const numL = Number(numLstr);
-      const numM = Number(numMstr);
-      const numS = Number(numSstr);
-      const denL = Number(denLstr);
-      const denM = Number(denMstr);
-      const denS = Number(denSstr);
-      const num =
-        Math.pow(numL, v["0"] ?? 0) *
-        Math.pow(numM, v["1"] ?? 0) *
-        Math.pow(numS, v["2"] ?? 0);
-      const den =
-        Math.pow(denL, v["0"] ?? 0) *
-        Math.pow(denM, v["1"] ?? 0) *
-        Math.pow(denS, v["2"] ?? 0);
-      const d = gcd(num, den);
-      return `${displayStepVector(v)} (${num / d}/${den / d})`;
-    } else {
-      return displayStepVector(v);
     }
-  }
 
-  /**
-   * Get pitch info for a scale degree given step counts
-   * @param stepCounts - Object with counts of L, m, s steps: { L: n, m: n, s: n }
-   * @param tuning - The current tuning object
-   * @param equave - The equave { num, den, ratio }
-   * @returns { pitch: string, cents: number }
-   */
-  function getPitchInfo(stepCounts, tuning, equave) {
-    if (!tuning) return { pitch: "", cents: 0 };
-
-    const nL = stepCounts.L || 0;
-    const nM = stepCounts.m || 0;
-    const nS = stepCounts.s || 0;
-
-    // Calculate equave in cents
-    const equaveCents = 1200 * Math.log2(equave.num / equave.den);
-
-    if (tuning["0"].includes("\\")) {
-      // ED tuning format like "5\12" or "5\12<3/1>"
-      let str0 = tuning["0"];
-      let str1 = tuning["1"];
-      let str2 = tuning["2"];
-
-      // Strip equave suffix if present
-      if (str0.includes("<")) {
-        str0 = str0.substring(0, str0.indexOf("<"));
-        str1 = str1.substring(0, str1.indexOf("<"));
-        str2 = str2.substring(0, str2.indexOf("<"));
-      }
-
-      const [numLstr, denLstr] = str0.split("\\");
-      const [numMstr] = str1.split("\\");
-      const [numSstr] = str2.split("\\");
-      const stepsL = Number(numLstr);
-      const stepsM = Number(numMstr);
-      const stepsS = Number(numSstr);
-      const ed = Number(denLstr);
-
-      const totalSteps = nL * stepsL + nM * stepsM + nS * stepsS;
-      const cents = (totalSteps / ed) * equaveCents;
-
-      let pitch;
-      if (equave.num !== 2 || equave.den !== 1) {
-        pitch = `${totalSteps}\\${ed}<${equave.num}/${equave.den}>`;
-      } else {
-        pitch = `${totalSteps}\\${ed}`;
-      }
-      return { pitch, cents };
-    } else if (tuning["0"].includes("/")) {
-      // JI tuning format like "9/8"
-      const [numLstr, denLstr] = tuning["0"].split("/");
-      const [numMstr, denMstr] = tuning["1"].split("/");
-      const [numSstr, denSstr] = tuning["2"].split("/");
-      const numL = Number(numLstr);
-      const numM = Number(numMstr);
-      const numS = Number(numSstr);
-      const denL = Number(denLstr);
-      const denM = Number(denMstr);
-      const denS = Number(denSstr);
-
-      const num = Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
-      const den = Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
-      const d = gcd(num, den);
-      const ratio = num / d / (den / d);
-      const cents = 1200 * Math.log2(ratio);
-      return { pitch: `${num / d}/${den / d}`, cents };
-    } else {
-      return { pitch: `${nL}L + ${nM}m + ${nS}s`, cents: 0 };
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll(`'`, "&#39;")
+        .replaceAll(`"`, "&quot;");
     }
-  }
 
-  function escapeHtml(text) {
-    return text
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll(`'`, "&#39;")
-      .replaceAll(`"`, "&quot;");
-  }
+    /**
+     * Clear selection from both tuning tables and select a row
+     */
+    function selectTuningRow(jiTable, edTable, row) {
+      jiTable.querySelector(`.selected`)?.classList.remove("selected");
+      edTable.querySelector(`.selected`)?.classList.remove("selected");
+      row.classList.add("selected");
+    }
 
-  /**
-   * Clear selection from both tuning tables and select a row
-   */
-  function selectTuningRow(jiTable, edTable, row) {
-    jiTable.querySelector(`.selected`)?.classList.remove("selected");
-    edTable.querySelector(`.selected`)?.classList.remove("selected");
-    row.classList.add("selected");
-  }
+    // Helper to update all views
+    function updateViews(equave) {
+      showScaleProfile(appState, equave);
+      createLatticeView(appState, equave);
+      showSonicWeaveCode(appState);
+    }
 
-  // Helper to update all views
-  function updateViews(equave) {
-    showScaleProfile(appState, equave);
-    createLatticeView(appState, equave);
-    showSonicWeaveCode(appState);
-  }
+    // UI messages for invalid input
+    const ONLY_TERNARY_SCALES =
+      "Only ternary (3 step sizes) scales are supported.";
+    const INVALID_SCALE_WORD =
+      "Scale word provided is not ternary with L, m, s. Make sure the scale word has no spaces.";
+    const NO_SCALE_WORD = "No scale word provided.";
+    const NO_STEP_SIGNATURE = "No step signature specified.";
 
-  const ONLY_TERNARY_SCALES = `Only ternary (3 step sizes) scales are supported.`;
+    const btnSig = document.getElementById("btn-sig");
+    const btnWord = document.getElementById("btn-word");
 
-  const btnSig = document.getElementById("btn-sig");
-  const btnWord = document.getElementById("btn-word");
+    btnSig.addEventListener("click", () => {
+      const sigQuery = document.getElementById("input-step-sig").value;
+      let sig = `${sigQuery}`
+        .split(" ")
+        .map((str) => str.trim())
+        .filter((str) => str.length > 0)
+        .map((str) => Number(str))
+        .filter((n) => !isNaN(n) && n >= 0);
 
-  btnSig.addEventListener("click", () => {
-    const sigQuery = document.getElementById("input-step-sig").value;
-    let sig = `${sigQuery}`
-      .split(" ")
-      .map((str) => str.trim())
-      .filter((str) => str.length > 0)
-      .map((str) => Number(str))
-      .filter((n) => !isNaN(n) && n >= 0);
+      const arity = sig.filter((m) => m > 0).length;
+      const scaleSize = sig.reduce((acc, m) => (acc += m), 0);
+      try {
+        if (scaleSize === 0) {
+          statusElement.textContent = NO_STEP_SIGNATURE;
+        } else if (arity != 3) {
+          statusElement.textContent = ONLY_TERNARY_SCALES;
+        } else {
+          if (true) {
+            statusElement.textContent = "Computing...";
 
-    const arity = sig.filter((m) => m > 0).length;
-    const scaleSize = sig.reduce((acc, m) => (acc += m), 0);
-    try {
-      if (scaleSize === 0) {
-        statusElement.textContent = "No scale specified.";
-      } else if (arity != 3) {
-        statusElement.textContent = ONLY_TERNARY_SCALES;
-      } else {
-        if (true) {
-          statusElement.textContent = "Computing...";
-
-          document.getElementById("tables").innerHTML = `
+            document.getElementById("tables").innerHTML = `
       <hr /><h2>Tables</h2>
       <div
         style="
@@ -984,138 +993,139 @@ stack()`
                       </div>
                     </div>
                   </div>`;
-          const scaleTable = document.getElementById("table-scales");
-          const jiTuningTable = document.getElementById("table-ji-tunings");
-          const edTuningTable = document.getElementById("table-ed-tunings");
-          const equave = getEquaveRatio();
-          const sigResultData = wasm.sig_result(
-            sig,
-            document.getElementById("monotone-lm").checked,
-            document.getElementById("monotone-ms").checked,
-            document.getElementById("monotone-s0").checked,
-            Number(document.getElementById("ggs-len").value),
-            document.querySelector('input[name="ggs-len-constraint"]:checked')
-              .value,
-            Number(document.getElementById("complexity").value),
-            document.querySelector(
-              'input[name="complexity-constraint"]:checked',
-            ).value,
-            Number(document.getElementById("mv").value),
-            document.querySelector('input[name="mv-constraint"]:checked').value,
-            document.querySelector('input[name="scale-type"]:checked').value,
-            equave.num,
-            equave.den,
-            getEdBound(),
-            getSLower(),
-            getSUpper(),
-          );
-          const scales = sigResultData["profiles"].map((j) => j["word"]);
-          const latticeBases = sigResultData["profiles"].map(
-            (j) => j["lattice_basis"],
-          );
-          const profiles = sigResultData["profiles"];
+            const scaleTable = document.getElementById("table-scales");
+            const jiTuningTable = document.getElementById("table-ji-tunings");
+            const edTuningTable = document.getElementById("table-ed-tunings");
+            const equave = getEquaveRatio();
+            const sigResultData = wasm.sig_result(
+              sig,
+              document.getElementById("monotone-lm").checked,
+              document.getElementById("monotone-ms").checked,
+              document.getElementById("monotone-s0").checked,
+              Number(document.getElementById("ggs-len").value),
+              document.querySelector('input[name="ggs-len-constraint"]:checked')
+                .value,
+              Number(document.getElementById("complexity").value),
+              document.querySelector(
+                'input[name="complexity-constraint"]:checked',
+              ).value,
+              Number(document.getElementById("mv").value),
+              document.querySelector('input[name="mv-constraint"]:checked')
+                .value,
+              document.querySelector('input[name="scale-type"]:checked').value,
+              equave.num,
+              equave.den,
+              getEdBound(),
+              getSLower(),
+              getSUpper(),
+            );
+            const scales = sigResultData["profiles"].map((j) => j["word"]);
+            const latticeBases = sigResultData["profiles"].map(
+              (j) => j["lattice_basis"],
+            );
+            const profiles = sigResultData["profiles"];
 
-          const jiTunings = sigResultData["ji_tunings"];
-          const edTunings = sigResultData["ed_tunings"];
-          let letters;
-          if (arity === 3) {
-            letters = ["L", "m", "s"];
-          } else if (arity === 2) {
-            letters = ["L", "s"];
-          } else if (arity === 1) {
-            letters = ["X"];
-          } else {
-            letters = [...Array(arity).keys()].map((i) => `X${i}`);
-          }
-          statusElement.innerHTML = `<h1>Results for ${escapeHtml([...Array(arity).keys()].map((i) => `${sig[i]}${letters[i]}`).join(""))}</h1> (click on a table row to select a scale or a tuning)`;
-          makeTable(scaleTable, scales, "scale");
-          // add event listener for each non-head row
-          const scaleRows = scaleTable.getElementsByTagName("tr");
-          if (scaleRows.length >= 3) {
-            scaleRows[2].classList.add("selected"); // For some reason 2 is the first row of a nonempty table.
-            appState.word = scales[0];
-            appState.profile = profiles[0];
-            appState.latticeBasis = appState.profile["lattice_basis"];
-
-            for (let i = 2; i < scaleRows.length; ++i) {
-              scaleRows[i].addEventListener("click", async () => {
-                // unselect selected row in either JI tuning table or ED tuning table
-                scaleTable
-                  .querySelector(`.selected`)
-                  .classList.remove("selected");
-
-                // select the row clicked on
-                scaleRows[i].classList.add("selected");
-                // get scale pattern
-                let scaleWord = scales[i - 2];
-                appState.profile = profiles[i - 2];
-                appState.latticeBasis = latticeBases[i - 2];
-                appState.word = scaleWord;
-                updateViews(equave);
-              });
+            const jiTunings = sigResultData["ji_tunings"];
+            const edTunings = sigResultData["ed_tunings"];
+            let letters;
+            if (arity === 3) {
+              letters = ["L", "m", "s"];
+            } else if (arity === 2) {
+              letters = ["L", "s"];
+            } else if (arity === 1) {
+              letters = ["X"];
+            } else {
+              letters = [...Array(arity).keys()].map((i) => `X${i}`);
             }
-          }
-          makeTable(jiTuningTable, jiTunings);
-          const jiRows = jiTuningTable.getElementsByTagName("tr");
-          for (let i = 2; i < jiRows.length; ++i) {
-            const thisRow = jiRows[i];
-            thisRow.addEventListener("click", () => {
-              if (arity === 3) {
-                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-                appState.tuning = jiTunings[i - 2];
-                updateViews(equave);
-              } else {
-                statusElement.textContent = ONLY_TERNARY_SCALES;
+            statusElement.innerHTML = `<h1>Results for ${escapeHtml([...Array(arity).keys()].map((i) => `${sig[i]}${letters[i]}`).join(""))}</h1> (click on a table row to select a scale or a tuning)`;
+            makeTable(scaleTable, scales, "scale");
+            // add event listener for each non-head row
+            const scaleRows = scaleTable.getElementsByTagName("tr");
+            if (scaleRows.length >= 3) {
+              scaleRows[2].classList.add("selected"); // For some reason 2 is the first row of a nonempty table.
+              appState.word = scales[0];
+              appState.profile = profiles[0];
+              appState.latticeBasis = appState.profile["lattice_basis"];
+
+              for (let i = 2; i < scaleRows.length; ++i) {
+                scaleRows[i].addEventListener("click", async () => {
+                  // unselect selected row in either JI tuning table or ED tuning table
+                  scaleTable
+                    .querySelector(`.selected`)
+                    .classList.remove("selected");
+
+                  // select the row clicked on
+                  scaleRows[i].classList.add("selected");
+                  // get scale pattern
+                  let scaleWord = scales[i - 2];
+                  appState.profile = profiles[i - 2];
+                  appState.latticeBasis = latticeBases[i - 2];
+                  appState.word = scaleWord;
+                  updateViews(equave);
+                });
               }
-            });
-          }
-          if (edTunings) {
-            makeTable(edTuningTable, edTunings);
-            const edRows = edTuningTable.getElementsByTagName("tr");
-            edRows[2].classList.add("selected");
-            const edTuning = edTunings[0];
-            appState.tuning = edTuning;
-            updateViews(equave);
-            for (let i = 2; i < edRows.length; ++i) {
-              const thisRow = edRows[i];
+            }
+            makeTable(jiTuningTable, jiTunings);
+            const jiRows = jiTuningTable.getElementsByTagName("tr");
+            for (let i = 2; i < jiRows.length; ++i) {
+              const thisRow = jiRows[i];
               thisRow.addEventListener("click", () => {
-                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-                const edTuning = edTunings[i - 2];
-                appState.tuning = edTuning;
-                updateViews(equave);
+                if (arity === 3) {
+                  selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                  appState.tuning = jiTunings[i - 2];
+                  updateViews(equave);
+                } else {
+                  statusElement.textContent = ONLY_TERNARY_SCALES;
+                }
               });
             }
+            if (edTunings) {
+              makeTable(edTuningTable, edTunings);
+              const edRows = edTuningTable.getElementsByTagName("tr");
+              edRows[2].classList.add("selected");
+              const edTuning = edTunings[0];
+              appState.tuning = edTuning;
+              updateViews(equave);
+              for (let i = 2; i < edRows.length; ++i) {
+                const thisRow = edRows[i];
+                thisRow.addEventListener("click", () => {
+                  selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                  const edTuning = edTunings[i - 2];
+                  appState.tuning = edTuning;
+                  updateViews(equave);
+                });
+              }
+            }
+            updateViews(equave);
           }
-          updateViews(equave);
         }
+      } catch (err) {
+        statusElement.innerText = err;
       }
-    } catch (err) {
-      statusElement.innerText = err;
-    }
-  });
-  btnWord.addEventListener("click", () => {
-    const query = document.getElementById("input-word").value;
-    const arity = new Set(Array.from(query)).size;
-    const queryIsValid = arity === 3 && /^[Lms]*$/.test(query);
-    if (queryIsValid) {
-      statusElement.textContent = "Computing...";
-      const equave = getEquaveRatio();
-      const edBound = getEdBound();
-      const sLower = getSLower();
-      const sUpper = getSUpper();
-      const wordResultData = wasm.word_result(
-        query,
-        equave.num,
-        equave.den,
-        edBound,
-        sLower,
-        sUpper,
-      );
-      const profile = wordResultData["profile"];
-      const brightestMode = wordResultData["profile"]["word"];
-      const jiTunings = wordResultData["ji_tunings"];
-      const edTunings = wordResultData["ed_tunings"];
-      document.getElementById("tables").innerHTML = `
+    });
+    btnWord.addEventListener("click", () => {
+      const query = document.getElementById("input-word").value;
+      const arity = new Set(Array.from(query)).size;
+      const queryIsValid = arity === 3 && /^[Lms]*$/.test(query);
+      if (queryIsValid) {
+        statusElement.textContent = "Computing...";
+        const equave = getEquaveRatio();
+        const edBound = getEdBound();
+        const sLower = getSLower();
+        const sUpper = getSUpper();
+        const wordResultData = wasm.word_result(
+          query,
+          equave.num,
+          equave.den,
+          edBound,
+          sLower,
+          sUpper,
+        );
+        const profile = wordResultData["profile"];
+        const brightestMode = wordResultData["profile"]["word"];
+        const jiTunings = wordResultData["ji_tunings"];
+        const edTunings = wordResultData["ed_tunings"];
+        document.getElementById("tables").innerHTML = `
                   <div class="tables-row">
                     <div class="table-column">
                       ed(equave) tunings
@@ -1144,54 +1154,56 @@ stack()`
                       </div>
                     </div>
                   </div>`;
-      const jiTuningTable = document.getElementById("table-ji-tunings");
-      const edTuningTable = document.getElementById("table-ed-tunings");
-      appState.word = brightestMode;
-      try {
-        statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
+        const jiTuningTable = document.getElementById("table-ji-tunings");
+        const edTuningTable = document.getElementById("table-ed-tunings");
+        appState.word = brightestMode;
+        try {
+          statusElement.innerHTML = `<h1>Results for ${appState.word}</h1>(click on a table row to select a tuning)`;
 
-        makeTable(jiTuningTable, jiTunings);
-        const jiRows = jiTuningTable.getElementsByTagName("tr");
-        for (let i = 2; i < jiRows.length; ++i) {
-          const thisRow = jiRows[i];
-          thisRow.addEventListener("click", () => {
-            if (arity === 3) {
-              selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-              appState.tuning = jiTunings[i - 2];
-              updateViews(equave);
-            } else {
-              statusElement.textContent = ONLY_TERNARY_SCALES;
-            }
-          });
-        }
-        if (edTunings) {
-          makeTable(edTuningTable, edTunings);
-          const edRows = edTuningTable.getElementsByTagName("tr");
-          edRows[2].classList.add("selected");
-          for (let i = 2; i < edRows.length; ++i) {
-            const thisRow = edRows[i];
+          makeTable(jiTuningTable, jiTunings);
+          const jiRows = jiTuningTable.getElementsByTagName("tr");
+          for (let i = 2; i < jiRows.length; ++i) {
+            const thisRow = jiRows[i];
             thisRow.addEventListener("click", () => {
-              selectTuningRow(jiTuningTable, edTuningTable, thisRow);
-              const edTuning = edTunings[i - 2];
-              appState.tuning = edTuning;
-              updateViews(equave);
+              if (arity === 3) {
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                appState.tuning = jiTunings[i - 2];
+                updateViews(equave);
+              } else {
+                statusElement.textContent = ONLY_TERNARY_SCALES;
+              }
             });
           }
+          if (edTunings) {
+            makeTable(edTuningTable, edTunings);
+            const edRows = edTuningTable.getElementsByTagName("tr");
+            edRows[2].classList.add("selected");
+            for (let i = 2; i < edRows.length; ++i) {
+              const thisRow = edRows[i];
+              thisRow.addEventListener("click", () => {
+                selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                const edTuning = edTunings[i - 2];
+                appState.tuning = edTuning;
+                updateViews(equave);
+              });
+            }
+          }
+          appState.tuning = edTunings[0];
+          appState.profile = profile;
+          appState.latticeBasis = appState.profile["lattice_basis"];
+          updateViews(equave);
+        } catch (err) {
+          statusElement.innerText = err;
         }
-        appState.tuning = edTunings[0];
-        appState.profile = profile;
-        appState.latticeBasis = appState.profile["lattice_basis"];
-        updateViews(equave);
-      } catch (err) {
-        statusElement.innerText = err;
+      } else if (query) {
+        statusElement.textContent = INVALID_SCALE_WORD;
+      } else {
+        statusElement.textContent = NO_SCALE_WORD;
       }
-    } else if (query) {
-      statusElement.textContent = "Scale word provided is not ternary with L, m, s. Make sure the scale word has no spaces.";
-    } else {
-      statusElement.textContent = "No scale word provided.";
-    }
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to load WASM module:", err);
+    statusElement.textContent =
+      "Failed to load WASM module. Check console for details.";
   });
-}).catch((err) => {
-  console.error("Failed to load WASM module:", err);
-  statusElement.textContent = "Failed to load WASM module. Check console for details.";
-});
