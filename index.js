@@ -906,27 +906,29 @@ stack()`
     showSonicWeaveCode(appState);
   }
 
-  const RANK_LIMIT = 3;
-  const NO_HIGH_RANK_SCALES = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
+  const ONLY_TERNARY_SCALES = `Only ternary (3 step sizes) scales are supported.`;
 
   const btnSig = document.getElementById("btn-sig");
   const btnWord = document.getElementById("btn-word");
 
   btnSig.addEventListener("click", () => {
     const sigQuery = document.getElementById("input-step-sig").value;
-    const sig = `${sigQuery}`
+    let sig = `${sigQuery}`
       .split(" ")
+      .map((str) => str.trim())
+      .filter((str) => str.length > 0)
       .map((str) => Number(str))
-      .filter((n) => n);
+      .filter((n) => !isNaN(n) && n >= 0);
+
     const arity = sig.filter((m) => m > 0).length;
     const scaleSize = sig.reduce((acc, m) => (acc += m), 0);
     try {
       if (scaleSize === 0) {
         statusElement.textContent = "No scale specified.";
-      } else if (arity > RANK_LIMIT) {
-        statusElement.textContent = `Scales of rank 0 or rank ${RANK_LIMIT + 1} or higher are not supported.`;
+      } else if (arity != 3) {
+        statusElement.textContent = ONLY_TERNARY_SCALES;
       } else {
-        if (arity > 0) {
+        if (true) {
           statusElement.textContent = "Computing...";
 
           document.getElementById("tables").innerHTML = `
@@ -1058,12 +1060,12 @@ stack()`
           for (let i = 2; i < jiRows.length; ++i) {
             const thisRow = jiRows[i];
             thisRow.addEventListener("click", () => {
-              if (arity >= 1 && arity <= 3) {
+              if (arity === 3) {
                 selectTuningRow(jiTuningTable, edTuningTable, thisRow);
                 appState.tuning = jiTunings[i - 2];
                 updateViews(equave);
               } else {
-                statusElement.textContent = NO_HIGH_RANK_SCALES;
+                statusElement.textContent = ONLY_TERNARY_SCALES;
               }
             });
           }
@@ -1094,7 +1096,8 @@ stack()`
   btnWord.addEventListener("click", () => {
     const query = document.getElementById("input-word").value;
     const arity = new Set(Array.from(query)).size;
-    if (arity) {
+    const queryIsValid = arity === 3 && /^[Lms]*$/.test(query);
+    if (queryIsValid) {
       statusElement.textContent = "Computing...";
       const equave = getEquaveRatio();
       const edBound = getEdBound();
@@ -1152,12 +1155,12 @@ stack()`
         for (let i = 2; i < jiRows.length; ++i) {
           const thisRow = jiRows[i];
           thisRow.addEventListener("click", () => {
-            if (arity >= 1 && arity <= 3) {
+            if (arity === 3) {
               selectTuningRow(jiTuningTable, edTuningTable, thisRow);
               appState.tuning = jiTunings[i - 2];
               updateViews(equave);
             } else {
-              statusElement.textContent = NO_HIGH_RANK_SCALES;
+              statusElement.textContent = ONLY_TERNARY_SCALES;
             }
           });
         }
@@ -1182,6 +1185,8 @@ stack()`
       } catch (err) {
         statusElement.innerText = err;
       }
+    } else if (query) {
+      statusElement.textContent = "Scale word provided is not ternary with L, m, s. Make sure the scale word has no spaces.";
     } else {
       statusElement.textContent = "No scale word provided.";
     }
