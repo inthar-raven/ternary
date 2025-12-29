@@ -707,7 +707,6 @@ stack()`
             el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
             el.innerHTML += `Offsets ${structure["offset_chord"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
             el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-            el.innerHTML += `Complexity ${JSON.stringify(structure["complexity"])}<br/><br/></small>`; // TODO prettify
           } else {
             el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
           }
