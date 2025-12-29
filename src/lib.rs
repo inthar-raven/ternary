@@ -1,21 +1,23 @@
 // #![deny(warnings)]
+pub mod billiard;
 pub mod comb;
 #[macro_use]
 pub mod equal;
 pub mod guide;
+pub mod helpers;
 pub mod interval;
 pub mod ji;
 pub mod ji_ratio;
-#[macro_use]
-pub mod monzo;
-pub mod helpers;
 pub mod lattice;
 pub mod matrix;
+#[macro_use]
+pub mod monzo;
 pub mod odd_limit_81;
+pub mod plane_geometry;
 pub mod primes;
-pub mod vector;
 #[macro_use]
 pub mod subgroup_monzo;
+pub mod vector;
 pub mod words;
 
 // use equal::is_in_tuning_range;
@@ -70,6 +72,7 @@ use guide::GuideFrame;
 use guide::guide_frames;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
+use crate::billiard::billiard_scales;
 use crate::lattice::get_unimodular_basis;
 use crate::monzo::Monzo;
 
@@ -260,8 +263,7 @@ pub fn word_result(
     s_lower: f64,
     s_upper: f64,
 ) -> Result<JsValue, JsValue> {
-    let equave =
-        RawJiRatio::try_new(equave_num as u64, equave_den as u64).unwrap_or(RawJiRatio::OCTAVE);
+    let equave = RawJiRatio::try_new(equave_num, equave_den).unwrap_or(RawJiRatio::OCTAVE);
     let word_as_numbers = string_to_numbers(&query);
     let step_sig = word_to_sig(&word_as_numbers);
 
@@ -434,15 +436,14 @@ pub fn sig_result(
     complexity_constraint: String,
     mv: u8,
     mv_constraint: String,
-    mos_subst: String,
+    scale_type: String,
     equave_num: u32,
     equave_den: u32,
     ed_bound: i32,
     s_lower: f64,
     s_upper: f64,
 ) -> Result<JsValue, JsValue> {
-    let equave =
-        RawJiRatio::try_new(equave_num as u64, equave_den as u64).unwrap_or(RawJiRatio::OCTAVE);
+    let equave = RawJiRatio::try_new(equave_num, equave_den).unwrap_or(RawJiRatio::OCTAVE);
     let step_sig = query;
     let filtering_cond = |scale: &[Letter]| {
         (!lm || monotone_lm(scale))
@@ -482,8 +483,11 @@ pub fn sig_result(
             })
     };
     let step_sig = step_sig.iter().map(|x| *x as usize).collect::<Vec<_>>();
-    let scales = if mos_subst == "on" {
+    let scales = if scale_type == "mos-subst" {
         words::mos_substitution_scales(&step_sig)
+    } else if scale_type == "billiard" {
+        let (a, b, c) = (step_sig[0], step_sig[1], step_sig[2]);
+        billiard_scales(a, b, c)
     } else {
         crate::comb::necklaces_fixed_content(&step_sig)
     }; // Now filter

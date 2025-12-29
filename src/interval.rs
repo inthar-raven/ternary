@@ -66,7 +66,7 @@ pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
 /// Trait for types representing JI ratios (just intonation ratios).
 pub trait JiRatio: Dyad + Copy + Sync + Send {
     /// The numerator of a JI ratio
-    fn numer(&self) -> u64;
+    fn numer(&self) -> u32;
     /// The denominator of a JI ratio
-    fn denom(&self) -> u64;
+    fn denom(&self) -> u32;
 }

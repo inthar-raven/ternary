@@ -12,7 +12,7 @@
       <p>
         This microtonal theory calculator is about ternary scales, scales with
         three step sizes. It specializes in
-        <a href="https://en.xen.wiki/w/Aberrismic theory" target="_blank"
+        <a href="https://wiki.spoogly.website/index.php?title=Aberrismic theory" target="_blank"
           >aberrismic theory</a
         >, developed by groundfault, inthar, and others.
       </p>
@@ -87,7 +87,7 @@
         <tr>
           <td>
             <input type="text" id="input-word" name="input-word" />
-            <button type="submit" id="btn-word">Submit</button>
+            <button type="button" id="btn-word">Submit</button>
           </td>
         </tr>
       </table>
@@ -112,15 +112,14 @@
             <td>
               <input
                 type="radio"
-                id="mos-subst-on"
-                name="mos-subst"
-                ,
-                value="on"
+                id="mos-subst"
+                name="scale-type"
+                value="mos-subst"
                 checked
               />
-              <label for="mos-subst-on"
+              <label for="mos-subst"
                 ><a
-                  href="https://en.xen.wiki/w/User:Inthar/MOS_substitution"
+                  href="https://wiki.spoogly.website/index.php?title=MOS_substitution"
                   target="_blank"
                   >MOS substitution</a
                 >
@@ -128,12 +127,25 @@
               >
               <input
                 type="radio"
-                id="mos-subst-off"
-                name="mos-subst"
-                ,
-                value="off"
+                id="billiard"
+                name="scale-type"
+                value="billiard"
               />
-              <label for="mos-subst-off"
+              <label for="billiard"
+                ><a
+                  href="https://en.xen.wiki/w/Hypercubic_billiard_word"
+                  target="_blank"
+                  >Billiard</a
+                >
+                scales only</label
+              >
+              <input
+                type="radio"
+                id="all-scales"
+                name="scale-type"
+                value="all-scales"
+              />
+              <label for="all-scales"
                 >All scales (warning: slow for large inputs)</label
               >
             </td>
@@ -257,7 +269,7 @@
           </tr>
           <tr>
             <td>
-              <button type="submit" id="btn-sig">Submit</button>
+              <button type="button" id="btn-sig">Submit</button>
             </td>
           </tr>
         </tbody>

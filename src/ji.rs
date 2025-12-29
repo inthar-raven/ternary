@@ -12,8 +12,8 @@ use crate::words::{CountVector, rotate};
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
 /// not including the unison.
-pub fn specified_odd_limit(odds: &[u64]) -> Vec<RawJiRatio> {
-    let odds: Vec<u64> = odds
+pub fn specified_odd_limit(odds: &[u32]) -> Vec<RawJiRatio> {
+    let odds: Vec<u32> = odds
         .iter()
         .filter(|x| **x > 0 && **x % 2 == 1)
         .copied()
@@ -31,7 +31,7 @@ pub fn specified_odd_limit(odds: &[u64]) -> Vec<RawJiRatio> {
 
 /// Returns the octave-reduced intervals of a specified odd limit, not including the unison.
 /// Generates all ratios with odd numerator and denominator up to the limit.
-pub fn odd_limit(limit: u64) -> Vec<RawJiRatio> {
+pub fn odd_limit(limit: u32) -> Vec<RawJiRatio> {
     let odds = (0..=(limit - 1) / 2).map(|i| 2 * i + 1).collect::<Vec<_>>();
     pairs(&odds, &odds)
         .into_iter()
@@ -121,7 +121,7 @@ pub fn disp_ji_scale(scale: &[RawJiRatio]) -> String {
 /// Display a JI scale as a JI chord (ratio of two or more integers).
 /// Computes the LCM of denominators to express as a single chord.
 pub fn disp_ji_scale_as_enumerated_chord(scale: &[RawJiRatio]) -> String {
-    let mut ell_cee_emm: u64 = 1;
+    let mut ell_cee_emm: u32 = 1;
     for item in scale {
         ell_cee_emm = lcm(ell_cee_emm, item.denom());
     }
@@ -179,7 +179,7 @@ pub fn ji_scale_modes(scale: &[RawJiRatio]) -> Vec<Vec<RawJiRatio>> {
 
 /// Returns the harmonic series mode `mode_num`: mode_num:...:(2*mode_num).
 /// Includes the octave duplication.
-pub fn harmonic_mode(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
+pub fn harmonic_mode(mode_num: u32) -> Result<Vec<RawJiRatio>, ScaleError> {
     if mode_num < 1 {
         Err(ScaleError::CannotMakeScale)
     } else {
@@ -190,7 +190,7 @@ pub fn harmonic_mode(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
 }
 
 /// Returns the harmonic series mode `mode_num` without octave: mode_num:...:(2*mode_num - 1).
-pub fn harmonic_mode_no_oct(mode_num: u64) -> Result<Vec<RawJiRatio>, ScaleError> {
+pub fn harmonic_mode_no_oct(mode_num: u32) -> Result<Vec<RawJiRatio>, ScaleError> {
     if mode_num < 1 {
         Err(ScaleError::CannotMakeScale)
     } else {
@@ -246,7 +246,7 @@ pub fn is_valid_offset_chord(strand: &[RawJiRatio], offset_chord: &[RawJiRatio])
 /// Compute the set of valid offset chords for an interleaved scale on harmonic series mode `m`.
 pub fn valid_offset_chords(
     strand: &[RawJiRatio],
-    m: u64,
+    m: u32,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
     Ok(crate::helpers::powerset(&mode)
@@ -258,7 +258,7 @@ pub fn valid_offset_chords(
 /// Compute the set of *maximal* valid offset chords for an interleaved scale on harmonic series mode `m`.
 pub fn maximal_valid_offset_chords(
     strand: &[RawJiRatio],
-    m: u64,
+    m: u32,
 ) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
     let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
     let power_set = crate::helpers::powerset(&mode);
@@ -374,7 +374,7 @@ pub fn well_formed_necklace_in_ji_scale(
     scale: &[RawJiRatio],
     gener_class: usize,
 ) -> Result<Vec<RawJiRatio>, ScaleError> {
-    if gcd(scale.len() as i64, gener_class as i64) == 1 {
+    if gcd(scale.len() as i32, gener_class as i32) == 1 {
         Ok((0..(scale.len()))
             .map(|k| {
                 (scale[(gener_class * (k + 1)) % scale.len()]

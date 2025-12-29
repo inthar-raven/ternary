@@ -13,8 +13,8 @@ use crate::interval::{Dyad, JiRatio};
 /// Error type for attempts to construct a RawJiRatio from a non-positive ratio.
 pub struct IllegalJiRatio {
     // Show what the attempt was
-    numer: u64,
-    denom: u64,
+    numer: u32,
+    denom: u32,
 }
 
 impl fmt::Display for IllegalJiRatio {
@@ -55,15 +55,15 @@ impl std::error::Error for BadJiArith {}
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct RawJiRatio {
-    numer: u64,
-    denom: u64,
+    numer: u32,
+    denom: u32,
 }
 
 impl JiRatio for RawJiRatio {
-    fn numer(&self) -> u64 {
+    fn numer(&self) -> u32 {
         self.numer
     }
-    fn denom(&self) -> u64 {
+    fn denom(&self) -> u32 {
         self.denom
     }
 }
@@ -295,7 +295,7 @@ impl RawJiRatio {
     /// Returns an error if numerator or denominator is zero.
     /// Automatically reduces the ratio to lowest terms using GCD.
     #[inline(always)]
-    pub fn try_new(numer: u64, denom: u64) -> Result<RawJiRatio, IllegalJiRatio> {
+    pub fn try_new(numer: u32, denom: u32) -> Result<RawJiRatio, IllegalJiRatio> {
         if (denom == 0) || (numer == 0) {
             // Reject non-positive ratios
             Err(IllegalJiRatio { numer, denom })
@@ -337,7 +337,7 @@ impl RawJiRatio {
     };
 
     /// Get the nth harmonic (ratio n/1).
-    pub fn harm(n: u64) -> Result<Self, IllegalJiRatio> {
+    pub fn harm(n: u32) -> Result<Self, IllegalJiRatio> {
         if n == 0 {
             // Zero is not a valid harmonic
             Err(IllegalJiRatio { numer: 0, denom: 1 })

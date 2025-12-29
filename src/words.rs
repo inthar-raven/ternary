@@ -370,10 +370,10 @@ where
 /// Return the brightest mode of the MOS aLbs and the bright generator, using Bjorklund's algorithm.
 /// The brightest mode is the lexicographically first rotation.
 pub fn brightest_mos_mode_and_gener(a: usize, b: usize) -> (Vec<Letter>, CountVector<Letter>) {
-    let d = gcd(a as u64, b as u64) as usize;
+    let d = gcd(a as u32, b as u32) as usize;
     if d == 1 {
         // The bright generator is a (b⁻¹ mod |scale|)-step, since stacking it `b` times results in the L step (mod period).
-        let count_gener_steps = modinv(b as i64, a as i64 + b as i64)
+        let count_gener_steps = modinv(b as i32, a as i32 + b as i32)
             .expect("Should be ok because gcd(a + b, b) == gcd(a, b) == 1")
             as usize;
         // These are the seed strings we build the brightest MOS word from.
@@ -803,7 +803,7 @@ mod tests {
         // MOS scales should be MV2.
         for a in 1usize..=10 {
             for b in 1usize..=10 {
-                if gcd(a as u64, b as u64) == 1 {
+                if gcd(a as u32, b as u32) == 1 {
                     let brightest_mos = brightest_mos_mode_and_gener(a, b).0;
                     assert_eq!(booth(&brightest_mos), 0); // MOS scales' brightest mode is indeed the least mode
                     assert_eq!(maximum_variety(&brightest_mos), 2);
