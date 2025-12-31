@@ -624,7 +624,13 @@ pub fn parallelogram_substring_info(
 
 #[cfg(test)]
 mod tests {
-    use crate::lattice::{parallelogram_substring_info, try_pitch_class_lattice};
+    // use crate::comb::{necklaces_fixed_content, partitions_exact_part_count};
+    // use crate::helpers::slicify_each;
+    use crate::lattice::{
+        /*ParallelogramSubstring, PitchClassLatticeBasis,*/
+        parallelogram_substring_info, try_pitch_class_lattice,
+    };
+    // use crate::words::mos_substitution_scales;
     // use std::fs;
     #[test]
     fn test_parallelogram_substring() {
@@ -850,54 +856,4 @@ mod tests {
             .is_none()
         );
     }
-    /*
-    #[test]
-    fn test_() {
-        let file_path = "output.txt";
-        let mut content = "Quasi-parallelogram MOS substitution scales\n".to_string();
-        for scale_size in 7..=34 {
-            content = format!("{content}=== {scale_size} notes ===\n");
-            for a in 2..=(scale_size - 2) {
-                for b in 1..=(scale_size - a) / 2 {
-                    let c = scale_size - a - b;
-                    if gcd(a as u64, gcd(b as u64, c as u64)) == 1 {
-                        println!("Now iterating for [a, b, c] = [{a}, {b}, {c}]");
-                        let mos_subst_scales =
-                            crate::words::mos_substitution_scales_one_perm(a, b, c);
-                        for scale in mos_subst_scales {
-                            if let Some(ParallelogramSubstring {
-                                row_count,
-                                full_row_len,
-                                first_row_len,
-                                last_row_len,
-                            }) = parallelogram_substring_info(&scale)
-                            {
-                                let scale_string = {
-                                    let mut result = "".to_string();
-                                    for step in scale {
-                                        if step == 0 {
-                                            result += "x";
-                                        } else if step == 1 {
-                                            result += "y";
-                                        } else if step == 2 {
-                                            result += "z";
-                                        }
-                                    }
-                                    result
-                                };
-                                println!(
-                                    "{scale_string} is ps\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}"
-                                );
-                                content = format!(
-                                    "{content}* {a}x({b}y{c}z)\t{scale_string}\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}\n"
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        let _ = fs::write(file_path, content);
-    }
-    */
 }
