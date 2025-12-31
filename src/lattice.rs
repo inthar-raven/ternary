@@ -50,18 +50,18 @@ impl IntoIterator for PitchClassLatticeBasis {
 }
 
 #[allow(dead_code)]
-/// A struct representing a sub-traversal of a full row-by-row traversal of a lattice parallelogram.
+/// A struct representing a substring of a row-by-row traversal of a lattice parallelogram.
 #[derive(Clone, Debug)]
-pub struct QuasiParallelogram {
+pub struct ParallelogramSubstring {
     row_count: i32,
     full_row_len: i32,
     first_row_len: i32,
     last_row_len: i32,
 }
 
-impl QuasiParallelogram {
+impl ParallelogramSubstring {
     fn new(row_count: i32, full_row_len: i32, first_row_len: i32, last_row_len: i32) -> Self {
-        QuasiParallelogram {
+        ParallelogramSubstring {
             row_count,
             full_row_len,
             first_row_len,
@@ -197,26 +197,26 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchC
 }
 
 /// Whether the result is `Some` or `None` depends on
-/// whether the ternary scale `query` has the "quasi-parallelogram property",
+/// whether the pitch classes form a substring of a parallelogram traversal,
 /// i.e. its pitch classes forming a substring of a traversal
 /// ```text
-/// (0,0), (0,1), (0,2), ..., (0,n),
-/// (1,0), (1,1), (1,2), ..., (1,n),
-/// (2,0), (2,1), (2,2), ..., (2,n),
+/// -> (0,0), (0,1), (0,2), ..., (0,n)
+/// -> (1,0), (1,1), (1,2), ..., (1,n)
+/// -> (2,0), (2,1), (2,2), ..., (2,n)
 /// ...
-/// (m,0), (m,1), (m,2), ..., (m,n)
+/// -> (m,0), (m,1), (m,2), ..., (m,n)
 /// ```
 /// under some choice of coordinate vectors (v, w).
-/// If `Some`, returns a `QuasiParallelogram` struct containing the following info:
+/// If `Some`, returns a `ParallelogramSubstring` struct containing the following info:
 /// row count, length of a full row, length of first row, length of last row.
 /// Also return the corresponding basis written in scale step coordinates.
 ///
 /// Ideally, this function should prioritize pitch class lattice bases with a generator (whether a row generator or not)
 /// that is likely to be a fifth/fourth, provided such a basis exists for a given scale.
-pub fn quasi_parallelogram_info(
+pub fn parallelogram_substring_info(
     pitch_classes: &[&[i32]],
     old_basis: PitchClassLatticeBasis,
-) -> Option<(QuasiParallelogram, PitchClassLatticeBasis)> {
+) -> Option<(ParallelogramSubstring, PitchClassLatticeBasis)> {
     let scale_size = pitch_classes.len();
     // `basis` is written in scale step coordinates (L, m, s).
     // The pitch classes are written in coordinates given by `basis`.
@@ -245,7 +245,7 @@ pub fn quasi_parallelogram_info(
         !(taxicab_len_lms % scale_size_i32 == fifth_mapping
             || taxicab_len_lms % scale_size_i32 == fourth_mapping)
     });
-    // Look for a unimodular basis that witnesses the quasi-parallelogram condition.
+    // Look for a unimodular basis that witnesses the parallelogram substring property.
     // If this basis turns out to work, just use the basis vectors' components as coefficients
     // to write the basis in step size coordinates.
     for (i, vx) in pairwise_differences.iter().enumerate() {
@@ -356,7 +356,7 @@ pub fn quasi_parallelogram_info(
                                 .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
                                 .collect::<Vec<_>>();
                             return Some((
-                                QuasiParallelogram::new(
+                                ParallelogramSubstring::new(
                                     row_count,
                                     full_row_len,
                                     first_row_len,
@@ -435,7 +435,7 @@ pub fn quasi_parallelogram_info(
                                 .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
                                 .collect::<Vec<_>>();
                             return Some((
-                                QuasiParallelogram::new(
+                                ParallelogramSubstring::new(
                                     row_count,
                                     full_row_len,
                                     first_row_len,
@@ -527,7 +527,7 @@ pub fn quasi_parallelogram_info(
                                 .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
                                 .collect::<Vec<_>>();
                             return Some((
-                                QuasiParallelogram::new(
+                                ParallelogramSubstring::new(
                                     row_count,
                                     full_row_len,
                                     first_row_len,
@@ -605,7 +605,7 @@ pub fn quasi_parallelogram_info(
                                 .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
                                 .collect::<Vec<_>>();
                             return Some((
-                                QuasiParallelogram::new(
+                                ParallelogramSubstring::new(
                                     row_count,
                                     full_row_len,
                                     first_row_len,
@@ -624,15 +624,15 @@ pub fn quasi_parallelogram_info(
 
 #[cfg(test)]
 mod tests {
-    use crate::lattice::{quasi_parallelogram_info, try_pitch_class_lattice};
+    use crate::lattice::{parallelogram_substring_info, try_pitch_class_lattice};
     // use std::fs;
     #[test]
-    fn test_quasi_parallelogram() {
+    fn test_parallelogram_substring() {
         let eps = 1e-8;
 
         let diasem_rh = [0, 1, 0, 2, 0, 1, 0, 2, 0];
         let diasem_lattices_and_basis = try_pitch_class_lattice(&diasem_rh).unwrap();
-        let diasem_rh_result = quasi_parallelogram_info(
+        let diasem_rh_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diasem_lattices_and_basis.0),
             diasem_lattices_and_basis.1,
         );
@@ -701,7 +701,7 @@ mod tests {
 
         let blackdye = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
         let blackdye_lattices_and_basis = try_pitch_class_lattice(&blackdye).unwrap();
-        let blackdye_result = quasi_parallelogram_info(
+        let blackdye_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&blackdye_lattices_and_basis.0),
             blackdye_lattices_and_basis.1,
         );
@@ -755,7 +755,7 @@ mod tests {
 
         let diaslen_4sc = [2, 0, 1, 0, 2, 0, 2, 0, 1, 0, 2]; // sLmLsLsLmLs
         let diaslen_lattices_and_basis = try_pitch_class_lattice(&diaslen_4sc).unwrap();
-        let diaslen_result = quasi_parallelogram_info(
+        let diaslen_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diaslen_lattices_and_basis.0),
             diaslen_lattices_and_basis.1,
         );
@@ -812,7 +812,7 @@ mod tests {
         */
         let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1]; // LsLsLmsLsLsm
         let diachrome_lattices_and_basis = try_pitch_class_lattice(&diachrome_5sc).unwrap();
-        let diachrome_result = quasi_parallelogram_info(
+        let diachrome_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diachrome_lattices_and_basis.0),
             diachrome_lattices_and_basis.1,
         );
@@ -823,7 +823,7 @@ mod tests {
         ]; // LLsmsLmsLsLmsLsmLsLsmLsms
         let lattices_and_basis = try_pitch_class_lattice(&example_6).unwrap();
         assert!(
-            quasi_parallelogram_info(
+            parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
                 lattices_and_basis.1
             )
@@ -833,7 +833,7 @@ mod tests {
         let nonexample = [0, 0, 0, 0, 2, 0, 1, 0, 0, 2, 0, 0, 0, 1, 2]; // LLLLsLmLLsLLLms
         let lattices_and_basis = try_pitch_class_lattice(&nonexample).unwrap();
         assert!(
-            quasi_parallelogram_info(
+            parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
                 lattices_and_basis.1
             )
@@ -843,7 +843,7 @@ mod tests {
         let nonexample_2 = [0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 2, 2]; // LsLsLsmsLsLsmss
         let lattices_and_basis = try_pitch_class_lattice(&nonexample_2).unwrap();
         assert!(
-            quasi_parallelogram_info(
+            parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
                 lattices_and_basis.1
             )
@@ -865,12 +865,12 @@ mod tests {
                         let mos_subst_scales =
                             crate::words::mos_substitution_scales_one_perm(a, b, c);
                         for scale in mos_subst_scales {
-                            if let Some(QuasiParallelogram {
+                            if let Some(ParallelogramSubstring {
                                 row_count,
                                 full_row_len,
                                 first_row_len,
                                 last_row_len,
-                            }) = quasi_parallelogram_info(&scale)
+                            }) = parallelogram_substring_info(&scale)
                             {
                                 let scale_string = {
                                     let mut result = "".to_string();

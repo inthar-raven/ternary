@@ -290,7 +290,7 @@ pub fn word_to_mv(query: String) -> u16 {
 /// Get lattice coordinates for pitch classes if a unimodular basis exists.
 /// Returns None if no unimodular basis can be found.
 /// The coordinates are 2D projections suitable for plotting.
-/// Prioritizes the basis from quasi_parallelogram_info if one exists.
+/// Prioritizes the basis from parallelogram_substring_info if one exists.
 #[wasm_bindgen]
 pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     let word_in_numbers = string_to_numbers(&query);
@@ -301,11 +301,11 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     // First get the initial lattice and basis
     if let Some((pitch_classes, initial_basis)) = lattice::try_pitch_class_lattice(&word_in_numbers)
     {
-        // Try to find a better basis using quasi_parallelogram_info
+        // Try to find a better basis using parallelogram_substring_info
         let pitch_class_refs: Vec<&[i32]> = pitch_classes.iter().map(|v| v.as_slice()).collect();
 
         let (final_coordinates, final_basis) = if let Some((_qp, better_basis)) =
-            lattice::quasi_parallelogram_info(&pitch_class_refs, initial_basis.clone())
+            lattice::parallelogram_substring_info(&pitch_class_refs, initial_basis.clone())
         {
             // Re-project pitch classes using the better basis
             let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
