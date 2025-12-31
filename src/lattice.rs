@@ -638,7 +638,7 @@ mod tests {
         );
         println!("{:?}", diasem_rh_result);
         assert!(diasem_rh_result.is_some());
-        if let Some((qp, b)) = diasem_rh_result {
+        if let Some((ps, b)) = diasem_rh_result {
             // Diasem has this structure:
             //   x x x x
             //   x x x x x
@@ -650,8 +650,8 @@ mod tests {
             // 1. row_count == 2, full_row_len == 5, first and last row lengths == {5, 4}
             // 2. row_count == 5, full_row_len == 2, first and last row lengths == {2, 1}.
             assert!(
-                (qp.row_count == 2 && qp.full_row_len == 5)
-                    || (qp.row_count == 5 && qp.full_row_len == 2)
+                (ps.row_count == 2 && ps.full_row_len == 5)
+                    || (ps.row_count == 5 && ps.full_row_len == 2)
             );
 
             // Use JI diasem step sizes: L == 9/8, m == 28/27, s == 64/63
@@ -674,7 +674,7 @@ mod tests {
                 + (b.v2[2] as f64) * sixty_four_to_sixty_three;
             let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
 
-            if qp.row_count == 2 && qp.full_row_len == 5 {
+            if ps.row_count == 2 && ps.full_row_len == 5 {
                 assert!(
                     (g1_in_ji_reduced - three_to_two).abs() < eps
                         || (g1_in_ji_reduced - (1200.0 - three_to_two)).abs() < eps
@@ -706,13 +706,13 @@ mod tests {
             blackdye_lattices_and_basis.1,
         );
         assert!(blackdye_result.is_some());
-        if let Some((qp, b)) = blackdye_result {
+        if let Some((ps, b)) = blackdye_result {
             // Since this is a full parallelogram, the parallelogram itself doesn't give
             // a canonical choice of which is the "generator" and which is the "offset",
             // so we check the following:
             assert!(
-                (qp.row_count == 2 && qp.full_row_len == 5)
-                    || (qp.row_count == 5 && qp.full_row_len == 2)
+                (ps.row_count == 2 && ps.full_row_len == 5)
+                    || (ps.row_count == 5 && ps.full_row_len == 2)
             );
 
             // Use JI blackdye step sizes: L == 10/9, m == 16/15, s == 81/80
@@ -732,7 +732,7 @@ mod tests {
                 + (b.v2[1] as f64) * sixteen_to_fifteen
                 + (b.v2[2] as f64) * eighty_one_to_eighty;
             let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
-            if qp.row_count == 2 && qp.full_row_len == 5 {
+            if ps.row_count == 2 && ps.full_row_len == 5 {
                 assert!(
                     (g1_in_ji_reduced - three_to_two).abs() < eps
                         || (g1_in_ji_reduced - four_to_three).abs() < eps
@@ -761,7 +761,7 @@ mod tests {
         );
         assert!(diaslen_result.is_some());
         /*
-        if let Some((qp, b)) = diaslen_result {
+        if let Some((ps, b)) = diaslen_result {
             // The structure we expect:
             //   x x x x
             //     x x x
@@ -771,7 +771,7 @@ mod tests {
             // However, this can still be interpreted in another way:
             // each row goes northwest/southeast, which is still row_count == 5, full_row_len == 3, first_row_len == 1, last_row_len == 1.
             // The latter interpretation means that each row is stacked by 32/21 and the offset is 3/2.
-            assert!((qp.row_count == 5 && qp.full_row_len == 3));
+            assert!((ps.row_count == 5 && ps.full_row_len == 3));
 
             // Use JI diamech step sizes: L == 9/8, m == 49/48, s == 64/63
             // Assert that basis reduces to gener: 3/2 or 4/3 and offset: 8/7 or 7/4
@@ -886,7 +886,7 @@ mod tests {
                                     result
                                 };
                                 println!(
-                                    "{scale_string} is QP\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}"
+                                    "{scale_string} is ps\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}"
                                 );
                                 content = format!(
                                     "{content}* {a}x({b}y{c}z)\t{scale_string}\trow_count: {row_count}\tfull_row_len: {full_row_len}\tfirst_row_len: {first_row_len}\tlast_row_len: {last_row_len}\n"
