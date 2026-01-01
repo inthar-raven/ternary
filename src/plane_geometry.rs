@@ -233,7 +233,7 @@ impl PartialEq for Line {
 }
 
 impl Line {
-    pub fn slope(self: Line) -> Slope {
+    pub fn slope(&self) -> Slope {
         Slope::new(
             (*(self.point2.y - self.point1.y).numer()) * (*(self.point2.x - self.point1.x).denom()),
             (*(self.point2.x - self.point1.x).numer()) * (*(self.point2.y - self.point1.y).denom()),
@@ -241,21 +241,24 @@ impl Line {
         .unwrap()
     }
 
-    pub fn point(self: Line) -> Point {
+    pub fn point(&self) -> Point {
         self.point1
     }
 
-    pub fn from_slope_and_point(sl: Slope, point: Point) -> Self {
+    pub fn from_slope_and_point(sl: &Slope, point: &Point) -> Self {
         Self {
-            point1: point,
-            point2: point + Point::new(r32::new_raw(sl.denom, 1), r32::new_raw(sl.numer, 1)),
+            point1: *point,
+            point2: *point + Point::new(r32::new_raw(sl.denom, 1), r32::new_raw(sl.numer, 1)),
         }
     }
-    pub fn from_points(point1: Point, point2: Point) -> Result<Self, String> {
+    pub fn from_points(point1: &Point, point2: &Point) -> Result<Self, String> {
         if point1 == point2 {
             Err("The points {point1} and {point2} are equal".to_string())
         } else {
-            Ok(Line { point1, point2 })
+            Ok(Line {
+                point1: *point1,
+                point2: *point2,
+            })
         }
     }
 
@@ -308,7 +311,7 @@ impl Line {
             // For vertical lines
             // If point2.y < point1.y, then the line is oriented downwards, so multiply by -1 to compensate.
             if (p.x - self.point().x) * (self.point2.y - self.point1.y) < r32::new_raw(0, 1) {
-                // upwards vertical line and point to the left of it, or downwards vertical line and point to the right of it.
+                // upwards vertical line and point to the left of it, or downwards vertical line and point to the right of it
                 PointLineConfiguration::Left
             } else if (p.x - self.point().x) * (self.point2.y - self.point1.y) == r32::new_raw(0, 1)
             {
@@ -327,18 +330,23 @@ impl fmt::Display for Line {
 }
 
 /// For two non-parallel ones, find the intersection; for two parallel lines, return `None`.
-pub fn intersection(l1: Line, l2: Line) -> Option<Point> {
+pub fn intersection(l1: &Line, l2: &Line) -> Option<Point> {
+    // We only call as_rational_raw() on non-infinite slopes so it's ok
     let (x1, y1, x2, y2) = (l1.point().x, l1.point().y, l2.point().x, l2.point().y);
     match (l1.slope(), l2.slope()) {
-        (s1, s2) if s1 == s2 => None, // Same slope
+        // Equal slope
+        (s1, s2) if s1 == s2 => None,
+        // Unequal slopes, s1 is infinite
         (s1, s2) if s1 == Slope::infinity() && s2 != Slope::infinity() => Some(Point {
             x: x1,
             y: s2.as_rational_raw() * (x1 - x2) + y2,
         }),
+        // Unequal slopes, s2 is infinite
         (s1, s2) if s1 != Slope::infinity() && s2 == Slope::infinity() => Some(Point {
             x: x2,
             y: s1.as_rational_raw() * (x2 - x1) + y1,
         }),
+        // Unequal slopes, neither infinite
         (s1, s2) => Some(Point {
             x: (y1 - s1.as_rational_raw() * x1 + s2.as_rational_raw() * x2 - y2)
                 / (s2.as_rational_raw() - s1.as_rational_raw()),
@@ -372,10 +380,10 @@ impl PartialEq for ConvexPolygon {
 
 impl ConvexPolygon {
     // Assumes that the vertices form a convex polygon. Does not check if the `Vec` of vertices consists of distinct elements.
-    pub fn new(vertices: Vec<Point>) -> Option<Self> {
+    pub fn new(vertices: &[Point]) -> Option<Self> {
         if vertices.len() >= 3 {
             Some(Self {
-                vertices: Point::ordered_ccw(vertices), // This will work for vertices of a convex polygon.
+                vertices: Point::ordered_ccw(vertices.to_vec()), // This will work for vertices of a convex polygon.
             })
         } else {
             None
@@ -389,7 +397,7 @@ impl ConvexPolygon {
     pub fn has_point_inside(&self, point: Point) -> bool {
         // Do `point` and edge_i+1 x edge_i+2 lie on the same side of edge_i?
         for i in 0..self.vertices.len() - 2 {
-            if !Line::from_points(self.vertices[i], self.vertices[i + 1])
+            if !Line::from_points(&self.vertices[i], &self.vertices[i + 1])
                 .unwrap()
                 .on_same_side(point, self.vertices[i + 2])
             {
@@ -398,15 +406,15 @@ impl ConvexPolygon {
         }
         // Check last two triples.
         if !Line::from_points(
-            self.vertices[self.vertices.len() - 2],
-            self.vertices[self.vertices.len() - 1],
+            &self.vertices[self.vertices.len() - 2],
+            &self.vertices[self.vertices.len() - 1],
         )
         .unwrap()
         .on_same_side(point, self.vertices[0])
         {
             false
         } else {
-            Line::from_points(self.vertices[self.vertices.len() - 1], self.vertices[0])
+            Line::from_points(&self.vertices[self.vertices.len() - 1], &self.vertices[0])
                 .unwrap()
                 .on_same_side(point, self.vertices[1])
         }
@@ -415,17 +423,18 @@ impl ConvexPolygon {
     /// A vector storing the edges of the polygon in order.
     fn lines_for_edges(&self) -> Vec<Line> {
         let mut result: Vec<Line> = (0..self.vertices.len() - 1)
-            .map(|i| Line::from_points(self.vertices[i], self.vertices[i + 1]).unwrap())
+            .map(|i| Line::from_points(&self.vertices[i], &self.vertices[i + 1]).unwrap())
             .collect();
         result.push(
-            Line::from_points(self.vertices[self.vertices.len() - 1], self.vertices[0]).unwrap(),
+            Line::from_points(&self.vertices[self.vertices.len() - 1], &self.vertices[0]).unwrap(),
         );
         result
     }
 
     /// Subdivide a polygon with the given line and return the two pieces.
-    pub fn subdivide(&self, line: Line) -> (Option<ConvexPolygon>, Option<ConvexPolygon>) {
-        // Collect vertices that fall to the left, on thhe line, and to the right, respectively. The left and right collections are missing two vertices.
+    pub fn subdivide(&self, line: &Line) -> (Option<ConvexPolygon>, Option<ConvexPolygon>) {
+        // Collect vertices that fall to the left, on the line, and to the right, respectively.
+        // The left and right collections are missing two vertices; we need to append them to make them `ConvexPolygon`s.
         let mut vertices_left: Vec<Point> = self
             .vertices
             .iter()
@@ -452,7 +461,7 @@ impl ConvexPolygon {
             }
             // Look for intersection points on edges with the line.
             for edge in &self.lines_for_edges() {
-                if let Some(intsn) = intersection(*edge, line)
+                if let Some(intsn) = intersection(edge, line)
                     && is_between_r32(intsn.x, edge.point1.x, edge.point2.x)
                     && is_between_r32(intsn.y, edge.point1.y, edge.point2.y)
                 {
@@ -463,8 +472,8 @@ impl ConvexPolygon {
             // At most two vertices are added, so if there was no vertex to one side originally, that side doesn't have a polygon.
         }
         (
-            ConvexPolygon::new(vertices_left),
-            ConvexPolygon::new(vertices_right),
+            ConvexPolygon::new(&vertices_left),
+            ConvexPolygon::new(&vertices_right),
         )
     }
 }

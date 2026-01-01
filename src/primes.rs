@@ -72,6 +72,7 @@ pub const SMALL_PRIMES: [u32; SMALL_PRIMES_COUNT] = [
 
 /// ln(p) for the first SMALL_PRIMES_COUNT primes.
 /// Cached for performance (used frequently in logarithmic calculations).
+/// (It can't be a `const` array because floating-point arithmetic is not `const`.)
 // DON'T CHANGE THE `OnceLock` TO `LazyLock`! (results in a perf regression as of July 29, 2024)
 pub fn log_primes() -> &'static [f64; SMALL_PRIMES_COUNT] {
     static LOCK: OnceLock<[f64; SMALL_PRIMES_COUNT]> = OnceLock::new();
@@ -80,8 +81,8 @@ pub fn log_primes() -> &'static [f64; SMALL_PRIMES_COUNT] {
 
 /// Primality test using naive trial division.
 /// Tests divisibility up to sqrt(n).
-pub fn is_prime(n: u64) -> bool {
-    let floor_sqrt_n = (n as f64).sqrt().floor() as u64;
+pub fn is_prime(n: u32) -> bool {
+    let floor_sqrt_n = (n as f64).sqrt().floor() as u32;
     n >= 2 && (2..=floor_sqrt_n).all(|k| !n.is_multiple_of(k))
 }
 

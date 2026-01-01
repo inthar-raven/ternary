@@ -36,24 +36,24 @@ fn projected_constraint_planes(a: u32, b: u32, c: u32) -> (Vec<Line>, Vec<Line>,
     let first = (0..b + c + 1)
         .map(|i| {
             Line::from_slope_and_point(
-                Slope::raw(0, 1),
-                Point::new(r32::new(0, 1), r32::new(-(b as i32) + (i as i32), c as i32)),
+                &Slope::raw(0, 1),
+                &Point::new(r32::new(0, 1), r32::new(-(b as i32) + (i as i32), c as i32)),
             )
         })
         .collect(); // horizontal lines going up (Left)
     let second = (0..a + c + 1)
         .map(|j| {
             Line::from_slope_and_point(
-                Slope::raw(1, 0),
-                Point::new(r32::new((c as i32) - (j as i32), c as i32), r32::new(0, 1)),
+                &Slope::raw(1, 0),
+                &Point::new(r32::new((c as i32) - (j as i32), c as i32), r32::new(0, 1)),
             )
         })
         .collect(); // vertical lines going left (Left)
     let third = (0..a + b + 1)
         .map(|k| {
             Line::from_slope_and_point(
-                Slope::raw(b as i32, a as i32),
-                Point::new(r32::new(0, 1), r32::new(-(b as i32) + (k as i32), a as i32)),
+                &Slope::raw(b as i32, a as i32),
+                &Point::new(r32::new(0, 1), r32::new(-(b as i32) + (k as i32), a as i32)),
             )
         })
         .collect(); // lines of pos. slope going up (Left)
@@ -80,7 +80,7 @@ fn projected_cube(a: u32, b: u32, c: u32) -> Option<ConvexPolygon> {
                 r32::new(-(b as i32), c as i32),
             ),
         ];
-        ConvexPolygon::new(projected_cube_vertices)
+        ConvexPolygon::new(&projected_cube_vertices)
     } else {
         None
     }
@@ -96,7 +96,7 @@ fn project_and_partition(a: u32, b: u32, c: u32) -> Vec<ConvexPolygon> {
     let mut i: usize = 0;
     let mut remaining: ConvexPolygon = projected_cube;
     loop {
-        let (maybe_remaining, maybe_next) = remaining.subdivide((lineses.0)[i]);
+        let (maybe_remaining, maybe_next) = remaining.subdivide(&(lineses.0)[i]);
         // The remaining portion is to the Left.
         match (maybe_remaining, maybe_next) {
             (Some(r), None) => {
@@ -121,7 +121,7 @@ fn project_and_partition(a: u32, b: u32, c: u32) -> Vec<ConvexPolygon> {
         let mut j: usize = 0;
         let mut remaining2: ConvexPolygon = polygon;
         loop {
-            let (maybe_remaining, maybe_next) = remaining2.subdivide((lineses.1)[j]); // The remaining portion is to the Left.
+            let (maybe_remaining, maybe_next) = remaining2.subdivide(&(lineses.1)[j]); // The remaining portion is to the Left.
             match (maybe_remaining, maybe_next) {
                 (Some(r), None) => {
                     remaining2 = r;
@@ -145,7 +145,7 @@ fn project_and_partition(a: u32, b: u32, c: u32) -> Vec<ConvexPolygon> {
         let mut j: usize = 0;
         let mut remaining3: ConvexPolygon = polygon;
         loop {
-            let (maybe_remaining, maybe_next) = remaining3.subdivide((lineses.2)[j]);
+            let (maybe_remaining, maybe_next) = remaining3.subdivide(&(lineses.2)[j]);
             // The remaining portion is to the Left.
             match (maybe_remaining, maybe_next) {
                 (Some(r), None) => {
@@ -179,16 +179,16 @@ fn advance(a: u32, b: u32, c: u32, pt: Point) -> Result<(Point, Letter), BadBill
         Err(BadBilliardState::PointNotInCube(pt))
     } else {
         let projected_x_y_equals_1_1 = Line::from_slope_and_point(
-            Slope::raw(b as i32, a as i32),
-            Point::new(r32::new(0, 1), r32::new(-(b as i32) + (a as i32), a as i32)),
+            &Slope::raw(b as i32, a as i32),
+            &Point::new(r32::new(0, 1), r32::new(-(b as i32) + (a as i32), a as i32)),
         ); // the /
         let projected_x_z_equals_1_1 = Line::from_slope_and_point(
-            Slope::raw(0, 1),
-            Point::new(r32::new(0, 1), r32::new(-(b as i32) + (c as i32), c as i32)),
+            &Slope::raw(0, 1),
+            &Point::new(r32::new(0, 1), r32::new(-(b as i32) + (c as i32), c as i32)),
         ); // the _, oriented right
         let projected_y_z_equals_1_1 = Line::from_slope_and_point(
-            Slope::raw(1, 0),
-            Point::new(r32::new((c as i32) - (a as i32), c as i32), r32::new(0, 1)),
+            &Slope::raw(1, 0),
+            &Point::new(r32::new((c as i32) - (a as i32), c as i32), r32::new(0, 1)),
         ); // the |, oriented up
         if projected_x_y_equals_1_1.point_line_config(pt) == PointLineConfiguration::Right
             && projected_y_z_equals_1_1.point_line_config(pt) == PointLineConfiguration::Right

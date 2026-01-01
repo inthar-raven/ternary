@@ -338,14 +338,14 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
         // Convert the basis to Vec<Vec<i16>> for serialization
         let basis_as_vecs = vec![
             vec![
-                final_basis.v1()[0] as i16,
-                final_basis.v1()[1] as i16,
-                final_basis.v1()[2] as i16,
+                final_basis.vx()[0] as i16,
+                final_basis.vx()[1] as i16,
+                final_basis.vx()[2] as i16,
             ],
             vec![
-                final_basis.v2()[0] as i16,
-                final_basis.v2()[1] as i16,
-                final_basis.v2()[2] as i16,
+                final_basis.vy()[0] as i16,
+                final_basis.vy()[1] as i16,
+                final_basis.vy()[2] as i16,
             ],
         ];
 

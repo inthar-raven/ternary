@@ -18,24 +18,24 @@ use crate::words::CountVector;
 /// it must therefore be ensured that v1 and v2 both have length 3.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PitchClassLatticeBasis {
-    v1: Vec<i32>,
-    v2: Vec<i32>,
+    vx: Vec<i32>,
+    vy: Vec<i32>,
 }
 
 impl PitchClassLatticeBasis {
-    pub fn from_slices(v1: &[i32], v2: &[i32]) -> Self {
+    pub fn from_slices(vx: &[i32], vy: &[i32]) -> Self {
         Self {
-            v1: v1.to_vec(),
-            v2: v2.to_vec(),
+            vx: vx.to_vec(),
+            vy: vy.to_vec(),
         }
     }
 
-    pub fn v1(&self) -> &[i32] {
-        &self.v1
+    pub fn vx(&self) -> &[i32] {
+        &self.vx
     }
 
-    pub fn v2(&self) -> &[i32] {
-        &self.v2
+    pub fn vy(&self) -> &[i32] {
+        &self.vy
     }
 }
 
@@ -45,7 +45,7 @@ impl IntoIterator for PitchClassLatticeBasis {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        vec![self.v1, self.v2].into_iter()
+        vec![self.vx, self.vy].into_iter()
     }
 }
 
@@ -122,8 +122,8 @@ pub fn project_pitch_classes(
 
     let (equave, gener_1, gener_2) = (
         sig.iter().map(|x| *x as i32).collect::<Vec<_>>(),
-        basis.v1().to_vec(),
-        basis.v2().to_vec(),
+        basis.vx().to_vec(),
+        basis.vy().to_vec(),
     );
 
     // Invert [equave, gener_1, gener_2] to get basis change matrix
@@ -239,9 +239,9 @@ pub fn parallelogram_substring_info(
             direct_approx(RawJiRatio::PYTH_5TH, scale_size as f64, RawJiRatio::OCTAVE);
         let fourth_mapping = scale_size_i32 - fifth_mapping;
         let taxicab_len_lms: i32 = (0..3)
-            .map(|i| (diff[0] * old_basis.v1[i] + diff[1] * old_basis.v2[i]).abs())
+            .map(|i| (diff[0] * old_basis.vx[i] + diff[1] * old_basis.vy[i]).abs())
             .sum();
-        // Negate because false < true
+        // Negate because false < true and sorting is in ascending order
         !(taxicab_len_lms % scale_size_i32 == fifth_mapping
             || taxicab_len_lms % scale_size_i32 == fourth_mapping)
     });
@@ -350,10 +350,10 @@ pub fn parallelogram_substring_info(
                             let first_row_len = first_row.len() as i32;
                             let last_row_len = last_row.len() as i32;
                             let vx_lms = (0..3) // for each of L, m, s
-                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .map(|i| vx[0] * old_basis.vx[i] + vx[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             let vy_lms = (0..3)
-                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .map(|i| vy[0] * old_basis.vx[i] + vy[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             return Some((
                                 ParallelogramSubstring::new(
@@ -362,8 +362,7 @@ pub fn parallelogram_substring_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                // Put the row generator first
-                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms),
+                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms), // put row generator first
                             ));
                         }
                     }
@@ -429,10 +428,10 @@ pub fn parallelogram_substring_info(
                             let first_row_len = first_row.len() as i32;
                             let last_row_len = last_row.len() as i32;
                             let vx_lms = (0..3)
-                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .map(|i| vx[0] * old_basis.vx[i] + vx[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             let vy_lms = (0..3)
-                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .map(|i| vy[0] * old_basis.vx[i] + vy[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             return Some((
                                 ParallelogramSubstring::new(
@@ -441,7 +440,7 @@ pub fn parallelogram_substring_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms),
+                                PitchClassLatticeBasis::from_slices(&vx_lms, &vy_lms), // put row generator first
                             ));
                         }
                     }
@@ -521,10 +520,10 @@ pub fn parallelogram_substring_info(
                             let first_row_len = first_row.len() as i32;
                             let last_row_len = last_row.len() as i32;
                             let vx_lms = (0..3)
-                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .map(|i| vx[0] * old_basis.vx[i] + vx[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             let vy_lms = (0..3)
-                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .map(|i| vy[0] * old_basis.vx[i] + vy[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             return Some((
                                 ParallelogramSubstring::new(
@@ -533,7 +532,7 @@ pub fn parallelogram_substring_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms),
+                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms), // put row generator first
                             ));
                         }
                     }
@@ -599,10 +598,10 @@ pub fn parallelogram_substring_info(
                             let first_row_len = first_row.len() as i32;
                             let last_row_len = last_row.len() as i32;
                             let vx_lms = (0..3)
-                                .map(|i| vx[0] * old_basis.v1[i] + vx[1] * old_basis.v2[i])
+                                .map(|i| vx[0] * old_basis.vx[i] + vx[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             let vy_lms = (0..3)
-                                .map(|i| vy[0] * old_basis.v1[i] + vy[1] * old_basis.v2[i])
+                                .map(|i| vy[0] * old_basis.vx[i] + vy[1] * old_basis.vy[i])
                                 .collect::<Vec<_>>();
                             return Some((
                                 ParallelogramSubstring::new(
@@ -611,7 +610,7 @@ pub fn parallelogram_substring_info(
                                     first_row_len,
                                     last_row_len,
                                 ),
-                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms),
+                                PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms), // put row generator first
                             ));
                         }
                     }
@@ -624,12 +623,11 @@ pub fn parallelogram_substring_info(
 
 #[cfg(test)]
 mod tests {
-    // use crate::comb::{necklaces_fixed_content, partitions_exact_part_count};
-    // use crate::helpers::slicify_each;
     use crate::lattice::{
         /*ParallelogramSubstring, PitchClassLatticeBasis,*/
         parallelogram_substring_info, try_pitch_class_lattice,
     };
+
     // use crate::words::mos_substitution_scales;
     // use std::fs;
     #[test]
@@ -671,13 +669,13 @@ mod tests {
             let twenty_eight_to_twenty_seven = f64::log2(28.0 / 27.0) * 1200.0;
             let sixty_four_to_sixty_three = f64::log2(64.0 / 63.0) * 1200.0;
 
-            let g1_in_ji = (b.v1[0] as f64) * nine_to_eight
-                + (b.v1[1] as f64) * twenty_eight_to_twenty_seven
-                + (b.v1[2] as f64) * sixty_four_to_sixty_three;
+            let g1_in_ji = (b.vx[0] as f64) * nine_to_eight
+                + (b.vx[1] as f64) * twenty_eight_to_twenty_seven
+                + (b.vx[2] as f64) * sixty_four_to_sixty_three;
             let g1_in_ji_reduced = f64::rem_euclid(g1_in_ji, 1200.0);
-            let g2_in_ji = (b.v2[0] as f64) * nine_to_eight
-                + (b.v2[1] as f64) * twenty_eight_to_twenty_seven
-                + (b.v2[2] as f64) * sixty_four_to_sixty_three;
+            let g2_in_ji = (b.vy[0] as f64) * nine_to_eight
+                + (b.vy[1] as f64) * twenty_eight_to_twenty_seven
+                + (b.vy[2] as f64) * sixty_four_to_sixty_three;
             let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
 
             if ps.row_count == 2 && ps.full_row_len == 5 {
@@ -730,13 +728,13 @@ mod tests {
             let ten_to_nine = f64::log2(10.0 / 9.0) * 1200.0;
             let sixteen_to_fifteen = f64::log2(16.0 / 15.0) * 1200.0;
             let eighty_one_to_eighty = f64::log2(81.0 / 80.0) * 1200.0;
-            let g1_in_ji = (b.v1[0] as f64) * ten_to_nine
-                + (b.v1[1] as f64) * sixteen_to_fifteen
-                + (b.v1[2] as f64) * eighty_one_to_eighty;
+            let g1_in_ji = (b.vx[0] as f64) * ten_to_nine
+                + (b.vx[1] as f64) * sixteen_to_fifteen
+                + (b.vx[2] as f64) * eighty_one_to_eighty;
             let g1_in_ji_reduced = f64::rem_euclid(g1_in_ji, 1200.0);
-            let g2_in_ji = (b.v2[0] as f64) * ten_to_nine
-                + (b.v2[1] as f64) * sixteen_to_fifteen
-                + (b.v2[2] as f64) * eighty_one_to_eighty;
+            let g2_in_ji = (b.vy[0] as f64) * ten_to_nine
+                + (b.vy[1] as f64) * sixteen_to_fifteen
+                + (b.vy[2] as f64) * eighty_one_to_eighty;
             let g2_in_ji_reduced = f64::rem_euclid(g2_in_ji, 1200.0);
             if ps.row_count == 2 && ps.full_row_len == 5 {
                 assert!(
