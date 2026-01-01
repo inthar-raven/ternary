@@ -95,7 +95,7 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
         vec![vec![subscale[0].clone()]]
     } else {
         let len = subscale.len();
-        (2..=len / 2) // Don't include 1-step GSes
+        (1..=len / 2)
             .filter(|&step_class| gcd(step_class as u32, len as u32) == 1)
             .flat_map(|step_class| step_class_guided_gs_list_for_subscale(step_class, subscale))
             .collect()
@@ -163,8 +163,8 @@ impl GuideFrame {
             let coprime_part = scale.len() / gcd_value;
             if !coprime_part.is_multiple_of(multiplicity) {
                 if gcd_value == multiplicity {
-                    // println!("interleaved");
                     // It's an interleaved scale.
+                    // Get the interleaved scales, each one's step is a `gcd_value`-step interval in the larger scale
                     let subscales = (0..gcd_value)
                         .map(|degree| rotate(scale, degree))
                         .map(|rotation| {
@@ -175,7 +175,6 @@ impl GuideFrame {
                         .collect::<Vec<_>>();
                     // since we checked that `scale` is nonempty, the following operation should be infallible
                     let subscale_on_root = subscales[0].clone();
-                    // println!("subscale_on_root: {:?}", subscale_on_root);
 
                     // All of the subscales must be rotations of one another.
                     // `offset_vec()` returns a witness to rotational equivalence (an offset) if there is any;
@@ -198,7 +197,6 @@ impl GuideFrame {
                         // `.collect()` returns `None` if there is any `None` returned by `map`.
                         .collect::<Option<Vec<CountVector<usize>>>>();
                     // println!("subscale_on_root: {:?}", subscale_on_root);
-                    // println!("maybe_offsets: {:?}", maybe_offsets);
                     if let Some(offsets) = maybe_offsets {
                         // sort list of offsets by step class
                         // If offset_chord is {0} use multiplicity 1
@@ -232,7 +230,6 @@ impl GuideFrame {
                     vec![]
                 }
             } else {
-                // println!("not interleaved");
                 // stack at most this many k-steps
                 let chain_length: usize = scale.len() / multiplicity;
                 if chain_length == 1 {
@@ -746,10 +743,42 @@ mod tests {
 
         // Verify the lattice basis contains the expected generators
         if let Some(lattice_basis) = profile.lattice_basis {
-            // The basis should contain gener_1=[3,2,3] or gener_2=[2,1,2] or their multiples
-            let has_expected_basis = lattice_basis.iter().any(|v| {
-                (v[0] == 3 && v[1] == 2 && v[2] == 3) || (v[0] == 2 && v[1] == 1 && v[2] == 2)
-            });
+            // The basis should contain gener_1=[3,2,3] and gener_2=[2,1,2]
+            let has_expected_basis =
+                lattice_basis.contains(&vec![3, 2, 3]) && lattice_basis.contains(&vec![2, 1, 2]);
+            assert!(
+                has_expected_basis,
+                "Lattice basis should contain one of the expected generators"
+            );
+        }
+    }
+
+    #[test]
+    fn test_interleaved_4l1s_bug() {
+        // 5L(4m1s) LmLmLmLmLs - This scale has a unimodular basis:
+        // equave:  [5, 4, 1]
+        // gener_1: [1, 1, 0] (stacked 4 times)
+        // gener_2: [1, 0, 0]
+        // The determinant of these vectors is ±1, making them a unimodular basis.
+        let scale: [usize; 10] = [0, 1, 0, 1, 0, 1, 0, 1, 0, 2];
+        let gfs = guide_frames(&scale);
+        assert!(
+            gfs.iter().any(|gf| gf.multiplicity() == 2),
+            "Should find a guide frame of multiplicity 2"
+        );
+        // Check that the unimodular basis is found
+        use crate::word_to_profile;
+        let profile = word_to_profile(&scale);
+        println!("profile: {profile:?}");
+        assert!(
+            profile.structure.is_some(),
+            "Should find a unimodular basis for 5L(4m1s) scale LmLmLmLmLs"
+        );
+        // Verify the lattice basis contains the expected generators
+        if let Some(lattice_basis) = profile.lattice_basis {
+            // The basis should contain gener_1=[1,1,0] and gener_2=[1,0,0] or vice versa
+            let has_expected_basis =
+                lattice_basis.contains(&vec![1, 1, 0]) && lattice_basis.contains(&vec![1, 0, 0]);
             assert!(
                 has_expected_basis,
                 "Lattice basis should contain one of the expected generators"
