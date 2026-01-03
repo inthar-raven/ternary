@@ -1,7 +1,7 @@
 [package]
 name = "ternary"
 version = "0.4.0"
-authors = ["inthar-raven <serotoceprafen@gmail.com>"]
+authors = ["turbofishcrow <serotoceprafen@gmail.com>"]
 edition = "2024"
 
 [lib]

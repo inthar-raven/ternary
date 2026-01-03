@@ -37,6 +37,24 @@ impl PitchClassLatticeBasis {
     pub fn vy(&self) -> &[i32] {
         &self.vy
     }
+
+    pub fn equave_reduce(&self, step_sig: &[i32]) -> Self {
+        let mut new_vx = self.vx.clone();
+        while (0..3).any(|i| new_vx[i] < 0) {
+            (0..3).for_each(|i| new_vx[i] += step_sig[i]);
+        }
+        while (0..3).any(|i| new_vx[i] > step_sig[i]) {
+            (0..3).for_each(|i| new_vx[i] -= step_sig[i]);
+        }
+        let mut new_vy = self.vy.clone();
+        while (0..3).any(|i| new_vy[i] < 0) {
+            (0..3).for_each(|i| new_vy[i] += step_sig[i]);
+        }
+        while (0..3).any(|i| new_vy[i] > step_sig[i]) {
+            (0..3).for_each(|i| new_vy[i] -= step_sig[i]);
+        }
+        Self::from_slices(&new_vx, &new_vy)
+    }
 }
 
 impl IntoIterator for PitchClassLatticeBasis {
@@ -215,7 +233,7 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchC
 /// that is likely to be a fifth/fourth, provided such a basis exists for a given scale.
 pub fn parallelogram_substring_info(
     pitch_classes: &[&[i32]],
-    old_basis: PitchClassLatticeBasis,
+    old_basis: &PitchClassLatticeBasis,
 ) -> Option<(ParallelogramSubstring, PitchClassLatticeBasis)> {
     let scale_size = pitch_classes.len();
     // `basis` is written in scale step coordinates (L, m, s).
@@ -251,6 +269,7 @@ pub fn parallelogram_substring_info(
     for (i, vx) in pairwise_differences.iter().enumerate() {
         for vy in pairwise_differences.iter().skip(i + 1) {
             if (vx[0] * vy[1] - vx[1] * vy[0]).abs() == 1 {
+                println!("DEBUG trying basis {vx:?}, {vy:?}");
                 // Change coordinates to basis (v1, v2)
                 let basis_change: Vec<Vec<i32>> = vec![vec![vy[1], -vx[1]], vec![-vy[0], vx[0]]];
                 let mut pitch_classes_transformed = pitch_classes
@@ -621,11 +640,118 @@ pub fn parallelogram_substring_info(
     None
 }
 
+pub fn parallelogram_info(
+    pitch_classes: &[&[i32]],
+    old_basis: &PitchClassLatticeBasis,
+) -> Option<(ParallelogramSubstring, PitchClassLatticeBasis)> {
+    let scale_size = pitch_classes.len();
+    // `basis` is written in scale step coordinates (L, m, s).
+    // The pitch classes are written in coordinates given by `basis`.
+    // Get all pairwise differences between distinct points.
+    let mut pairwise_differences: Vec<Vec<i32>> = vec![];
+    for i in 0..scale_size {
+        for j in i + 1..scale_size {
+            let diff = vec![
+                pitch_classes[j][0] - pitch_classes[i][0],
+                pitch_classes[j][1] - pitch_classes[i][1],
+            ];
+            pairwise_differences.push(diff);
+        }
+    }
+
+    // Sort pairwise differences so that
+    // bases that likely have fifths or fourths (determined by patent val mapping for scale_size-edo) come first.
+    pairwise_differences.sort_by_key(|diff| {
+        let scale_size_i32 = scale_size as i32;
+        let fifth_mapping =
+            direct_approx(RawJiRatio::PYTH_5TH, scale_size as f64, RawJiRatio::OCTAVE);
+        let fourth_mapping = scale_size_i32 - fifth_mapping;
+        let taxicab_len_lms: i32 = (0..3)
+            .map(|i| (diff[0] * old_basis.vx[i] + diff[1] * old_basis.vy[i]).abs())
+            .sum();
+        // Negate because false < true and sorting is in ascending order
+        !(taxicab_len_lms % scale_size_i32 == fifth_mapping
+            || taxicab_len_lms % scale_size_i32 == fourth_mapping)
+    });
+
+    // Look for a unimodular basis that witnesses the parallelogram property.
+    // If this basis turns out to work, just use the basis vectors' components as coefficients
+    // to write the basis in step size coordinates.
+    for (i, vx) in pairwise_differences.iter().enumerate() {
+        'checking_bases: for vy in pairwise_differences.iter().skip(i + 1) {
+            if (vx[0] * vy[1] - vx[1] * vy[0]).abs() == 1 {
+                // Change coordinates to basis (v1, v2)
+                let basis_change: Vec<Vec<i32>> = vec![vec![vy[1], -vx[1]], vec![-vy[0], vx[0]]];
+                let mut pitch_classes_transformed = pitch_classes
+                    .iter()
+                    .map(|v| {
+                        vec![
+                            basis_change[0][0] * v[0] + basis_change[1][0] * v[1],
+                            basis_change[0][1] * v[0] + basis_change[1][1] * v[1],
+                        ]
+                    })
+                    .collect::<Vec<_>>();
+                // Get window dimensions: x_min, x_max, y_min, y_max
+                let mut xs: Vec<_> = pitch_classes_transformed.iter().map(|v| v[0]).collect();
+                let mut ys: Vec<_> = pitch_classes_transformed.iter().map(|v| v[1]).collect();
+                xs.sort();
+                ys.sort();
+                let x_min = xs[0];
+                let x_max = xs[xs.len() - 1];
+                let y_min = ys[0];
+                let y_max = ys[ys.len() - 1];
+                // Only need to try one traversal
+                // Sort pitch_classes_transformed in lex order for traversal
+                pitch_classes_transformed.sort_by(|v1, v2| {
+                    // Sort by *ascending* y values, if y values are equal sort by *ascending* x values
+                    v1[1].cmp(&v2[1]).then(v1[0].cmp(&v2[0]))
+                });
+                let mut index = 0; // index into pitch_classes_transformed
+                // Check if all rows are fully occupied; if not go on to checking the next basis
+                let row_count = y_max - y_min + 1;
+                let full_row_len = x_max - x_min + 1; // Required length of each row
+                for y in y_min..=y_max {
+                    let mut row_counter = 0; // Count pitches with this y value
+                    while index < pitch_classes_transformed.len()
+                        && pitch_classes_transformed[index][1] == y
+                    {
+                        row_counter += 1;
+                        index += 1;
+                    }
+                    if row_counter != full_row_len {
+                        continue 'checking_bases;
+                    }
+                }
+                let vx_lms = (0..3)
+                    .map(|i| vx[0] * old_basis.vx[i] + vx[1] * old_basis.vy[i])
+                    .collect::<Vec<_>>();
+                let vy_lms = (0..3)
+                    .map(|i| vy[0] * old_basis.vx[i] + vy[1] * old_basis.vy[i])
+                    .collect::<Vec<_>>();
+                return Some((
+                    ParallelogramSubstring::new(
+                        row_count,
+                        full_row_len,
+                        full_row_len,
+                        full_row_len,
+                    ),
+                    PitchClassLatticeBasis::from_slices(&vy_lms, &vx_lms), // put row generator first
+                ));
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::lattice::{
-        /*ParallelogramSubstring, PitchClassLatticeBasis,*/
-        parallelogram_substring_info, try_pitch_class_lattice,
+    use crate::{
+        // comb::partitions_exact_part_count,
+        lattice::{
+            /*ParallelogramSubstring, PitchClassLatticeBasis,*/
+            // ParallelogramSubstring, get_unimodular_basis, parallelogram_info,
+            parallelogram_substring_info, try_pitch_class_lattice,
+        },
     };
 
     // use crate::words::mos_substitution_scales;
@@ -638,7 +764,7 @@ mod tests {
         let diasem_lattices_and_basis = try_pitch_class_lattice(&diasem_rh).unwrap();
         let diasem_rh_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diasem_lattices_and_basis.0),
-            diasem_lattices_and_basis.1,
+            &diasem_lattices_and_basis.1,
         );
         println!("{:?}", diasem_rh_result);
         assert!(diasem_rh_result.is_some());
@@ -707,7 +833,7 @@ mod tests {
         let blackdye_lattices_and_basis = try_pitch_class_lattice(&blackdye).unwrap();
         let blackdye_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&blackdye_lattices_and_basis.0),
-            blackdye_lattices_and_basis.1,
+            &blackdye_lattices_and_basis.1,
         );
         assert!(blackdye_result.is_some());
         if let Some((ps, b)) = blackdye_result {
@@ -761,7 +887,7 @@ mod tests {
         let diaslen_lattices_and_basis = try_pitch_class_lattice(&diaslen_4sc).unwrap();
         let diaslen_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diaslen_lattices_and_basis.0),
-            diaslen_lattices_and_basis.1,
+            &diaslen_lattices_and_basis.1,
         );
         assert!(diaslen_result.is_some());
         /*
@@ -818,7 +944,7 @@ mod tests {
         let diachrome_lattices_and_basis = try_pitch_class_lattice(&diachrome_5sc).unwrap();
         let diachrome_result = parallelogram_substring_info(
             &crate::helpers::slicify_each(&diachrome_lattices_and_basis.0),
-            diachrome_lattices_and_basis.1,
+            &diachrome_lattices_and_basis.1,
         );
         assert!(diachrome_result.is_some());
 
@@ -829,7 +955,7 @@ mod tests {
         assert!(
             parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
-                lattices_and_basis.1
+                &lattices_and_basis.1
             )
             .is_some()
         );
@@ -839,7 +965,7 @@ mod tests {
         assert!(
             parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
-                lattices_and_basis.1
+                &lattices_and_basis.1
             )
             .is_none()
         );
@@ -849,7 +975,7 @@ mod tests {
         assert!(
             parallelogram_substring_info(
                 &crate::helpers::slicify_each(&lattices_and_basis.0),
-                lattices_and_basis.1
+                &lattices_and_basis.1
             )
             .is_none()
         );

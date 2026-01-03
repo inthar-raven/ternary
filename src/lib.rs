@@ -51,7 +51,7 @@ const STEP_LETTERS: [&str; 12] = [
     "",                                                     // 0
     "X",                                                    // 1
     "Ls",                                                   // 2
-    "Lms",                                                  // 3
+    "xyz",                                                  // 3
     "Lmns",                                                 // 4
     "HLmns",                                                // 5
     "HLmnst",                                               // 6
@@ -305,7 +305,7 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
         let pitch_class_refs: Vec<&[i32]> = pitch_classes.iter().map(|v| v.as_slice()).collect();
 
         let (final_coordinates, final_basis) = if let Some((_qp, better_basis)) =
-            lattice::parallelogram_substring_info(&pitch_class_refs, initial_basis.clone())
+            lattice::parallelogram_substring_info(&pitch_class_refs, &initial_basis)
         {
             // Re-project pitch classes using the better basis
             let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
