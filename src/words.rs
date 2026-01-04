@@ -658,18 +658,35 @@ where
     T: PartialEq + Clone + Send + Sync,
 {
     let sqrt_word_len = (word.len() as f64).sqrt().floor() as usize;
-    for prefix_len in 1..=sqrt_word_len {
-        if word.len().is_multiple_of(prefix_len) {
-            // Prefix length must divide word.len()
-            let prefix_repeated: Vec<_> = word
+    println!("sqrt_word_len: {sqrt_word_len}");
+    for divisor in 1..=sqrt_word_len {
+        println!("divisor: {divisor}");
+        if word.len().is_multiple_of(divisor) {
+            // Prefix length must divide word.len(); check both divisor and, if divisor > 1, prefix.len() / divisor
+            let prefix1_repeated: Vec<_> = word
                 .iter()
-                .take(prefix_len)
+                .take(divisor)
                 .cycle()
                 .take(word.len())
                 .cloned()
                 .collect(); // Repeat prefix the appropriate number of times
-            if word.to_vec() == prefix_repeated {
-                return word[..prefix_len].to_vec();
+            if word.to_vec() == prefix1_repeated {
+                println!("Returning prefix of length {divisor}");
+                return word[..divisor].to_vec();
+            }
+            if divisor > 1 {
+                let divisor2 = word.len() / divisor;
+                let prefix2_repeated: Vec<_> = word
+                    .iter()
+                    .take(divisor2)
+                    .cycle()
+                    .take(word.len())
+                    .cloned()
+                    .collect(); // Repeat prefix the appropriate number of times
+                if word.to_vec() == prefix2_repeated {
+                    println!("Returning prefix of length {divisor2}");
+                    return word[..divisor2].to_vec();
+                }
             }
         }
     }
@@ -787,9 +804,11 @@ mod tests {
         let word_012 = [0, 1, 2, 0, 1, 2, 0, 1, 2];
         let pentawood = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1];
         let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+        let three_periods = [0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1];
         assert_eq!(period_pattern(&word_012).len(), 3);
         assert_eq!(period_pattern(&pentawood).len(), 2);
         assert_eq!(period_pattern(&diasem).len(), 9);
+        assert_eq!(period_pattern(&three_periods).len(), 5);
     }
     #[test]
     fn test_weak_period_pattern() {
