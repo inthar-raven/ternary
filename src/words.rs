@@ -652,42 +652,49 @@ pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
         && maximum_variety(&replace(scale, 2, 0)) == 2
 }
 
-/// The repeating portion of a slice.
-pub fn period_pattern<T>(slice: &[T]) -> Vec<T>
+/// The repeating portion of a word.
+pub fn period_pattern<T>(word: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
 {
-    let l = 1
-        + (1..slice.len())
-            .map(|i| slice.iter().take(i).cycle())
-            .enumerate()
-            .take_while(|(i, iter)| {
-                slice.to_vec()
-                    != iter
-                        .clone()
-                        .take((i + 1) * (slice.len() / (i + 1))) // Take one more than the index, then repeat
-                        .cloned()
-                        .collect::<Vec<T>>()
-            })
-            .collect::<Vec<_>>()
-            .len();
-    slice[..l].to_vec()
+    let l = (1..word.len()) // Only check up to prefix_len == slice.len() - 1 since the check will succeed when prefix is the whole word
+        .map(|prefix_len| word.iter().take(prefix_len).cycle()) // Get infinite repetition of each prefix
+        .enumerate()
+        .take_while(|(i, iter)| {
+            // Try each prefix until word == (word.len() / prefix.len())-fold repetition of prefix
+            word.to_vec()
+                != iter
+                    .clone()
+                    .take((i + 1) * (word.len() / (i + 1))) // Add 1 to the enumeration index to get prefix length
+                    .cloned()
+                    .collect::<Vec<T>>()
+        })
+        .collect::<Vec<_>>()
+        .len()
+        + 1; // Add 1 because the final letter of the prefix where the check succeeds is not appended to the iterator
+    word[..l].to_vec()
 }
 
-/// The minimal string `x` such that `slice` is a prefix of `x^\infty`.
-pub fn weak_period_pattern<T>(slice: &[T]) -> Vec<T>
+/// The minimal prefix `x` such that `word` is a prefix of `x^\infty`.
+pub fn weak_period_pattern<T>(word: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone,
 {
-    let l = 1
-        + (1..slice.len())
-            .map(|i| slice.iter().take(i).cycle())
-            .take_while(|iter| {
-                slice.to_vec() != iter.clone().take(slice.len()).cloned().collect::<Vec<T>>()
-            })
-            .collect::<Vec<_>>()
-            .len();
-    slice[..l].to_vec()
+    let l = (1..word.len()) // Only check up to prefix_len == slice.len() - 1 since the check will succeed when prefix is the whole word
+        .map(|prefix_len| word.iter().take(prefix_len).cycle()) // Get infinite repetition of each prefix
+        .take_while(|prefix_cycle| {
+            // Try each prefix until word == the word.len()-letter prefix of prefix_cycle
+            word.to_vec()
+                != prefix_cycle
+                    .clone()
+                    .take(word.len())
+                    .cloned()
+                    .collect::<Vec<T>>()
+        })
+        .collect::<Vec<_>>()
+        .len()
+        + 1; // Add 1 because the final letter of the prefix where the check succeeds is not appended to the iterator
+    word[..l].to_vec()
 }
 
 /// The collection of rotations of a word, in cyclic order.
