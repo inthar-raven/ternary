@@ -662,12 +662,15 @@ where
         .enumerate()
         .take_while(|(i, iter)| {
             // Try each prefix until word == (word.len() / prefix.len())-fold repetition of prefix
-            word.to_vec()
-                != iter
-                    .clone()
-                    .take((i + 1) * (word.len() / (i + 1))) // Add 1 to the enumeration index to get prefix length
-                    .cloned()
-                    .collect::<Vec<T>>()
+            // (Add 1 to the enumeration index to get prefix length)
+            // Short-circuit when prefix length does not divide word.len()
+            !word.len().is_multiple_of(i + 1)
+                || word.to_vec()
+                    != iter
+                        .clone()
+                        .take((i + 1) * (word.len() / (i + 1)))
+                        .cloned()
+                        .collect::<Vec<T>>()
         })
         .collect::<Vec<_>>()
         .len()
