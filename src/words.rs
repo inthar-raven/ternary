@@ -657,25 +657,24 @@ pub fn period_pattern<T>(word: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
 {
-    let l = (1..word.len()) // Only check up to prefix_len == slice.len() - 1 since the check will succeed when prefix is the whole word
-        .map(|prefix_len| word.iter().take(prefix_len).cycle()) // Get infinite repetition of each prefix
-        .enumerate()
-        .take_while(|(i, iter)| {
-            // Try each prefix until word == (word.len() / prefix.len())-fold repetition of prefix
-            // (Add 1 to the enumeration index to get prefix length)
-            // Short-circuit when prefix length does not divide word.len()
-            !word.len().is_multiple_of(i + 1)
-                || word.to_vec()
-                    != iter
-                        .clone()
-                        .take((i + 1) * (word.len() / (i + 1)))
-                        .cloned()
-                        .collect::<Vec<T>>()
-        })
-        .collect::<Vec<_>>()
-        .len()
-        + 1; // Add 1 because the final letter of the prefix where the check succeeds is not appended to the iterator
-    word[..l].to_vec()
+    let sqrt_word_len = (word.len() as f64).sqrt().floor() as usize;
+    for prefix_len in 1..=sqrt_word_len {
+        if word.len().is_multiple_of(prefix_len) {
+            // Prefix length must divide word.len()
+            let prefix_repeated: Vec<_> = word
+                .iter()
+                .take(prefix_len)
+                .cycle()
+                .take(word.len())
+                .cloned()
+                .collect(); // Repeat prefix the appropriate number of times
+            if word.to_vec() == prefix_repeated {
+                return word[..prefix_len].to_vec();
+            }
+        }
+    }
+    // If all divisors fail then return the whole word
+    word.to_vec()
 }
 
 /// The minimal prefix `x` such that `word` is a prefix of `x^\infty`.
