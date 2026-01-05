@@ -38,7 +38,7 @@ features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window']
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"
-criterion = "0.5.1"
+criterion = "0.8.1"
 
 [[bench]]
 name = "bench"
