@@ -312,24 +312,8 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
                 .unwrap()
                 .0;
             // Equave reduce
-            let better_vectors = better_basis
-                .into_iter()
-                .map(|v| {
-                    let mut new_v = v;
-                    while new_v.iter().any(|v_i| *v_i < 0) {
-                        (0..3).for_each(|i| new_v[i] += step_sig[i]);
-                    }
-                    while (0..3).any(|i| new_v[i] > step_sig[i]) {
-                        (0..3).for_each(|i| new_v[i] -= step_sig[i]);
-                    }
-                    new_v
-                })
-                .collect::<Vec<_>>();
-            let better_basis = lattice::PitchClassLatticeBasis::from_slices(
-                &better_vectors[0],
-                &better_vectors[1],
-            );
-            (coords, better_basis)
+            let better_basis_rd = better_basis.equave_reduce(&step_sig);
+            (coords, better_basis_rd)
         } else {
             // No better basis found, use the original
             (pitch_classes, initial_basis)
