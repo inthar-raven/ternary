@@ -29,7 +29,7 @@ use ji_ratio::RawJiRatio;
 // use subgroup_monzo::SubgroupMonzo;
 use wasm_bindgen::prelude::*;
 use words::{Chirality, Letter};
-use words::{chirality, is_mos_subst};
+use words::{chirality, is_mos_subst_one_perm};
 
 #[wasm_bindgen]
 extern "C" {
@@ -215,9 +215,9 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u16)
         .collect::<Vec<u16>>();
-    let subst_l_ms = is_mos_subst(query, 0, 1, 2);
-    let subst_m_ls = is_mos_subst(query, 1, 0, 2);
-    let subst_s_lm = is_mos_subst(query, 2, 0, 1);
+    let subst_l_ms = is_mos_subst_one_perm(query, 0, 1, 2);
+    let subst_m_ls = is_mos_subst_one_perm(query, 1, 0, 2);
+    let subst_s_lm = is_mos_subst_one_perm(query, 2, 0, 1);
     if let Some(pair) = get_unimodular_basis(&guide_frames(query), &step_sig) {
         let (lattice_basis, structure) = pair;
         ScaleProfile {
