@@ -599,7 +599,7 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
 
 /// Whether `scale` is a MOS substitution scale with any choice of letter as template letter.
 pub fn is_mos_subst(scale: &[Letter]) -> bool {
-    let steps: Vec<_> = step_set(scale).iter().copied().collect();
+    let steps: Vec<_> = step_set(scale).into_iter().collect();
     steps.len() == 3 && {
         let (x, y, z) = (steps[0], steps[1], steps[2]);
         mos_subst_helper(scale, x, y, z)
@@ -614,7 +614,7 @@ pub fn is_mos_subst_one_perm(scale: &[Letter], t: Letter, f1: Letter, f2: Letter
         && mos_subst_helper(scale, t, f1, f2)
 }
 
-// Helper for checking MOS substitution property assuming `scale` is already ternary with the given letters.
+// Helper for checking MOS substitution property assuming `scale` is already ternary with the given
 fn mos_subst_helper(scale: &[Letter], t: Letter, f1: Letter, f2: Letter) -> bool {
     maximum_variety(&delete(scale, t)) == 2 // Is the result of deleting t a MOS?
         && maximum_variety(&replace(scale, f1, f2)) == 2 // Is the result of identifying letters of the filling MOS a MOS
@@ -679,9 +679,7 @@ where
     T: PartialEq + Clone + Send + Sync,
 {
     let sqrt_word_len = (word.len() as f64).sqrt().floor() as usize;
-    println!("sqrt_word_len: {sqrt_word_len}");
     for divisor in 1..=sqrt_word_len {
-        println!("divisor: {divisor}");
         if word.len().is_multiple_of(divisor) {
             // Prefix length must divide word.len(); check both divisor and, if divisor > 1, prefix.len() / divisor
             let prefix1_repeated: Vec<_> = word
@@ -751,7 +749,7 @@ where
 pub fn chirality(word: &[Letter]) -> Chirality {
     let least_mode_word = least_mode(word);
 
-    let word_rev: Vec<usize> = word.iter().cloned().rev().collect();
+    let word_rev: Vec<usize> = word.iter().copied().rev().collect();
     let least_mode_word_rev = least_mode(&word_rev);
 
     match least_mode_word.cmp(&least_mode_word_rev) {

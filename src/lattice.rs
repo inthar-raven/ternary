@@ -269,7 +269,6 @@ pub fn parallelogram_substring_info(
     for (i, vx) in pairwise_differences.iter().enumerate() {
         for vy in pairwise_differences.iter().skip(i + 1) {
             if (vx[0] * vy[1] - vx[1] * vy[0]).abs() == 1 {
-                println!("DEBUG trying basis {vx:?}, {vy:?}");
                 // Change coordinates to basis (v1, v2)
                 let basis_change: Vec<Vec<i32>> = vec![vec![vy[1], -vx[1]], vec![-vy[0], vx[0]]];
                 let mut pitch_classes_transformed = pitch_classes
