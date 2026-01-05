@@ -69,4 +69,5 @@ cargo test
   - maximum variety
 
 # Nota bene
+
 If you ever see the status message "RuntimeError: unreachable executed" while running the web app, it's a bug (something that's not supposed to happen is happening). Please report it. When an error happens, just refresh the web app.

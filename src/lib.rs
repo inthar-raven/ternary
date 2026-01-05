@@ -121,6 +121,8 @@ pub struct ScaleProfile {
     subst_m_ls: bool,
     /// whether scale is a subst cs(aLbm)
     subst_s_lm: bool,
+    /// Temperament-agnostic edo join
+    edo_join: (u16, u16, u16),
     /// maximum variety of scale
     mv: u16,
 }
@@ -215,6 +217,12 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .iter()
         .map(|x| *x as u16)
         .collect::<Vec<u16>>();
+    let (n_l, n_m, n_s) = (step_sig[0], step_sig[1], step_sig[2]);
+    let edo_join = (
+        3 * n_l + 2 * n_m + n_s,
+        4 * n_l + 2 * n_m + n_s,
+        4 * n_l + 3 * n_m + n_s,
+    );
     let subst_l_ms = is_mos_subst_one_perm(query, 0, 1, 2);
     let subst_m_ls = is_mos_subst_one_perm(query, 1, 0, 2);
     let subst_s_lm = is_mos_subst_one_perm(query, 2, 0, 1);
@@ -233,6 +241,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             subst_l_ms,
             subst_m_ls,
             subst_s_lm,
+            edo_join,
             mv,
         }
     } else {
@@ -249,6 +258,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             subst_l_ms,
             subst_m_ls,
             subst_s_lm,
+            edo_join,
             mv,
         }
     }

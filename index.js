@@ -377,7 +377,7 @@ import("./pkg")
         <button id="reset-view">Reset View</button>
         <span style="margin-left: 20px;">Zoom: <span id="zoom-level">100%</span></span>
     </div>`;
-              latticeElement.innerHTML += `Lattice basis:<br/>[gx, gy] = [${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)}, ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)}]`
+              latticeElement.innerHTML += `Lattice basis:<br/>[gx, gy] = [${alsoInCurrentTuning(state.latticeBasis[0], state.tuning, equave)}, ${alsoInCurrentTuning(state.latticeBasis[1], state.tuning, equave)}]`;
               latticeElement.appendChild(svgTag);
 
               // Zoom functionality
@@ -689,48 +689,23 @@ stack()`
       if (el) {
         el.innerHTML = "";
         const h2 = document.createElement("h2");
-        h2.innerText = `Scale profile for ${state.word}`;
+        h2.innerText = `Scale information for ${state.word}`;
         el.appendChild(h2);
         if (state.profile) {
           // const ploidacot = state.profile["ploidacot"];
+
+          const [edo1, edo2, edo3] = state.profile["edo_join"];
+          // Edo join (always shown)
+          el.innerHTML += `Edo join (temp-agnostic): ${edo1} & ${edo2} & ${edo3}<br/>`;
+
           const structure = state.profile["structure"];
-
-          // Guide frame info (only if structure exists)
-          if (structure) {
-            el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame
-           " target="_blank">Guide frame</a></b><br/><small>`;
-            let gsDisp =
-              `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
-                1,
-              );
-            el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
-            el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
-            el.innerHTML += `Offsets ${structure["offset_chord"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
-            el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
-          } else {
-            el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
-          }
-
-          // Monotone MOS properties (always shown)
-          el.innerHTML += `<b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
-          el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
-          el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
-          el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
-          if (
-            !state.profile["lm"] &&
-            !state.profile["ms"] &&
-            !state.profile["s0"]
-          ) {
-            el.innerHTML += `None<br/>`;
-          }
-          el.innerHTML += `<br/>`;
 
           // MOS substitution properties (always shown)
           const a = countChar(state.word, "L");
           const b = countChar(state.word, "m");
           const c = countChar(state.word, "s");
 
-          el.innerHTML += `<b><a href="https://wiki.spoogly.website/index.php?title=MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
+          el.innerHTML += `<br/><b><a href="https://wiki.spoogly.website/index.php?title=MOS_substitution" target="_blank">MOS substitution</a> properties</b><br/>`;
           el.innerHTML += state.profile["subst_l_ms"]
             ? `subst ${a}L(${b}m${c}s)<br/>`
             : "";
@@ -748,6 +723,19 @@ stack()`
             el.innerHTML += `None<br/>`;
           }
 
+          // Monotone MOS properties (always shown)
+          el.innerHTML += `<br/><b><a href="https://en.xen.wiki/w/Monotone-MOS_scale" target="_blank">Monotone MOS properties</a></b><br/><small>`;
+          el.innerHTML += state.profile["lm"] ? `L = m<br/>` : "";
+          el.innerHTML += state.profile["ms"] ? `m = s<br/>` : "";
+          el.innerHTML += state.profile["s0"] ? `s = 0<br/>` : "";
+          if (
+            !state.profile["lm"] &&
+            !state.profile["ms"] &&
+            !state.profile["s0"]
+          ) {
+            el.innerHTML += `None<br/>`;
+          }
+          
           // Chirality (always shown)
           if (state.profile["chirality"] === "Achiral") {
             el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
@@ -756,7 +744,23 @@ stack()`
           }
 
           // Maximum variety (always shown)
-          el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}</small>`;
+          el.innerHTML += `<br/><br/><a href="https://en.xen.wiki/w/Maximum_variety" target="_blank">Maximum variety</a>: ${state.profile["mv"]}<br/>`;
+
+          // Guide frame info (only if structure exists)
+          if (structure) {
+            el.innerHTML += `<br/><b><a href="https://en.xen.wiki/w/Guide_frame
+           " target="_blank">Guide frame</a></b><br/><small>`;
+            let gsDisp =
+              `${structure["gs"].map((g) => ` ${alsoInCurrentTuning(g, state.tuning, equave)}`)}`.slice(
+                1,
+              );
+            el.innerHTML += `Guided <a href="https://en.xen.wiki/w/Generator_sequence" target="_blank">generator sequence</a> of ${stepVectorLength(structure["gs"][0])}-steps: GS(${gsDisp})<br/>`; // TODO prettify
+            el.innerHTML += `Aggregate generator ${alsoInCurrentTuning(structure["aggregate"], state.tuning, equave)}<br/>`; // TODO prettify
+            el.innerHTML += `Offsets ${structure["offset_chord"].map((g) => alsoInCurrentTuning(g, state.tuning, equave))}<br/>`; // TODO prettify
+            el.innerHTML += `Multiplicity ${JSON.stringify(structure["multiplicity"])}<br/>`; // TODO prettify
+          } else {
+            el.innerHTML += `<b><a href="https://en.xen.wiki/w/Guide_frame" target="_blank">Guide frame</a></b><br/><small>No guide frame found.<br/><br/></small>`;
+          }
         }
       }
     }
