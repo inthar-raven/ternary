@@ -51,7 +51,7 @@ const STEP_LETTERS: [&str; 12] = [
     "",                                                     // 0
     "X",                                                    // 1
     "Ls",                                                   // 2
-    "xyz",                                                  // 3
+    "Lms",                                                  // 3
     "Lmns",                                                 // 4
     "HLmns",                                                // 5
     "HLmnst",                                               // 6
