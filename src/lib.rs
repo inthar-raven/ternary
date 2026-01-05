@@ -308,10 +308,8 @@ pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
             lattice::parallelogram_substring_info(&pitch_class_refs, &initial_basis)
         {
             // Re-project pitch classes using the better basis
-            let coords = lattice::project_pitch_classes(&word_in_numbers, &better_basis)
-                .unwrap()
-                .0;
-            // Equave reduce
+            let (coords, _) = lattice::pitch_classes(&word_in_numbers, &better_basis);
+            // Equave reduce the basis
             let better_basis_rd = better_basis.equave_reduce(&step_sig);
             (coords, better_basis_rd)
         } else {

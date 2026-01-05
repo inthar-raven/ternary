@@ -127,12 +127,12 @@ pub fn get_unimodular_basis(
     None
 }
 
-/// Project pitch classes onto a given basis.
+/// Project pitches onto the pitch class lattice using the given basis.
 /// Takes a scale (word) and a basis, and returns the pitch classes projected onto that basis.
-pub fn project_pitch_classes(
+pub fn pitch_classes(
     query: &[usize],
     basis: &PitchClassLatticeBasis,
-) -> Option<(Vec<Vec<i32>>, PitchClassLatticeBasis)> {
+) -> (Vec<Vec<i32>>, PitchClassLatticeBasis) {
     let sig = word_to_sig(query)
         .iter()
         .map(|x| *x as u16)
@@ -163,7 +163,7 @@ pub fn project_pitch_classes(
         let v_i_projected = v_i_transformed[1..3].to_vec();
         pitch_classes.push(v_i_projected);
     }
-    Some((pitch_classes, basis.clone()))
+    (pitch_classes, basis.clone())
 }
 
 /// Try to get a lattice of pitch classes in the scale
