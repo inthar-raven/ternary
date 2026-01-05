@@ -25,7 +25,7 @@ use crate::{
 // get all valid Guided GSes using k-steps on any rotation.
 fn guided_gs_chains<T>(chain: &[T]) -> Vec<Vec<T>>
 where
-    T: core::fmt::Debug + PartialEq + Clone + Eq + Send,
+    T: core::fmt::Debug + PartialEq + Clone + Eq + Send + Sync,
 {
     // println!("chain: {:?}", chain);
     let len = chain.len();

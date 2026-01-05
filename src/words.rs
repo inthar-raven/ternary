@@ -732,9 +732,10 @@ where
 /// Contains redundant rotations if the word is not primitive.
 pub fn rotations<T>(word: &[T]) -> Vec<Vec<T>>
 where
-    T: Clone + Eq,
+    T: Clone + Eq + Send + Sync,
 {
-    (0..word.len()).map(|i| rotate(word, i)).collect()
+    let period = period_pattern(word).len();
+    (0..period).map(|i| rotate(word, i)).collect()
 }
 
 /// The chirality of a scale word.
