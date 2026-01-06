@@ -694,9 +694,9 @@ stack()`
         if (state.profile) {
           // const ploidacot = state.profile["ploidacot"];
 
-          const [edo1, edo2, edo3] = state.profile["edo_join"];
-          // Edo join (always shown)
-          el.innerHTML += `Temp-agnostic ed join: ${edo1} & ${edo2} & ${edo3}<br/>`;
+          const [ed1, ed2, ed3] = state.profile["ed_join"];
+          // Ed join (always shown)
+          el.innerHTML += `Temp-agnostic ed join: ${ed1} & ${ed2} & ${ed3}<br/>`;
 
           const structure = state.profile["structure"];
 

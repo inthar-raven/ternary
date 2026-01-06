@@ -91,7 +91,7 @@ pub struct GuideResult {
     /// The `JsValue` is an array of 3 numbers where each entry is the count of the corresp. step size.
     pub offset_chord: Vec<Vec<u16>>,
     /// complexity result
-    /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-edo.
+    /// The base GS chains in a multiple GS structure don't form interleaved scales. Instead they form a detempered copy of m-ed.
     pub multiplicity: u16,
     pub complexity: u16,
 }
@@ -121,8 +121,8 @@ pub struct ScaleProfile {
     subst_m_ls: bool,
     /// whether scale is a subst cs(aLbm)
     subst_s_lm: bool,
-    /// Temperament-agnostic edo join
-    edo_join: (u16, u16, u16),
+    /// Temperament-agnostic ed join
+    ed_join: (u16, u16, u16),
     /// maximum variety of scale
     mv: u16,
 }
@@ -218,7 +218,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
         .map(|x| *x as u16)
         .collect::<Vec<u16>>();
     let (n_l, n_m, n_s) = (step_sig[0], step_sig[1], step_sig[2]);
-    let edo_join = (
+    let ed_join = (
         3 * n_l + 2 * n_m + n_s,
         4 * n_l + 2 * n_m + n_s,
         4 * n_l + 3 * n_m + n_s,
@@ -241,7 +241,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             subst_l_ms,
             subst_m_ls,
             subst_s_lm,
-            edo_join,
+            ed_join,
             mv,
         }
     } else {
@@ -258,7 +258,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
             subst_l_ms,
             subst_m_ls,
             subst_s_lm,
-            edo_join,
+            ed_join,
             mv,
         }
     }

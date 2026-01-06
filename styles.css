@@ -90,7 +90,7 @@ pre[class*="language-"] {
   position: relative;
   overflow: auto;
   background-color: #2f005e;
-  color: chartreuse;
+  color: #0ff;
   font-family: var(--mono);
   font-size: 14px;
 
