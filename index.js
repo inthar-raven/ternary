@@ -696,7 +696,7 @@ stack()`
 
           const [edo1, edo2, edo3] = state.profile["edo_join"];
           // Edo join (always shown)
-          el.innerHTML += `Edo join (temp-agnostic): ${edo1} & ${edo2} & ${edo3}<br/>`;
+          el.innerHTML += `Temp-agnostic ed join: ${edo1} & ${edo2} & ${edo3}<br/>`;
 
           const structure = state.profile["structure"];
 
