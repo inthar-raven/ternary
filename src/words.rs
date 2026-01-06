@@ -678,8 +678,7 @@ pub fn period_pattern<T>(word: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
 {
-    let sqrt_word_len = (word.len() as f64).sqrt().floor() as usize;
-    for divisor in 1..=sqrt_word_len {
+    for divisor in 1..=word.len() / 2 {
         if word.len().is_multiple_of(divisor) {
             // Prefix length must divide word.len(); check both divisor and, if divisor > 1, prefix.len() / divisor
             let prefix1_repeated: Vec<_> = word
@@ -690,22 +689,7 @@ where
                 .cloned()
                 .collect(); // Repeat prefix the appropriate number of times
             if word.to_vec() == prefix1_repeated {
-                println!("Returning prefix of length {divisor}");
                 return word[..divisor].to_vec();
-            }
-            if divisor > 1 {
-                let divisor2 = word.len() / divisor;
-                let prefix2_repeated: Vec<_> = word
-                    .iter()
-                    .take(divisor2)
-                    .cycle()
-                    .take(word.len())
-                    .cloned()
-                    .collect(); // Repeat prefix the appropriate number of times
-                if word.to_vec() == prefix2_repeated {
-                    println!("Returning prefix of length {divisor2}");
-                    return word[..divisor2].to_vec();
-                }
             }
         }
     }
