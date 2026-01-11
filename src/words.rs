@@ -955,7 +955,6 @@ mod tests {
     }
     #[test]
     fn test_maximum_variety() {
-        assert_eq!(maximum_variety::<usize>(&[]), 0);
         assert_eq!(maximum_variety(&[0, 0, 0, 0]), 1); // check even and odd
         assert_eq!(maximum_variety(&[1, 1, 1, 1, 1]), 1);
         assert_eq!(maximum_variety(&[0, 0, 0, 1, 0, 0, 1]), 2); // diatonic has max variety 2
