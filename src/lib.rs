@@ -168,6 +168,8 @@ use serde_wasm_bindgen::to_value;
 
 use guide::GuideFrame;
 use guide::guide_frames;
+#[cfg(feature = "wasm")]
+use words::maximum_variety_is;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
 #[cfg(feature = "wasm")]
@@ -559,7 +561,7 @@ pub fn sig_result(
                 0 => true,
                 mv => {
                     if mv_constraint == "exactly" {
-                        maximum_variety(scale) == mv as usize
+                        maximum_variety_is(scale, mv as usize)
                     } else {
                         maximum_variety(scale) <= mv as usize
                     }

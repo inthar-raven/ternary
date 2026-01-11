@@ -403,6 +403,43 @@ where
     result
 }
 
+/// Says whether this scale has the given [maximum variety](https://en.xen.wiki/w/Maximum_variety).
+/// Faster than comparing the output of `maximum_variety` because of short-circuiting.
+///
+/// Maximum variety counts the largest number of distinct interval classes
+/// at any single interval size. MOS scales have MV=2.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::maximum_variety_is;
+///
+/// // MOS scales have maximum variety 2
+/// let diatonic = [0, 0, 1, 0, 0, 0, 1];
+/// assert!(maximum_variety_is(&diatonic, 2));
+///
+/// // Ternary scales have higher MV
+/// let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// assert!(maximum_variety_is(&diasem, 3));
+/// let blackdye = [2, 0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// assert!(maximum_variety_is(&blackdye, 4));
+/// ```
+pub fn maximum_variety_is<T>(scale: &[T], mv: usize) -> bool
+where
+    T: Hash + Ord + Clone + Sync + Send,
+{
+    let mut result = 0;
+    let floor_half: usize = scale.len() / 2;
+    for subword_length in 1..(floor_half + 1) {
+        let sizes = CountVector::distinct_spectrum(scale, subword_length);
+        result = max(result, sizes.len()); // update result
+        if result > mv {
+            return false;
+        }
+    }
+    result == mv
+}
+
 /// Whether `scale` is strict variety (the variety is the same for every non-equave step class).
 pub fn is_strict_variety<T>(scale: &[T]) -> bool
 where
@@ -709,8 +746,8 @@ pub fn is_mos_subst_one_perm(scale: &[Letter], t: Letter, f1: Letter, f2: Letter
 
 // Helper for checking MOS substitution property assuming `scale` is already ternary with the given
 fn mos_subst_helper(scale: &[Letter], t: Letter, f1: Letter, f2: Letter) -> bool {
-    maximum_variety(&delete(scale, t)) == 2 // Is the result of deleting t a MOS?
-        && maximum_variety(&replace(scale, f1, f2)) == 2 // Is the result of identifying letters of the filling MOS a MOS
+    maximum_variety_is(&delete(scale, t), 2) // Is the result of deleting t a MOS?
+        && maximum_variety_is(&replace(scale, f1, f2), 2) // Is the result of identifying letters of the filling MOS a MOS
 }
 
 /// Return the number of distinct steps in `scale`.
@@ -737,33 +774,33 @@ pub fn delete(scale: &[Letter], letter: Letter) -> Vec<Letter> {
 /// Returns `false` if the scale is not ternary.
 pub fn is_monotone_mos(scale: &[Letter]) -> bool {
     step_variety(scale) == 3
-        && maximum_variety(&replace(scale, 1, 0)) == 2 // L = m
-        && maximum_variety(&replace(scale, 2, 1)) == 2 // m = s
-        && maximum_variety(&delete(scale, 2)) == 2 // s = 0
+        && maximum_variety_is(&replace(scale, 1, 0), 2) // L = m
+        && maximum_variety_is(&replace(scale, 2, 1), 2) // m = s
+        && maximum_variety_is(&delete(scale, 2), 2) // s = 0
 }
 
 /// Check if the result of equating L = m is a MOS. Assumes the scale is ternary.
 pub fn monotone_lm(scale: &[Letter]) -> bool {
-    maximum_variety(&replace(scale, 1, 0)) == 2
+    maximum_variety_is(&replace(scale, 1, 0), 2)
 }
 
 /// Check if the result of equating m = s is a MOS. Assumes the scale is ternary.
 pub fn monotone_ms(scale: &[Letter]) -> bool {
-    maximum_variety(&replace(scale, 2, 1)) == 2
+    maximum_variety_is(&replace(scale, 2, 1), 2)
 }
 
 /// Check if the result of equating s = 0 is a MOS. Assumes the scale is ternary.
 pub fn monotone_s0(scale: &[Letter]) -> bool {
-    maximum_variety(&delete(scale, 2)) == 2
+    maximum_variety_is(&delete(scale, 2), 2)
 }
 
 /// Check if pairiwse identifications of two of the step sizes always results in a MOS.
 /// Returns `false` if the scale is not ternary.
 pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
     step_variety(scale) == 3
-        && maximum_variety(&replace(scale, 1, 0)) == 2
-        && maximum_variety(&replace(scale, 1, 2)) == 2
-        && maximum_variety(&replace(scale, 2, 0)) == 2
+        && maximum_variety_is(&replace(scale, 1, 0), 2)
+        && maximum_variety_is(&replace(scale, 1, 2), 2)
+        && maximum_variety_is(&replace(scale, 2, 0), 2)
 }
 
 /// The repeating portion of a word.
