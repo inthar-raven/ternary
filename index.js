@@ -1009,10 +1009,6 @@ stack()`
               Number(document.getElementById("ggs-len").value),
               document.querySelector('input[name="ggs-len-constraint"]:checked')
                 .value,
-              Number(document.getElementById("complexity").value),
-              document.querySelector(
-                'input[name="complexity-constraint"]:checked',
-              ).value,
               Number(document.getElementById("mv").value),
               document.querySelector('input[name="mv-constraint"]:checked')
                 .value,

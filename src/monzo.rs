@@ -1,3 +1,46 @@
+//! Prime-factorized representation of Just Intonation intervals.
+//!
+//! A **monzo** represents a JI ratio as a vector of prime exponents. For example,
+//! the ratio 3/2 = 2^(-1) × 3^1 is represented as `[-1, 1, 0, 0, ...]`.
+//!
+//! This representation enables efficient arithmetic on JI intervals:
+//! - Stacking intervals = vector addition
+//! - Inverting intervals = vector negation
+//! - Computing cents = dot product with log(primes)
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::{monzo, monzo::Monzo};
+//! use ternary::interval::{Dyad, JiRatio};
+//!
+//! // Create common intervals
+//! let octave = Monzo::OCTAVE;           // 2/1
+//! let fifth = Monzo::PYTH_5TH;          // 3/2
+//!
+//! // Create from a ratio
+//! let syntonic_comma = Monzo::try_new(81, 80).unwrap();
+//! assert_eq!(syntonic_comma.numer(), 81);
+//! assert_eq!(syntonic_comma.denom(), 80);
+//!
+//! // Use the monzo! macro for convenience
+//! let same_comma = monzo![-4, 4, -1];   // 2^-4 × 3^4 × 5^-1 = 81/80
+//! assert_eq!(syntonic_comma, same_comma);
+//!
+//! // Arithmetic via the Dyad trait
+//! let fourth = octave.unstack(fifth);   // 2/1 ÷ 3/2 = 4/3
+//! assert_eq!(fourth, Monzo::PYTH_4TH);
+//!
+//! // Get size in cents
+//! let fifth_cents = fifth.cents();
+//! assert!((fifth_cents - 701.96).abs() < 0.01);
+//! ```
+//!
+//! # Prime Limit
+//!
+//! Monzos are bounded by [`SMALL_PRIMES_COUNT`],
+//! currently supporting primes up to 79 (22-prime-limit).
+
 use std::cmp::Ordering;
 use std::f64::consts::LOG2_E;
 use std::iter::Sum;
@@ -16,7 +59,22 @@ use crate::vector::{Vector, Vectorf64};
 type Weighting = fn(Monzo) -> Vectorf64;
 
 #[macro_export]
-/// Creates a `Monzo` dynamically.
+/// Creates a [`Monzo`] from prime exponents.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::monzo;
+/// use ternary::interval::JiRatio;
+///
+/// // Empty = unison (1/1)
+/// let unison = monzo![];
+///
+/// // Exponents for primes 2, 3, 5, ...
+/// let syntonic_comma = monzo![-4, 4, -1];  // 81/80
+/// assert_eq!(syntonic_comma.numer(), 81);
+/// assert_eq!(syntonic_comma.denom(), 80);
+/// ```
 macro_rules! monzo {
     () => (
         $crate::monzo::Monzo::UNISON
@@ -54,9 +112,26 @@ pub enum CantMakeMonzo {
     DenomCantBeZero,
 }
 
-/// Vector representation of a bounded-prime-limit JI ratio.
-/// Stores exponents of prime factors in order (2, 3, 5, 7, ...).
-/// E.g., 3/2 = 2^-1 * 3^1 is stored as [-1, 1, 0, 0, ...].
+/// A Just Intonation interval represented as a vector of prime exponents.
+///
+/// Stores exponents of prime factors in order (2, 3, 5, 7, 11, ...).
+/// For example, 3/2 = 2^(-1) × 3^1 is stored as `[-1, 1, 0, 0, ...]`.
+///
+/// # Creating Monzos
+///
+/// ```
+/// use ternary::{monzo, monzo::Monzo};
+///
+/// // From a ratio (fallible)
+/// let major_third = Monzo::try_new(5, 4).unwrap();
+///
+/// // Using the macro (panics if invalid)
+/// let minor_third = monzo![-5, 1, 1];  // 6/5
+///
+/// // Built-in constants
+/// let octave = Monzo::OCTAVE;
+/// let fifth = Monzo::PYTH_5TH;
+/// ```
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Monzo(Vector);
 
@@ -102,7 +177,26 @@ impl Monzo {
     }
 
     /// Tries to convert the JI ratio `numer`/`denom` into monzo form.
-    /// Factorizes numerator and denominator, validates they fit within SMALL_PRIMES limit.
+    ///
+    /// Factorizes numerator and denominator, validates they fit within the prime limit.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ternary::monzo::{Monzo, CantMakeMonzo};
+    /// use ternary::interval::JiRatio;
+    ///
+    /// // Valid ratio within prime limit
+    /// let fifth = Monzo::try_new(3, 2).unwrap();
+    /// assert_eq!(fifth.numer(), 3);
+    /// assert_eq!(fifth.denom(), 2);
+    ///
+    /// // Zero is invalid
+    /// assert!(matches!(
+    ///     Monzo::try_new(0, 1),
+    ///     Err(CantMakeMonzo::NumerCantBeZero)
+    /// ));
+    /// ```
     pub fn try_new(numer: u32, denom: u32) -> Result<Monzo, CantMakeMonzo> {
         if numer == 0 {
             return Err(CantMakeMonzo::NumerCantBeZero);

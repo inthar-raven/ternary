@@ -1,16 +1,40 @@
+//! Guided Generator Sequences (GGS) for analyzing MOS structure in scales.
+//!
+//! A **Guided Generator Sequence** is a sequence of generators that, when stacked,
+//! produces a detempered MOS subscale of the original scale. This module finds
+//! guide frames—structures that describe how a scale can be generated.
+//!
+//! # Key Concepts
+//!
+//! - **Generator sequence**: A periodic sequence of intervals that generates a scale
+//! - **Guide frame**: A GGS together with offset information (for scales that are unions of multiple copies of the same generator sequence)
+//! - **Multiplicity**: Number of copies of a generator sequence
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::guide::{guide_frames, GuideFrame};
+//!
+//! // Diasem scale: 5L 2m 2s
+//! let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+//!
+//! // Find all guide frames
+//! let frames = guide_frames(&diasem);
+//! assert!(!frames.is_empty());
+//!
+//! // The simplest guide frame has complexity 2
+//! let simplest = &frames[0];
+//! assert_eq!(simplest.complexity(), 2);
+//! ```
+//!
+//! # References
+//!
+//! - [Guided generator sequences](https://en.xen.wiki/w/Guided_generator_sequence)
+//! - [MOS scales](https://en.xen.wiki/w/MOS_scale)
+
 use std::collections::BTreeSet;
 
 use itertools::Itertools;
-use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
 use crate::{
     helpers::gcd,
@@ -60,12 +84,12 @@ where
         .collect()
 }
 
-/// TODO: To get all Guided GSes, we actually need to iterate through all the step classes, not just ones <= len / 2.
 /// All Guided GSes that generate a given abstract necklace.
 /// Guided GS: generator sequence using fixed k-steps where gcd(k, scale.len()) == 1.
+/// The last element is not counted and is required to differ from every element of the Guided GS.
 pub fn guided_gs_list(scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let len = scale.len();
-    (2..=len - 2) // Don't include 1-step GSes
+    (1..=len - 1) // Do include 1-step GSes
         .filter(|&step_class| gcd(step_class as u32, len as u32) == 1)
         .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
         .collect()
@@ -74,7 +98,7 @@ pub fn guided_gs_list(scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
 /// All Guided GSes of length `gs_length` that generate a given abstract necklace.
 pub fn guided_gs_list_of_len(gs_length: usize, scale: &[usize]) -> Vec<Vec<CountVector<usize>>> {
     let scale_len = scale.len();
-    (2..=scale_len / 2) // Don't include 1-step GSes
+    (1..=scale_len / 2) // Do include length 1 here
         .filter(|&step_class| gcd(step_class as u32, scale_len as u32) == 1)
         .flat_map(|step_class| step_class_guided_gs_list(step_class, scale))
         .filter(|vs| gs_length == vs.len())
@@ -102,16 +126,39 @@ fn guided_gs_list_for_subscale(subscale: &[CountVector<usize>]) -> Vec<Vec<Count
     }
 }
 
-/// A guide frame structure for a scale word, consisting of a generator sequence together with a set of offsets or a multiplicity.
-/// Multiplicity > 1 is a generalization of [even-regular MV3 scales](https://en.xen.wiki/w/Even-regular_MV3_scale);
-/// scales of this type always have number of notes divisible by the multiplicity.
-/// Consists of m copies of same generator sequence offset by `scale.len()` / m steps (where m is the multiplicity).
+/// A guide frame describing how a scale is generated from a sequence of intervals.
+///
+/// A guide frame consists of:
+/// - A **generator sequence** (`gs`): intervals that stack to form a subscale
+/// - An **offset chord**: the starting offsets of each copy of the subscale
+///
+/// # Multiplicity
+///
+/// Scales with multiplicity > 1 consist of m copies of the same generator sequence,
+/// offset from each other.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::guide::{guide_frames, GuideFrame};
+/// use ternary::words::CountVector;
+///
+/// // Diasem has a simple guide frame with 2 generators
+/// let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// let frames = guide_frames(&diasem);
+///
+/// // Check the simplest frame
+/// let frame = &frames[0];
+/// assert_eq!(frame.gs.len(), 2);           // 2 generators
+/// assert_eq!(frame.multiplicity(), 1);     // Not interleaved
+/// assert_eq!(frame.complexity(), 2);       // Complexity = gs.len() * multiplicity
+/// ```
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GuideFrame {
-    /// Either Guided GS or multiple interleaved GSes (Guided GSes when considered individually).
-    /// `gs` generates a guided generator sequence (detempered single-period_pattern MOS) subscale.
+    /// The generator sequence — intervals that stack to form a detempered MOS subscale.
     pub gs: Vec<CountVector<usize>>,
-    /// `offset_chord` is the set of intervals that each guided generator sequence chain is based on. Always includes `CountVector::ZERO`.
+    /// Offset chord for interleaved scales. Always includes `CountVector::ZERO`.
+    /// Length equals the multiplicity.
     pub offset_chord: Vec<CountVector<usize>>,
 }
 
@@ -130,7 +177,8 @@ impl GuideFrame {
     ) -> Self {
         Self { gs, offset_chord }
     }
-    /// The complexity of a guide frame (size of generator sequence plus size of offset_chord).
+    /// The complexity of a guide frame (size of generator sequence times size of offset_chord).
+    /// Only used as a heuristic for sorting scales in the UI.
     pub fn complexity(&self) -> usize {
         self.gs.len() * self.offset_chord.len()
     }
@@ -138,7 +186,7 @@ impl GuideFrame {
     pub fn multiplicity(&self) -> usize {
         self.offset_chord.len()
     }
-    /// Try to get simple guide frames with k-step generators.
+    /// Try to get multiplicity == 1 guide frames with k-step generators.
     pub fn try_simple(scale: &[usize], step_class: usize) -> Vec<Self> {
         if scale.is_empty() || gcd(scale.len() as u32, step_class as u32) != 1 {
             vec![]
@@ -151,9 +199,10 @@ impl GuideFrame {
                 })
                 .sorted()
                 .dedup()
-                .collect::<Vec<_>>()
+                .collect::<_>()
         }
     }
+    /// Try to get multiplicity > 1 guide frames with the given multiplicity and step size.
     pub fn try_multiple(scale: &[usize], multiplicity: usize, step_class: usize) -> Vec<Self> {
         // The scale cannot be empty and its size must be divisible by `multiplicity`.
         if multiplicity == 1 || scale.is_empty() || !scale.len().is_multiple_of(multiplicity) {
@@ -196,7 +245,6 @@ impl GuideFrame {
                         })
                         // `.collect()` returns `None` if there is any `None` returned by `map`.
                         .collect::<Option<Vec<CountVector<usize>>>>();
-                    // println!("subscale_on_root: {:?}", subscale_on_root);
                     if let Some(offsets) = maybe_offsets {
                         // sort list of offsets by step class
                         // If offset_chord is {0} use multiplicity 1
@@ -258,7 +306,6 @@ impl GuideFrame {
                         .sorted()
                         .dedup()
                         .collect();
-                    // println!("{:?}", gses);
                     gses.iter()
                         .map(|gs| {
                             (
@@ -276,7 +323,8 @@ impl GuideFrame {
                             )
                         })
                         .filter(|(_, polyoffset_indices)| {
-                            // Filter by whether the number of gen chains each GS occurs on is equal to the multiplcity.
+                            // Filter by whether the number of generator chains each GS occurs on
+                            // is equal to the multiplcity.
                             // We also need to check that all of the chains are disjoint.
                             let mut union_of_chains: Vec<_> = polyoffset_indices
                                 .iter()
@@ -288,13 +336,10 @@ impl GuideFrame {
                                 .collect();
                             union_of_chains.sort();
                             union_of_chains.dedup();
-                            // println!("union_of_chains: {:?}", union_of_chains);
                             let chains_are_disjoint = union_of_chains.len() == scale.len();
                             chains_are_disjoint && polyoffset_indices.len() == multiplicity
                         })
                         .map(|(gs, polyoffset_indices)| {
-                            // println!("gs: {:?}", gs);
-                            // println!("polyoffset_indices: {:?}", polyoffset_indices);
                             let first_deg = polyoffset_indices[0];
                             let offset_chord: Vec<CountVector<Letter>> = polyoffset_indices
                                 .iter()
@@ -341,7 +386,23 @@ impl GuideFrame {
     }
 }
 
-/// Return the collection of guide frames for the given scale word, sorted by complexity.
+/// Find all guide frames for a scale, sorted by complexity.
+///
+/// Returns guide frames from simplest (lowest complexity) to most complex.
+/// An empty result means the scale has no valid guide frame structure.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::guide::guide_frames;
+///
+/// // Pinedye scale: 5L 2m 1s
+/// let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
+/// let frames = guide_frames(&pinedye);
+///
+/// // Returns frames sorted by complexity
+/// assert!(frames.windows(2).all(|w| w[0].complexity() <= w[1].complexity()));
+/// ```
 pub fn guide_frames(scale: &[usize]) -> Vec<GuideFrame> {
     (2..=scale.len() / 2) // steps subtended by generator used for the guided generator sequence
         .flat_map(|step_class| GuideFrame::try_all_variants(scale, step_class))

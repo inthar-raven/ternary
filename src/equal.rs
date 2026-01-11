@@ -1,3 +1,37 @@
+//! Equal temperament calculations and tuning analysis.
+//!
+//! This module provides tools for working with equal temperaments (ETs) and
+//! analyzing how they approximate Just Intonation intervals.
+//!
+//! # Key Concepts
+//!
+//! - **Val**: A covector mapping JI intervals to ET steps. In regular temperament
+//!   theory, a val represents how each prime maps to steps in an equal temperament.
+//! - **Patent val**: The val where each prime maps to its nearest integer step count.
+//! - **ED (equal division)**: A division of an equave (usually octave) into equal steps.
+//!   "12edo" means 12 equal divisions of the octave.
+//! - **Tuning range**: For ternary scales, the set of valid tunings based on
+//!   degenerate cases (where step sizes collapse).
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::equal::{gpval, direct_approx, relative_error};
+//! use ternary::ji_ratio::RawJiRatio;
+//! use ternary::monzo;
+//!
+//! // Get the patent val for 12edo
+//! let val_12 = gpval(12.0);
+//! // 12edo maps the octave to 12 steps, the fifth (3/2) to 7 steps
+//! let fifth = monzo![-1, 1];  // 3/2 = 2^-1 * 3^1
+//! assert_eq!(val_12.evaluate(fifth), 7);
+//!
+//! // Direct approximation of 5/4 in 12edo
+//! let major_third = RawJiRatio::try_new(5, 4).unwrap();
+//! let steps = direct_approx(major_third, 12.0, RawJiRatio::OCTAVE);
+//! assert_eq!(steps, 4);  // 4 steps = 400 cents, approximates 386 cents
+//! ```
+
 use std::ops::{Add, AddAssign};
 
 use num_traits::Pow;
@@ -13,7 +47,7 @@ use crate::{
 
 /// In regular temperament theory, a [*val*](https://en.xen.wiki/w/Val) is a covector,
 /// i.e. an element of the [dual module](https://en.wikipedia.org/wiki/Dual_module) of
-/// interval vectors.
+/// interval vectors
 /// (the space of linear maps from the abelian group of intervals to ℤ).
 /// Represents the steps in an equal temperament for each prime.
 #[derive(Debug, Copy, Clone, Hash, PartialEq)]
@@ -54,6 +88,22 @@ impl AddAssign for Val {
 
 /// The [generalized patent val](https://en.xen.wiki/w/Generalized_patent_val) of x-edo where x is any positive real.
 /// Computes the step mapping for each prime in x-tone equal division of the octave.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::equal::gpval;
+/// use ternary::monzo;
+///
+/// // 12edo patent val: <12 19 28 34|
+/// let val_12 = gpval(12.0);
+/// assert_eq!(val_12.evaluate(monzo![1]), 12);   // octave = 12 steps
+/// assert_eq!(val_12.evaluate(monzo![-1, 1]), 7); // fifth = 7 steps
+///
+/// // Works with non-integer EDOs too
+/// let val_16_9 = gpval(16.9);
+/// assert_eq!(val_16_9.evaluate(monzo![1]), 17);  // rounds to nearest
+/// ```
 pub fn gpval(edo: f64) -> Val {
     let mut arr = [0i32; SMALL_PRIMES_COUNT];
     for (i, &p) in SMALL_PRIMES.iter().enumerate() {
@@ -63,7 +113,7 @@ pub fn gpval(edo: f64) -> Val {
     Val(RowVector::new(arr))
 }
 
-/// The best approximation of `ratio` in steps of `ed`ed<`equave`>.
+/// The best approximation of `ratio` in steps of `ed`-ed<`equave`>.
 /// Returns the integer number of steps that best approximates the given JI ratio.
 pub fn direct_approx<J: JiRatio>(ratio: J, ed: f64, equave: J) -> i32 {
     f64::round(
@@ -74,7 +124,7 @@ pub fn direct_approx<J: JiRatio>(ratio: J, ed: f64, equave: J) -> i32 {
     ) as i32
 }
 
-/// `steps` in `ed`<`equave`> converted to cents.
+/// `steps` in `ed`-ed<`equave`> converted to cents.
 /// Scales the step count to the full size of the equave in cents.
 pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
     (steps as f64) / ed * equave.cents()
@@ -106,6 +156,26 @@ pub fn is_in_tuning_range(
 }
 
 /// All integer ed`equave` tunings for `step_sig` scales below `ed_bound`.
+///
+/// Returns tunings as `[L_steps, m_steps, s_steps]` where the smallest step
+/// size falls within `[aber_lower, aber_upper]` cents.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::equal::ed_tunings_for_ternary;
+/// use ternary::ji_ratio::RawJiRatio;
+///
+/// // Find ED tunings for 5L2m3s (blackdye) up to 31edo
+/// // with smallest step between 20 and 60 cents
+/// let tunings = ed_tunings_for_ternary(&[5, 2, 3], RawJiRatio::OCTAVE, 31, 20.0, 60.0);
+/// assert!(!tunings.is_empty());
+///
+/// // Each tuning is [L, m, s] step counts with L > m > s
+/// for t in &tunings {
+///     assert!(t[0] > t[1] && t[1] > t[2]);
+/// }
+/// ```
 pub fn ed_tunings_for_ternary(
     step_sig: &[usize],
     equave: RawJiRatio,
@@ -159,7 +229,24 @@ pub fn odd_limit_l2_error(odd: u32, edo: f64) -> f64 {
 }
 
 #[macro_export]
-/// Creates a `Val`.
+/// Creates a [`Val`] from a list of step mappings for each prime.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::{val, monzo};
+///
+/// // Create 12edo 5-limit val: <12 19 28|
+/// let val_12 = val![12, 19, 28];
+///
+/// // The syntonic comma (81/80) is tempered out in 12edo
+/// let syntonic_comma = monzo![-4, 4, -1];
+/// assert_eq!(val_12.evaluate(syntonic_comma), 0);
+///
+/// // The major third (5/4) maps to 4 steps
+/// let major_third = monzo![-2, 0, 1];
+/// assert_eq!(val_12.evaluate(major_third), 4);
+/// ```
 macro_rules! val {
     () => (
         $crate::equal::Val::ZERO

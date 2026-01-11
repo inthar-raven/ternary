@@ -8,7 +8,8 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["console_error_panic_hook"]
+default = []
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys", "dep:console_error_panic_hook"]
 
 [dependencies]
 stacker = "0.1.15"
@@ -22,19 +23,13 @@ num-bigint = "0.4.5"
 
 thiserror = "2.0.3"
 
-wasm-bindgen = "0.2.106"
 serde = { version = "1.0.208", features = ["derive"] }
-serde-wasm-bindgen = "0.6.5"
 
-# The `console_error_panic_hook` crate provides better debugging of panics by
-# logging them with `console.error`. This is great for development, but requires
-# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
-# code size when deploying.
+# WASM-specific dependencies (optional)
+wasm-bindgen = { version = "0.2.106", optional = true }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
-
-[dependencies.web-sys]
-version = "0.3"
-features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window']
+web-sys = { version = "0.3", features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window'], optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

@@ -1,3 +1,38 @@
+//! Operations on Just Intonation ratios.
+//!
+//! This module provides [`RawJiRatio`], a simple representation of JI ratios
+//! as numerator/denominator pairs. It supports:
+//!
+//! - Arithmetic operations (stacking, unstacking intervals)
+//! - Octave reduction and other equave reductions
+//! - Conversion to cents
+//! - Built-in scale constants (Pythagorean, Zarlino, etc.)
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::ji_ratio::RawJiRatio;
+//! use ternary::interval::Dyad;
+//!
+//! // Create ratios
+//! let fifth = RawJiRatio::PYTH_5TH;     // 3/2
+//! let fourth = RawJiRatio::PYTH_4TH;    // 4/3
+//!
+//! // Arithmetic
+//! let octave = fifth.stack(fourth);      // 3/2 × 4/3 = 2/1
+//! assert_eq!(octave, RawJiRatio::OCTAVE);
+//!
+//! // Octave reduction
+//! let ninth = fifth.stack(fifth);        // 9/4
+//! let reduced = ninth.rd(RawJiRatio::OCTAVE);  // 9/8
+//! assert_eq!(reduced.cents().round(), 204.0);
+//! ```
+//!
+//! # Comparison with [`Monzo`](crate::monzo::Monzo)
+//!
+//! - `RawJiRatio`: Simple numerator/denominator, good for display and small ratios
+//! - `Monzo`: Prime-exponent vector, better for arithmetic and avoiding overflow
+
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Div, DivAssign, Mul, MulAssign};
@@ -50,8 +85,25 @@ impl std::error::Error for BadJiArith {}
 
 // STRUCTS
 
-/// A quasi-primitive wrapper class for a JI ratio. Implements `Copy`.
-/// Will eventually be deprecated for most uses, but may be used for quick computations.
+/// A Just Intonation ratio represented as numerator/denominator.
+///
+/// Automatically reduces to lowest terms. Implements `Copy` for efficiency.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji_ratio::RawJiRatio;
+/// use ternary::interval::{Dyad, JiRatio};
+///
+/// // Create and verify reduction to lowest terms
+/// let ratio = RawJiRatio::try_new(6, 4).unwrap();
+/// assert_eq!(ratio.numer(), 3);
+/// assert_eq!(ratio.denom(), 2);
+///
+/// // Use constants for common intervals
+/// let fifth = RawJiRatio::PYTH_5TH;
+/// assert!((fifth.cents() - 701.96).abs() < 0.01);
+/// ```
 #[derive(Debug, Default, Clone, Copy)]
 #[repr(C)]
 pub struct RawJiRatio {
@@ -291,9 +343,26 @@ impl RawJiRatio {
         }
     }
 
-    /// Check the input for validity before creating a new `RawJiRatio`.
-    /// Returns an error if numerator or denominator is zero.
-    /// Automatically reduces the ratio to lowest terms using GCD.
+    /// Creates a new `RawJiRatio`, validating and reducing to lowest terms.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IllegalJiRatio`] if numerator or denominator is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ternary::ji_ratio::RawJiRatio;
+    /// use ternary::interval::JiRatio;
+    ///
+    /// // Valid ratio, automatically reduced
+    /// let ratio = RawJiRatio::try_new(12, 8).unwrap();
+    /// assert_eq!(ratio.numer(), 3);
+    /// assert_eq!(ratio.denom(), 2);
+    ///
+    /// // Zero denominator is invalid
+    /// assert!(RawJiRatio::try_new(5, 0).is_err());
+    /// ```
     #[inline(always)]
     pub fn try_new(numer: u32, denom: u32) -> Result<RawJiRatio, IllegalJiRatio> {
         if (denom == 0) || (numer == 0) {

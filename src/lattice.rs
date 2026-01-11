@@ -1,3 +1,35 @@
+//! JI-agnostic 2D pitch class lattice visualization.
+//!
+//! This module computes lattice coordinates for scale pitches, enabling
+//! geometric visualization of scale structure independent of specific tunings.
+//!
+//! # Key Concepts
+//!
+//! - **Pitch class lattice**: A 2D projection of scale degrees onto a plane. We require that the lattice have no torsion (i.e. the equave not be a multiple of any lattice element).
+//! - **Unimodular basis**: Two generators whose determinant with the equave is ±1
+//! - **Parallelogram**: The fundamental domain tiled by the lattice
+//!
+//! # Algorithm
+//!
+//! 1. Find a unimodular basis from the scale's guide frames
+//! 2. Project each pitch onto the 2D plane spanned by the basis vectors
+//! 3. The result shows the geometric structure of the scale
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::lattice::try_pitch_class_lattice;
+//!
+//! // Diasem scale
+//! let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+//!
+//! // Get lattice coordinates if a unimodular basis exists
+//! if let Some((coords, basis)) = try_pitch_class_lattice(&diasem) {
+//!     // coords contains 2D coordinates for each pitch class
+//!     assert_eq!(coords.len(), 9);  // One coordinate per scale degree
+//! }
+//! ```
+
 use std::iter::IntoIterator;
 
 use serde::Serialize;
@@ -13,9 +45,22 @@ use crate::matrix::unimodular_inv;
 use crate::word_to_sig;
 use crate::words::CountVector;
 
-/// Represents a(n ordered) unimodular basis for the pitch class lattice of the scale.
-/// The basis vectors are assumed to be written in scale-step coordinates [L, m, s];
-/// it must therefore be ensured that v1 and v2 both have length 3.
+/// An ordered pair of vectors forming a unimodular basis for the pitch class lattice.
+///
+/// The basis vectors are in scale-step coordinates `[L, m, s]`, where each component
+/// represents the count of that step type. Together with the equave (step signature),
+/// these vectors have determinant ±1.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::lattice::PitchClassLatticeBasis;
+///
+/// // A basis with two generators
+/// let basis = PitchClassLatticeBasis::from_slices(&[1, 1, 0], &[0, 1, 1]);
+/// assert_eq!(basis.vx(), &[1, 1, 0]);
+/// assert_eq!(basis.vy(), &[0, 1, 1]);
+/// ```
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PitchClassLatticeBasis {
     vx: Vec<i32>,
@@ -23,17 +68,18 @@ pub struct PitchClassLatticeBasis {
 }
 
 impl PitchClassLatticeBasis {
+    // Create a new `PitchClassLatticeBasis` from two slices (representing the two basis vectors).
     pub fn from_slices(vx: &[i32], vy: &[i32]) -> Self {
         Self {
             vx: vx.to_vec(),
             vy: vy.to_vec(),
         }
     }
-
+    /// Get the first basis vector (represented as the x-direction in the lattice diagram).
     pub fn vx(&self) -> &[i32] {
         &self.vx
     }
-
+    /// Get the second basis vector (represented as the y-direction in the lattice diagram).
     pub fn vy(&self) -> &[i32] {
         &self.vy
     }
@@ -67,7 +113,6 @@ impl IntoIterator for PitchClassLatticeBasis {
     }
 }
 
-#[allow(dead_code)]
 /// A struct representing a substring of a row-by-row traversal of a lattice parallelogram.
 #[derive(Clone, Debug)]
 pub struct ParallelogramSubstring {
@@ -85,6 +130,22 @@ impl ParallelogramSubstring {
             first_row_len,
             last_row_len,
         }
+    }
+    /// Get the number of rows, full or not.
+    pub fn row_count(&self) -> i32 {
+        self.row_count
+    }
+    /// Get the length of a full row.
+    pub fn full_row_len(&self) -> i32 {
+        self.full_row_len
+    }
+    /// Get the length of the first row.
+    pub fn first_row_len(&self) -> i32 {
+        self.first_row_len
+    }
+    /// Get the length of the last row.
+    pub fn last_row_len(&self) -> i32 {
+        self.last_row_len
     }
 }
 
@@ -166,9 +227,36 @@ pub fn pitch_classes(
     (pitch_classes, basis.clone())
 }
 
-/// Try to get a lattice of pitch classes in the scale
-/// using the unimodular basis found with guide_frames.
-/// Also returns the basis in question as a `PitchClassLatticeBasis`.
+/// Compute 2D lattice coordinates for each pitch in a scale.
+///
+/// Finds a unimodular basis from the scale's guide frames and projects
+/// each pitch class onto the 2D plane spanned by that basis.
+///
+/// # Arguments
+///
+/// * `query` - A scale word (sequence of step letters)
+///
+/// # Returns
+///
+/// `Some((coordinates, basis))` if a unimodular basis exists, where:
+/// - `coordinates[i]` is the `[x, y]` position of pitch class `i`
+/// - `basis` is the [`PitchClassLatticeBasis`] used for projection
+///
+/// Returns `None` if no unimodular basis can be found.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::lattice::try_pitch_class_lattice;
+///
+/// let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// if let Some((coords, _basis)) = try_pitch_class_lattice(&diasem) {
+///     // Each pitch has a 2D coordinate
+///     for coord in &coords {
+///         assert_eq!(coord.len(), 2);
+///     }
+/// }
+/// ```
 pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchClassLatticeBasis)> {
     let gfs = guide_frames(query);
     let sig = word_to_sig(query)

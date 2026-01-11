@@ -1,3 +1,104 @@
+//! # Ternary
+//!
+//! A library for studying **ternary scales** — musical scales with exactly three step sizes.
+//!
+//! This crate provides algorithms for generating, analyzing, and tuning ternary scales,
+//! with applications to microtonal music theory and xenharmonic scale research.
+//!
+//! ## Glossary
+//!
+//! ### Scale Basics
+//!
+//! - **Ternary scale**: A scale with exactly 3 distinct step sizes, conventionally labeled
+//!   L (large), m (medium), and s (small). Example: "LLmLLms" is a 7-note ternary scale.
+//!
+//! - **Equave**: The interval of equivalence used by a scale; usually the octave, but sometimes 3/1 or other intervals.
+//!
+//! - **Step signature**: The multiset of step sizes in a scale, written as aLbmcs where
+//!   a, b, c are counts. Example: 5L2m2s means 5 large, 2 medium, and 2 small steps.
+//!
+//! - **Word**: A scale represented as a sequence of step letters. Two words are equivalent
+//!   if one is a rotation of the other (same scale, different starting note).
+//!
+//! - **Mode**: A rotation of a scale word, representing a different starting degree.
+//!   The "brightest mode" starts from the position that gives the lexicographically
+//!   smallest rotation.
+//!
+//! - **Necklace**: An equivalence class of words under rotation. Used to enumerate
+//!   distinct scales without counting rotations as different.
+//!
+//! ### Scale Properties
+//!
+//! - **Maximum variety (MV)**: The maximum number of distinct interval sizes for any
+//!   fixed number of steps. MV=2 scales are called MOS (Moment of Symmetry).
+//!
+//! - **Constant structure (CS)**: A scale where no interval appears in two different
+//!   interval classes. If 3/2 is a 4-step somewhere, it's a 4-step everywhere.
+//!
+//! - **Chirality**: Scale handedness. A scale is *achiral* if it equals its reversal
+//!   (under rotation), *left-handed* if lexicographically greater than its reversal,
+//!   *right-handed* otherwise.
+//!
+//! - **Monotone-MOS**: Conditions where the scale is required to be a MOS
+//!   when two step sizes coincide in a way that preserves the ordering on step sizes.
+//!   L=m monotone, m=s monotone, and s=0 monotone are the three types.
+//!
+//! ### Guided Generator Sequences
+//!
+//! - **Generator sequence (GS)**: A sequence of intervals that, when stacked and
+//!   octave-reduced, produces a scale.
+//!
+//! - **Guided Generator Sequence (GGS)**: A GS that produces a detempered MOS subscale
+//!   of the original ternary scale. See Keenan Pepper's work on GGS.
+//!
+//! - **Guide frame**: A GGS together with offset information. Multiple guide frames
+//!   can describe interleaved scale structures.
+//!
+//! - **Complexity**: The length of the shortest GGS for a scale. Lower complexity
+//!   suggests simpler melodic structure.
+//!
+//! ### Just Intonation
+//!
+//! - **Monzo**: A vector of prime exponents representing a JI ratio.
+//!   Example: `[-1, 1]` = 3/2 = 2⁻¹ × 3¹.
+//!
+//! - **Odd limit**: JI intervals with numerator and denominator ≤ n after factoring out
+//!   all factors of 2. The 81-odd-limit is used for step signature solving.
+//!
+//! - **Cumulative form**: Scale as intervals from tonic: `[9/8, 5/4, 4/3, ...]`.
+//!
+//! - **Step form**: Scale as consecutive steps: `[9/8, 10/9, 16/15, ...]`.
+//!
+//! ### Equal Temperament
+//!
+//! - **ED (equal division)**: Division of an equave into equal steps.
+//!   "12edo" = 12 equal divisions of the octave.
+//!
+//! - **Val**: A covector mapping JI intervals to ET steps. The *patent val* maps
+//!   each prime to its nearest integer step count.
+//!
+//! - **Tuning range**: For ternary scales, the valid tunings based on degenerate
+//!   cases where step sizes collapse (L=m, m=s, or s=0).
+//!
+//! ### Lattice Visualization
+//!
+//! - **Pitch class lattice**: A 2D projection of scale degrees using a unimodular
+//!   basis including the equave. Useful for visualizing scale structure.
+//!
+//! - **Unimodular basis**: Three step-count vectors with determinant ±1.
+//!
+//! ## Module Overview
+//!
+//! - [`words`]: Scale representation and word operations
+//! - [`mod@monzo`]: Prime-factorized JI intervals
+//! - [`ji_ratio`]: JI ratio arithmetic
+//! - [`ji`]: JI scale analysis and tuning solvers
+//! - [`equal`]: Equal temperament calculations
+//! - [`guide`]: Guided Generator Sequences
+//! - [`billiard`]: Billiard scale generation algorithm
+//! - [`comb`]: Necklace enumeration
+//! - [`lattice`]: Pitch class lattice visualization
+
 // #![deny(warnings)]
 pub mod billiard;
 pub mod comb;
@@ -15,35 +116,31 @@ pub mod monzo;
 pub mod odd_limit_81;
 pub mod plane_geometry;
 pub mod primes;
-#[macro_use]
-pub mod subgroup_monzo;
 pub mod vector;
 pub mod words;
 
-// use equal::is_in_tuning_range;
 use interval::JiRatio;
+#[cfg(feature = "wasm")]
 use itertools::Itertools;
 use ji_ratio::RawJiRatio;
-// use monzo::Monzo;
-// use nalgebra::{Matrix3, Vector3};
-// use subgroup_monzo::SubgroupMonzo;
+#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
-use words::{Chirality, Letter};
+use words::Chirality;
+#[cfg(feature = "wasm")]
+use words::Letter;
 use words::{chirality, is_mos_subst_one_perm};
 
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
 
+#[cfg(feature = "wasm")]
 #[allow(unused_macros)]
 macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
@@ -66,12 +163,14 @@ use std::cmp::min;
 use std::collections::HashSet;
 
 use serde::Serialize;
+#[cfg(feature = "wasm")]
 use serde_wasm_bindgen::to_value;
 
 use guide::GuideFrame;
 use guide::guide_frames;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
+#[cfg(feature = "wasm")]
 use crate::billiard::billiard_scales;
 use crate::lattice::get_unimodular_basis;
 use crate::monzo::Monzo;
@@ -147,6 +246,7 @@ pub struct LatticeResult {
     basis: Vec<Vec<i16>>,
 }
 
+#[cfg(feature = "wasm")]
 fn string_to_numbers(word: &str) -> Vec<usize> {
     let mut result = vec![];
     let arity = word.chars().collect::<HashSet<_>>().len();
@@ -264,6 +364,7 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     }
 }
 
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn word_result(
     query: String,
@@ -284,6 +385,7 @@ pub fn word_result(
     })?)
 }
 
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn word_to_brightest(query: String) -> String {
     let word_in_numbers = string_to_numbers(&query);
@@ -291,6 +393,7 @@ pub fn word_to_brightest(query: String) -> String {
     numbers_to_string(&brightest)
 }
 
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn word_to_mv(query: String) -> u16 {
     let word_in_numbers = string_to_numbers(&query);
@@ -301,6 +404,7 @@ pub fn word_to_mv(query: String) -> u16 {
 /// Returns None if no unimodular basis can be found.
 /// The coordinates are 2D projections suitable for plotting.
 /// Prioritizes the basis from parallelogram_substring_info if one exists.
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn word_to_lattice(query: String) -> Result<JsValue, JsValue> {
     let word_in_numbers = string_to_numbers(&query);
@@ -415,6 +519,7 @@ pub fn sig_to_ed_tunings(
         .collect::<Vec<_>>()
 }
 
+#[cfg(feature = "wasm")]
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
 pub fn sig_result(
@@ -424,8 +529,6 @@ pub fn sig_result(
     s0: bool,
     ggs_len: u8,
     ggs_len_constraint: String,
-    complexity: u8,
-    complexity_constraint: String,
     mv: u8,
     mv_constraint: String,
     scale_type: String,
@@ -459,17 +562,6 @@ pub fn sig_result(
                         maximum_variety(scale) == mv as usize
                     } else {
                         maximum_variety(scale) <= mv as usize
-                    }
-                }
-            })
-            && (match complexity {
-                0 => true,
-                c => {
-                    let guide_frames = guide_frames(scale);
-                    if complexity_constraint == "exactly" {
-                        !guide_frames.is_empty() && guide_frames[0].complexity() == c as usize
-                    } else {
-                        !guide_frames.is_empty() && guide_frames[0].complexity() <= c as usize
                     }
                 }
             })

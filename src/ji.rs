@@ -1,3 +1,52 @@
+//! Just Intonation scale operations and tuning solvers.
+//!
+//! This module provides tools for working with JI (Just Intonation) scales:
+//! analyzing their structure, finding tunings for step signatures, and
+//! constructing scales from generators or harmonic series segments.
+//!
+//! # Key Concepts
+//!
+//! - **Odd limit**: The set of JI intervals with odd numerator and denominator
+//!   up to a given limit. The 81-odd-limit is used for step signature solving.
+//! - **Cumulative form**: A scale represented as intervals from the tonic
+//!   (e.g., `[9/8, 5/4, 4/3, 3/2, 5/3, 15/8, 2/1]`).
+//! - **Step form**: A scale represented as consecutive intervals
+//!   (e.g., `[9/8, 10/9, 16/15, 9/8, 10/9, 9/8, 16/15]`).
+//! - **Constant structure (CS)**: A scale where each interval class is unique — no
+//!   interval appears as both an n-step and an m-step (n ≠ m).
+//! - **Interleaved scale**: A scale formed by duplicating a "strand" and
+//!   offsetting copies by notes of an "offset chord", where for every pair of
+//!   strands one note of one strand always occurs strictly between two notes of
+//!   the other.
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::ji::{mode, step_form, cumulative_form, is_cs_ji_scale};
+//! use ternary::ji_ratio::RawJiRatio;
+//!
+//! // Convert between cumulative and step forms
+//! let zarlino = vec![
+//!     RawJiRatio::try_new(9, 8).unwrap(),   // 9/8 from tonic
+//!     RawJiRatio::try_new(5, 4).unwrap(),   // 5/4 from tonic
+//!     RawJiRatio::try_new(4, 3).unwrap(),   // etc.
+//!     RawJiRatio::try_new(3, 2).unwrap(),
+//!     RawJiRatio::try_new(5, 3).unwrap(),
+//!     RawJiRatio::try_new(15, 8).unwrap(),
+//!     RawJiRatio::OCTAVE,
+//! ];
+//!
+//! let steps = step_form(&zarlino);
+//! assert_eq!(steps.len(), 7);  // 7 steps in the scale
+//!
+//! // Get a different mode (rotation)
+//! let dorian = mode(&zarlino, 1);
+//! assert_eq!(dorian.len(), 7);
+//!
+//! // Check if the scale is a constant structure
+//! assert!(is_cs_ji_scale(&zarlino));
+//! ```
+
 use itertools::Itertools;
 use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;
@@ -31,6 +80,30 @@ pub fn specified_odd_limit(odds: &[u32]) -> Vec<RawJiRatio> {
 
 /// Returns the octave-reduced intervals of a specified odd limit, not including the unison.
 /// Generates all ratios with odd numerator and denominator up to the limit.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji::odd_limit;
+/// use ternary::ji_ratio::RawJiRatio;
+/// use itertools::Itertools;
+///
+/// // The 5-odd-limit contains ratios like 3/2, 5/4, 5/3, etc.
+/// let five_limit: Vec<_> = odd_limit(5).into_iter().sorted().collect();
+///
+/// assert_eq!(five_limit, vec![
+///     RawJiRatio::try_new(6, 5).unwrap(),
+///     RawJiRatio::try_new(5, 4).unwrap(),
+///     RawJiRatio::try_new(4, 3).unwrap(),
+///     RawJiRatio::try_new(3, 2).unwrap(),
+///     RawJiRatio::try_new(8, 5).unwrap(),
+///     RawJiRatio::try_new(5, 3).unwrap(),
+/// ]);
+///
+/// // Higher odd-limits contain more intervals
+/// let nine_limit = odd_limit(9);
+/// assert!(nine_limit.len() > five_limit.len());
+/// ```
 pub fn odd_limit(limit: u32) -> Vec<RawJiRatio> {
     let odds = (0..=(limit - 1) / 2).map(|i| 2 * i + 1).collect::<Vec<_>>();
     pairs(&odds, &odds)
@@ -94,11 +167,34 @@ pub fn solve_step_sig_81_odd_limit(
 
 /// Multiset of `subword_length`-step intervals in a JI scale.
 /// Counts the frequency of each interval subtype.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji::spectrum;
+/// use ternary::ji_ratio::RawJiRatio;
+///
+/// // Pythagorean pentatonic: 1/1 9/8 81/64 3/2 27/16 2/1
+/// let pentatonic = vec![
+///     RawJiRatio::try_new(9, 8).unwrap(),
+///     RawJiRatio::try_new(81, 64).unwrap(),
+///     RawJiRatio::try_new(3, 2).unwrap(),
+///     RawJiRatio::try_new(27, 16).unwrap(),
+///     RawJiRatio::OCTAVE,
+/// ];
+///
+/// // Get the 1-step spectrum (seconds)
+/// let seconds = spectrum(&pentatonic, 1);
+/// // Pentatonic has exactly two step sizes: 9/8 (whole tone) and 32/27 (minor third)
+/// assert_eq!(seconds.keys_count(), 2);
+/// ```
 pub fn spectrum(scale: &[RawJiRatio], subword_length: usize) -> CountVector<RawJiRatio> {
     let mut result = std::collections::BTreeMap::new();
-    for interval in (0..scale.len()).map(|degree| {
+    let intervals = (0..scale.len()).map(|degree| {
         (scale[(degree + subword_length) % scale.len()] / scale[degree]).rd(RawJiRatio::OCTAVE)
-    }) {
+    });
+
+    for interval in intervals {
         if let Some(update_this) = result.get_mut(&interval) {
             *update_this += 1;
         } else {
@@ -179,6 +275,23 @@ pub fn ji_scale_modes(scale: &[RawJiRatio]) -> Vec<Vec<RawJiRatio>> {
 
 /// Returns the harmonic series mode `mode_num`: mode_num:...:(2*mode_num).
 /// Includes the octave duplication.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji::harmonic_mode;
+/// use ternary::ji_ratio::RawJiRatio;
+///
+/// // Harmonic mode 4 is the 4:5:6:7:8 chord
+/// let mode_4 = harmonic_mode(4).unwrap();
+/// assert_eq!(mode_4.len(), 4);  // 5/4, 6/4, 7/4, 8/4
+/// assert_eq!(mode_4[0], RawJiRatio::try_new(5, 4).unwrap());
+/// assert_eq!(mode_4[3], RawJiRatio::OCTAVE);
+///
+/// // Harmonic mode 8 is the 8:9:10:11:12:13:14:15:16 chord
+/// let mode_8 = harmonic_mode(8).unwrap();
+/// assert_eq!(mode_8.len(), 8);
+/// ```
 pub fn harmonic_mode(mode_num: u32) -> Result<Vec<RawJiRatio>, ScaleError> {
     if mode_num < 1 {
         Err(ScaleError::CannotMakeScale)
@@ -302,8 +415,30 @@ pub fn interleaved_scale_ji(
 }
 
 /// Given `arr` a periodic JI scale given in JI ratios from the tonic, is `arr` a CS (constant structure)?
-/// Assumes arr[0] = the 1-step from the tonic, ..., arr[n-1] == the equave;
+/// Assumes `arr[0]` = the 1-step from the tonic, ..., `arr[arr.len() - 1]` = the equave;
 /// arr.len() == the scale size.
+///
+/// A constant structure (CS) is a scale where no interval appears in two different
+/// interval classes. For example, 3/2 cannot be both a 4-step and a 5-step.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji::is_cs_ji_scale;
+/// use ternary::ji_ratio::RawJiRatio;
+///
+/// // Pythagorean major scale is CS
+/// let pyth_major = vec![
+///     RawJiRatio::try_new(9, 8).unwrap(),
+///     RawJiRatio::try_new(81, 64).unwrap(),
+///     RawJiRatio::try_new(4, 3).unwrap(),
+///     RawJiRatio::try_new(3, 2).unwrap(),
+///     RawJiRatio::try_new(27, 16).unwrap(),
+///     RawJiRatio::try_new(243, 128).unwrap(),
+///     RawJiRatio::OCTAVE,
+/// ];
+/// assert!(is_cs_ji_scale(&pyth_major));
+/// ```
 pub fn is_cs_ji_scale(arr: &[RawJiRatio]) -> bool {
     let n = arr.len();
     let mut interval_classes = vec![vec![RawJiRatio::UNISON; n]; n - 1];
@@ -343,6 +478,26 @@ pub fn is_cs_ji_scale(arr: &[RawJiRatio]) -> bool {
 /// Given a generator sequence `gs`,
 /// return an `n`-note generator sequence scale with equave `equave`
 /// formed by stacking and reducing `n - 1` intervals of `gs` in turn.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::ji::gs_scale;
+/// use ternary::ji_ratio::RawJiRatio;
+///
+/// // Build a pentatonic scale by stacking 3/2 fifths
+/// let generators = [RawJiRatio::try_new(3, 2).unwrap()];
+/// let pentatonic = gs_scale(&generators, 5, RawJiRatio::OCTAVE).unwrap();
+/// assert_eq!(pentatonic.len(), 5);
+///
+/// // Alternating generators create more complex scales
+/// let gens = [
+///     RawJiRatio::try_new(7, 6).unwrap(),
+///     RawJiRatio::try_new(8, 7).unwrap(),
+/// ];
+/// let scale = gs_scale(&gens, 5, RawJiRatio::OCTAVE).unwrap();
+/// assert_eq!(scale.len(), 5);
+/// ```
 pub fn gs_scale(
     gs: &[RawJiRatio],
     n: usize,
@@ -391,9 +546,27 @@ pub fn well_formed_necklace_in_ji_scale(
 mod tests {
     #[allow(unused)]
     use super::*;
-    use crate::{ji::odd_limit, ji_ratio::RawJiRatio};
+    use crate::ji_ratio::RawJiRatio;
 
     use crate::monzo;
+
+    #[test]
+    fn test_ji_spectrum() {
+        use crate::ji::spectrum;
+        use crate::ji_ratio::RawJiRatio;
+        // Pythagorean pentatonic: 1/1 9/8 81/64 3/2 27/16 2/1
+        let pentatonic = vec![
+            RawJiRatio::try_new(9, 8).unwrap(),
+            RawJiRatio::try_new(81, 64).unwrap(),
+            RawJiRatio::try_new(3, 2).unwrap(),
+            RawJiRatio::try_new(27, 16).unwrap(),
+            RawJiRatio::OCTAVE,
+        ];
+        // Get the 1-step spectrum (seconds)
+        let seconds = spectrum(&pentatonic, 1);
+        // Pentatonic has exactly two step sizes: 9/8 (whole tone) and 32/27 (minor third)
+        assert_eq!(seconds.keys_count(), 2);
+    }
 
     #[test]
     fn test_ji_scale_modes() {
@@ -610,13 +783,7 @@ mod tests {
         ];
         assert_eq!(zil_24, correct_zil_24);
     }
-    #[test]
-    fn test_odd_limit() {
-        let mut eighty_one_odd_limit = odd_limit(81);
-        eighty_one_odd_limit.sort();
-        eighty_one_odd_limit.dedup();
-        println!("{eighty_one_odd_limit:?}");
-    }
+
     #[test]
     fn test_cs() {
         assert!(is_cs_ji_scale(&RawJiRatio::PYTH_5));

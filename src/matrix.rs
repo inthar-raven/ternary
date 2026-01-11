@@ -27,7 +27,7 @@ pub fn det3(col0: &[u16], col1: &[u16], col2: &[u16]) -> i32 {
 /// * `col2` - Third column of the matrix (3 elements)
 ///
 /// # Returns
-/// The determinant as a Vec<Vec<i32>> (column-major order)
+/// The inverse as a `Vec<Vec<i32>>` (column-major order)
 pub fn unimodular_inv(col0: &[i32], col1: &[i32], col2: &[i32]) -> Vec<Vec<i32>> {
     let (a, b, c, d, e, f, g, h, i) = (
         col0[0], col1[0], col2[0], col0[1], col1[1], col2[1], col0[2], col1[2], col2[2],

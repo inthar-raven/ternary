@@ -1,3 +1,47 @@
+//! Scale representation as sequences of step letters.
+//!
+//! A scale is represented as a word over an alphabet of step letters (L, m, s, etc.),
+//! where each letter represents a step size class. For ternary scales:
+//! - `0` = L (large step)
+//! - `1` = m (medium step)
+//! - `2` = s (small step)
+//!
+//! # Core Types
+//!
+//! - [`Letter`]: Type alias for step letters (`usize`)
+//! - [`CountVector<T>`]: Multiset of elements, used for step signatures and interval classes
+//! - [`Chirality`]: Scale symmetry classification (Left/Achiral/Right)
+//!
+//! # Key Operations
+//!
+//! - [`rotate`]: Rotate a scale word (change mode)
+//! - [`least_mode`]: Find lexicographically smallest rotation (canonical form)
+//! - [`maximum_variety`]: Compute the maximum variety of a scale
+//! - [`chirality`]: Determine scale handedness
+//! - [`is_monotone_mos`]: Check monotone-MOS conditions
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::words::{rotate, least_mode, maximum_variety, chirality, Chirality};
+//!
+//! // Represent the diatonic scale as a word: 5 large steps, 2 small steps
+//! let lydian = vec![0, 0, 0, 1, 0, 0, 1];  // L L L s L L s
+//!
+//! // Rotate to get different modes
+//! let mixolydian = rotate(&lydian, 1);          // L L s L L L s
+//!
+//! // Find canonical form (lexicographically first mode)
+//! let canonical = least_mode(&lydian);
+//! assert_eq!(canonical, vec![0, 0, 0, 1, 0, 0, 1]);  // Lydian is already canonical
+//!
+//! // MOS scales have maximum variety 2
+//! assert_eq!(maximum_variety(&lydian), 2);
+//!
+//! // Diatonic is achiral (equal to its reversal)
+//! assert_eq!(chirality(&lydian), Chirality::Achiral);
+//! ```
+
 use itertools::Itertools;
 use serde::Serialize;
 use std::cmp::{Ordering, max};
@@ -6,6 +50,9 @@ use std::hash::Hash;
 
 use crate::helpers::{ScaleError, gcd, modinv};
 
+/// A step letter representing a step size class.
+///
+/// In ternary scales: `0` = L (large), `1` = m (medium), `2` = s (small).
 pub type Letter = usize;
 
 /// Types such that when you put them into vectors, it makes sense to interpret the vectors as scales and take intervals from these scales.
@@ -35,19 +82,55 @@ impl Subtendable for CountVector<Letter> {
     }
 }
 
-/// The [chirality](https://en.xen.wiki/w/Chirality) of a scale.
+/// The [chirality](https://en.xen.wiki/w/Chirality) (handedness) of a scale.
+///
+/// Compares a scale to its reversal to determine symmetry.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{chirality, Chirality};
+///
+/// // Achiral: equal to its reversal (as a circular word)
+/// let diatonic = [0, 0, 0, 1, 0, 0, 1];
+/// assert_eq!(chirality(&diatonic), Chirality::Achiral);
+///
+/// // Chiral scales have distinct left/right forms
+/// let right_handed = [0, 1, 0, 2, 0, 1, 0, 2, 0];  // diasem
+/// assert_eq!(chirality(&right_handed), Chirality::Right);
+/// ```
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Serialize)]
 pub enum Chirality {
-    /// Lexicographically first mode is greater than that of reversed scale word.
+    /// Scale word > reversed word (lexicographically, in canonical form).
     Left,
-    /// Equal as circular word to reversed scale word.
+    /// Scale equals its reversal as a circular word.
     Achiral,
-    /// Lexicographically first mode is less than that of reversed scale word.
+    /// Scale word < reversed word (lexicographically, in canonical form).
     Right,
 }
 
+/// A multiset (bag) of elements, implemented as a map from elements to counts.
+///
+/// Used to represent:
+/// - **Step signatures**: e.g., "5L 2s" as `{0: 5, 1: 2}`
+/// - **Interval classes**: the step content of a scale interval
+///
+/// Supports group operations (addition, negation, scalar multiplication).
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::CountVector;
+///
+/// // Create from a slice (counts occurrences)
+/// let steps = CountVector::from_slice(&[0, 0, 0, 1, 0, 0, 1]);
+/// assert_eq!(steps.get(&0), Some(&5));  // 5 large steps
+/// assert_eq!(steps.get(&1), Some(&2));  // 2 small steps
+///
+/// // Total step count
+/// assert_eq!(steps.len(), 7);
+/// ```
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-/// Wrapper type for the free abelian group on T.
 pub struct CountVector<T>(BTreeMap<T, i32>);
 
 impl<T> CountVector<T> {
@@ -194,6 +277,10 @@ impl<T> CountVector<T> {
     {
         self.0.get(arg)
     }
+    /// Get the number of keys.
+    pub fn keys_count(&self) -> usize {
+        self.0.len()
+    }
 }
 
 pub fn countvector_to_slice(v: CountVector<usize>) -> Vec<i32> {
@@ -215,7 +302,7 @@ pub fn countvector_to_slice(v: CountVector<usize>) -> Vec<i32> {
     }
 }
 
-/// Treating `scale` as a circular string (that is, "scale[i] == scale[i % scale.len()]"),
+/// Treating `scale` as a circular string,
 /// take a slice of length `subword_length` from `degree`; assumes `subword_length` <= `scale`.len().
 /// Reduce `degree` first.
 pub fn word_on_degree<T>(scale: &[T], degree: usize, subword_length: usize) -> Vec<T>
@@ -263,25 +350,6 @@ where
     }
 }
 
-/// Return the step class of the offset of scale2 to the right relative to scale1 if strings are conjugate, otherwise None.
-pub fn offset_string<T>(scale1: &[T], scale2: &[T]) -> Option<usize>
-where
-    T: Clone + PartialEq,
-{
-    if scale1.len() != scale2.len() {
-        None
-    } else {
-        let length = scale1.len();
-        for i in 0..length {
-            if rotate(scale2, i) == scale1.to_vec() {
-                // scale2 has been rotated i steps to the left.
-                return Some(i);
-            }
-        }
-        None
-    }
-}
-
 /// Return the offset of vec2 to the right relative to vec1 if the Vecs are conjugate, otherwise None.
 pub fn offset_vec<T>(vec1: &[T], vec2: &[T]) -> Option<usize>
 where
@@ -302,7 +370,26 @@ where
     }
 }
 
-/// Computes the maximum variety of a scale word. (Not actual interval sizes)
+/// Computes the [maximum variety](https://en.xen.wiki/w/Maximum_variety) of a scale.
+///
+/// Maximum variety counts the largest number of distinct interval classes
+/// at any single interval size. MOS scales have MV=2.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::maximum_variety;
+///
+/// // MOS scales have maximum variety 2
+/// let diatonic = [0, 0, 1, 0, 0, 0, 1];
+/// assert_eq!(maximum_variety(&diatonic), 2);
+///
+/// // Ternary scales have higher MV
+/// let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// assert_eq!(maximum_variety(&diasem), 3);
+/// let blackdye = [2, 0, 1, 0, 2, 0, 1, 0, 2, 0];
+/// assert_eq!(maximum_variety(&blackdye), 4);
+/// ```
 pub fn maximum_variety<T>(scale: &[T]) -> usize
 where
     T: Hash + Ord + Clone + Sync + Send,
@@ -316,7 +403,7 @@ where
     result
 }
 
-/// Whether `scale` as a word is strict variety.
+/// Whether `scale` is strict variety (the variety is the same for every non-equave step class).
 pub fn is_strict_variety<T>(scale: &[T]) -> bool
 where
     T: Hash + Ord + Clone + Sync + Send,
@@ -334,7 +421,7 @@ where
     true
 }
 
-/// Return the block balance of `s` = `s`(x, y, z), defined as max { | |w|_{x_i} - |w'|_{x_i} | : x_i is a letter of `s` and k = len(w) = len(w') }.
+/// Return the [block balance](https://en.xen.wiki/w/Balanced_word) of `s`.
 pub fn block_balance<T>(scale: &[T]) -> usize
 where
     T: Hash + Ord + Clone + PartialEq + Send + Sync,
@@ -429,13 +516,23 @@ pub fn mos_mode(a: usize, b: usize, brightness: usize) -> Vec<Letter> {
     let brightness = brightness % scale_len;
     let (mos, bright_gener) = brightest_mos_mode_and_gener(a, b);
     let bright_gener_step_count: usize = bright_gener.len();
-    // Rotate backwards from brightest mode by (scale_len - 1 - brightness) bright generators
-    // which is equivalent to rotating forward by brightness dark generators from darkest mode
+    // Rotate backwards from brightest mode by `(scale_len - 1 - brightness)` bright generators
+    // which is equivalent to rotating forward by `brightness` dark generators from darkest mode
     let steps_from_brightest = (scale_len - 1 - brightness) * bright_gener_step_count;
     rotate(&mos, steps_from_brightest)
 }
 
-/// Rotate an array. Returns a Vec.
+/// Rotate a scale word left by `degree` positions (change mode).
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::rotate;
+///
+/// let lydian = vec![0, 0, 0, 1, 0, 0, 1];
+/// let mixolydian = rotate(&lydian, 1);  // Rotate left by 1
+/// assert_eq!(mixolydian, vec![0, 0, 1, 0, 0, 1, 0]);
+/// ```
 pub fn rotate<T: std::clone::Clone>(slice: &[T], degree: usize) -> Vec<T> {
     let degree = degree % slice.len();
     if degree == 0 {
@@ -536,11 +633,7 @@ pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
 /// Return the collection of all MOS substitution scales `subst n0 x (n1 y n2 z)`
 /// where the template MOS is assumed to have step signature `n0*0 (n1 + n2)*X` (`X` is the slot letter)
 /// and the filling MOS has step signature `n1*1 n2*2`.
-pub(crate) fn mos_substitution_scales_one_perm(
-    n0: usize,
-    n1: usize,
-    n2: usize,
-) -> Vec<Vec<Letter>> {
+pub fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<Letter>> {
     let (template, _) = brightest_mos_mode_and_gener(n0, n1 + n2);
     let (filler, gener) = brightest_mos_mode_and_gener(n1, n2);
     let filler = filler.into_iter().map(|x| x + 1).collect::<Vec<_>>();

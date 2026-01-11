@@ -1,3 +1,35 @@
+//! Necklace enumeration using Sawada's algorithm.
+//!
+//! A **necklace** is an equivalence class of words under rotation. This module
+//! enumerates all necklaces with a given "content" (step signature), which is
+//! useful for generating all scales with a specific count of each step size.
+//!
+//! # Algorithm
+//!
+//! Uses Sawada (2003)'s efficient algorithm for generating necklaces with
+//! fixed content. The algorithm generates each necklace exactly once in
+//! lexicographically smallest (canonical) form.
+//!
+//! # Examples
+//!
+//! ```
+//! use ternary::comb::necklaces_fixed_content;
+//!
+//! // Generate all ternary scale patterns with 2L, 2m, 1s
+//! let content = [2, 2, 1];  // 2 of letter 0, 2 of letter 1, 1 of letter 2
+//! let necklaces = necklaces_fixed_content(&content);
+//!
+//! // Each necklace has length 5 (2+2+1)
+//! for necklace in &necklaces {
+//!     assert_eq!(necklace.len(), 5);
+//! }
+//! ```
+//!
+//! # References
+//!
+//! - Sawada, J. (2003). "A fast algorithm to generate necklaces with fixed content."
+//!   Theoretical Computer Science, 301(1-3), 477-489.
+
 use std::collections::BTreeSet;
 
 use crate::helpers::{first_index_desc, first_index_smaller};
@@ -64,8 +96,34 @@ fn partitions_rec(n: usize, m: usize) -> Vec<Vec<usize>> {
     }
 }
 
-/// Sawada (2003)'s algorithm for enumerating necklaces with a given step signature ("content"),
-/// where `content[i]` = the number of occurrences of the letter `i`.
+/// Generate all necklaces (rotation-equivalence classes) with a given content.
+///
+/// Uses Sawada (2003)'s efficient algorithm. Each necklace is returned in
+/// canonical form (lexicographically smallest rotation).
+///
+/// # Arguments
+///
+/// * `content` - Array where `content[i]` is the count of letter `i`
+///
+/// # Examples
+///
+/// ```
+/// use ternary::comb::necklaces_fixed_content;
+///
+/// // All necklaces with 3 zeros and 2 ones (binary necklaces)
+/// let necklaces = necklaces_fixed_content(&[3, 2]);
+/// assert_eq!(necklaces.len(), 2);  // 00011 and 00101
+///
+/// // Ternary: 2L, 1m, 1s
+/// let ternary = necklaces_fixed_content(&[2, 1, 1]);
+/// for n in &ternary {
+///     assert_eq!(n.len(), 4);
+/// }
+/// ```
+///
+/// # Returns
+///
+/// Empty vector if all content values are zero.
 pub fn necklaces_fixed_content(content: &[Letter]) -> Vec<Vec<Letter>> {
     if content.iter().all(|x| *x == 0) {
         vec![]

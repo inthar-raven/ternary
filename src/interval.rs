@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 /// Trait for any type representing concrete interval sizes.
-/// The trait provides the abstraction of a ℤ-module (free module over integers) under interval stacking.
+/// The trait provides the abstraction of an abelian group under interval stacking.
 /// Operations treat intervals as elements that can be combined additively.
 pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
     /// The result of stacking two intervals.
@@ -16,7 +16,7 @@ pub trait Dyad: Copy + Eq + PartialEq + std::fmt::Debug + Send + Sync {
     fn log_inv(self) -> Self
     where
         Self: Sized;
-    /// The size of an interval in nepers.
+    /// The size of an interval in [nepers](https://en.xen.wiki/w/Neper).
     fn ln(self) -> f64;
     /// The cents size of an interval.
     fn cents(self) -> f64;
