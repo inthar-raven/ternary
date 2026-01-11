@@ -394,7 +394,7 @@ pub fn maximum_variety<T>(scale: &[T]) -> usize
 where
     T: Hash + Ord + Clone + Sync + Send,
 {
-    let mut result = 0;
+    let mut result = 1; // variety for 0-steps and periods
     let floor_half: usize = scale.len() / 2;
     for subword_length in 1..(floor_half + 1) {
         let sizes = CountVector::distinct_spectrum(scale, subword_length);
@@ -428,7 +428,7 @@ pub fn maximum_variety_is<T>(scale: &[T], mv: usize) -> bool
 where
     T: Hash + Ord + Clone + Sync + Send,
 {
-    let mut result = 0;
+    let mut result = 1; // variety for 0-steps and periods
     let floor_half: usize = scale.len() / 2;
     for subword_length in 1..(floor_half + 1) {
         let sizes = CountVector::distinct_spectrum(scale, subword_length);
