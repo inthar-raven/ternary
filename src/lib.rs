@@ -85,7 +85,7 @@
 //! - **Pitch class lattice**: A 2D projection of scale degrees using a unimodular
 //!   basis including the equave. Useful for visualizing scale structure.
 //!
-//! - **Unimodular basis**: Three step-count vectors with determinant ±1.
+//! - **Unimodular basis**: A list of step-count vectors with determinant ±1.
 //!
 //! ## Module Overview
 //!

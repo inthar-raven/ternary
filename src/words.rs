@@ -588,6 +588,16 @@ where
 }
 
 /// The lexicographically least mode of a word (where the letters are in their usual order).
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::least_mode;
+///
+/// let ionian = vec![0, 0, 1, 0, 0, 0, 1]; // LLsLLLs
+/// let lydian = vec![0, 0, 0, 1, 0, 0, 1]; // LLLsLLs (lexicographically least mode of diatonic)
+/// assert_eq!(least_mode(&ionian), lydian)
+/// ```
 pub fn least_mode(scale: &[Letter]) -> Vec<Letter> {
     rotate(scale, booth(scale))
 }
@@ -643,9 +653,20 @@ pub fn booth(scale: &[Letter]) -> usize {
 }
 
 /// [Letterwise substitution](https://en.xen.wiki/w/MOS_substitution) for scale words.
-///
 /// Note: This function does not fail even if the number of times `x` occurs in `template`
 /// does not divide `filler.len()`.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::subst;
+///
+/// let template = vec![0, 1, 1, 0, 1, 1, 1];
+/// let filler = vec![1, 2];
+/// let subst_scale = subst(&template, 1, &filler);
+/// assert_eq!(subst_scale, vec![0, 1, 2, 0, 1, 2, 1]);
+/// ```
+///
 pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
     let mut ret = vec![];
     let mut i: usize = 0;
@@ -670,6 +691,15 @@ pub fn subst(template: &[Letter], x: Letter, filler: &[Letter]) -> Vec<Letter> {
 /// Return the collection of all MOS substitution scales `subst n0 x (n1 y n2 z)`
 /// where the template MOS is assumed to have step signature `n0*0 (n1 + n2)*X` (`X` is the slot letter)
 /// and the filling MOS has step signature `n1*1 n2*2`.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::mos_substitution_scales_one_perm;
+///
+/// let only_contains_one_scale = mos_substitution_scales_one_perm(6, 5, 5);
+/// assert_eq!(only_contains_one_scale.len(), 1);
+/// ```
 pub fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<Vec<Letter>> {
     let (template, _) = brightest_mos_mode_and_gener(n0, n1 + n2);
     let (filler, gener) = brightest_mos_mode_and_gener(n1, n2);
@@ -693,7 +723,8 @@ pub fn mos_substitution_scales_one_perm(n0: usize, n1: usize, n2: usize) -> Vec<
         .collect()
 }
 
-/// The set of all [MOS substitution](https://en.xen.wiki/w/User:Inthar/MOS_substitution) ternary scales.
+/// The set of all [MOS substitution](https://en.xen.wiki/w/User:Inthar/MOS_substitution) ternary scales
+/// with the given step signature `sig`.
 pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
     let (n0, n1, n2) = (sig[0], sig[1], sig[2]);
 
@@ -728,6 +759,18 @@ pub fn mos_substitution_scales(sig: &[usize]) -> Vec<Vec<Letter>> {
 }
 
 /// Whether `scale` is a MOS substitution scale with any choice of letter as template letter.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, is_mos_subst};
+///
+/// let blackdye: Vec<Letter> = vec![2, 0, 1, 0, 2, 0, 1, 0, 2, 0]; // sLmLsLmLsL
+/// assert!(is_mos_subst(&blackdye));
+///
+/// let nonexample: Vec<Letter> = vec![1, 2, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 2, 0, 0, 0];
+/// assert!(!is_mos_subst(&nonexample));
+/// ```
 pub fn is_mos_subst(scale: &[Letter]) -> bool {
     let steps: Vec<_> = step_set(scale).into_iter().collect();
     steps.len() == 3 && {
@@ -739,6 +782,16 @@ pub fn is_mos_subst(scale: &[Letter]) -> bool {
 }
 
 /// Whether `scale` is a MOS substitution scale subst at(bf1 cf2).
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, is_mos_subst_one_perm};
+///
+/// let blackdye: Vec<Letter> = vec![2, 0, 1, 0, 2, 0, 1, 0, 2, 0]; // sLmLsLmLsL
+/// assert!(is_mos_subst_one_perm(&blackdye, 0, 1, 2)); // XLXLXLXLXL is a MOS pattern
+/// assert!(!is_mos_subst_one_perm(&blackdye, 1, 0, 2)); // XXmXXXmXXX is not a MOS pattern
+/// ```
 pub fn is_mos_subst_one_perm(scale: &[Letter], t: Letter, f1: Letter, f2: Letter) -> bool {
     step_variety(scale) == 3 // Is it ternary?
         && mos_subst_helper(scale, t, f1, f2)
@@ -772,6 +825,18 @@ pub fn delete(scale: &[Letter], letter: Letter) -> Vec<Letter> {
 
 /// If `scale` is ternary, return whether identifying L = m, m = s, and s = 0 results in a MOS.
 /// Returns `false` if the scale is not ternary.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, is_monotone_mos};
+///
+/// let diasem_2sr = [0, 1, 0, 2, 0, 1, 0, 2, 0]; // LmLsLmLsL
+/// assert!(is_monotone_mos(&diasem_2sr)); // LXLXLXLXL, XXXsXXXsX, LmLLmLL are all MOSes
+///
+/// let blackdye = [2, 0, 1, 0, 2, 0, 1, 0, 2, 0]; // sLmLsLmLsL
+/// assert!(!is_monotone_mos(&blackdye)); // sXXXsXXXsX, X = L~m, is not a MOS pattern
+/// ```
 pub fn is_monotone_mos(scale: &[Letter]) -> bool {
     step_variety(scale) == 3
         && maximum_variety_is(&replace(scale, 1, 0), 2) // L = m
@@ -796,6 +861,18 @@ pub fn monotone_s0(scale: &[Letter]) -> bool {
 
 /// Check if pairiwse identifications of two of the step sizes always results in a MOS.
 /// Returns `false` if the scale is not ternary.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, is_pairwise_mos};
+///
+/// let diasem_2sr = [0, 1, 0, 2, 0, 1, 0, 2, 0]; // LmLsLmLsL
+/// assert!(is_pairwise_mos(&diasem_2sr)); // LXLXLXLXL, XXXsXXXsX, XmXXXmXXX are all MOSes
+///
+/// let blackdye = [2, 0, 1, 0, 2, 0, 1, 0, 2, 0]; // sLmLsLmLsL
+/// assert!(!is_pairwise_mos(&blackdye)); // sXXXsXXXsX, X = L~m, is not a MOS pattern
+/// ```
 pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
     step_variety(scale) == 3
         && maximum_variety_is(&replace(scale, 1, 0), 2)
@@ -804,6 +881,18 @@ pub fn is_pairwise_mos(scale: &[Letter]) -> bool {
 }
 
 /// The repeating portion of a word.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, period_pattern};
+///
+/// let diminished = [0, 1, 0, 1, 0, 1, 0, 1]; // LsLsLsLs
+/// assert_eq!(period_pattern::<Letter>(&diminished), vec![0, 1]);
+///
+/// let diasem_2sr = [0, 1, 0, 2, 0, 1, 0, 2, 0]; // LmLsLmLsL
+/// assert_eq!(period_pattern::<Letter>(&diasem_2sr), diasem_2sr);
+/// ```
 pub fn period_pattern<T>(word: &[T]) -> Vec<T>
 where
     T: PartialEq + Clone + Send + Sync,
@@ -828,9 +917,21 @@ where
 }
 
 /// The minimal prefix `x` such that `word` is a prefix of `x^\infty`.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, weak_period_pattern};
+///
+/// let diminished = [0, 1, 0, 1, 0, 1, 0, 1]; // LsLsLsLs
+/// assert_eq!(weak_period_pattern::<Letter>(&diminished), vec![0, 1]);
+///
+/// let diasem_2sr = [0, 1, 0, 2, 0, 1, 0, 2, 0]; // LmLsLmLsL
+/// assert_eq!(weak_period_pattern::<Letter>(&diasem_2sr), vec![0, 1, 0, 2]);
+/// ```
 pub fn weak_period_pattern<T>(word: &[T]) -> Vec<T>
 where
-    T: PartialEq + Clone,
+    T: PartialEq + Clone + Send + Sync,
 {
     let l = (1..word.len()) // Only check up to prefix_len == slice.len() - 1 since the check will succeed when prefix is the whole word
         .map(|prefix_len| word.iter().take(prefix_len).cycle()) // Get infinite repetition of each prefix
@@ -851,6 +952,18 @@ where
 
 /// The collection of rotations of a word, in cyclic order.
 /// Contains redundant rotations if the word is not primitive.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Letter, rotations};
+///
+/// let diatonic = [0, 0, 1, 0, 0, 0, 1]; // LLsLLLs
+/// assert_eq!(rotations::<Letter>(&diatonic).len(), 7);
+///
+/// // Diminished scale is a mode of limited transposition
+/// let diminished = [0, 1, 0, 1, 0, 1, 0, 1]; // LsLsLsLs
+/// assert_eq!(rotations::<Letter>(&diminished).len(), 2);
 pub fn rotations<T>(word: &[T]) -> Vec<Vec<T>>
 where
     T: Clone + Eq + Send + Sync,
@@ -859,7 +972,22 @@ where
     (0..period).map(|i| rotate(word, i)).collect()
 }
 
-/// The chirality of a scale word.
+/// The lexicographically determined chirality of a scale word.
+///
+/// # Examples
+///
+/// ```
+/// use ternary::words::{Chirality, chirality};
+///
+/// let diasem_2sr = vec![0, 1, 0, 2, 0, 1, 0, 2, 0]; // Reversing step order results in diasem_2sl
+/// assert_eq!(chirality(&diasem_2sr), Chirality::Right);
+///
+/// let diasem_2sl = vec![0, 2, 0, 1, 0, 2, 0, 1, 0];
+/// assert_eq!(chirality(&diasem_2sl), Chirality::Left);
+///
+/// let blackdye = vec![2, 0, 2, 0, 1, 0, 2, 0, 1, 0];
+/// assert_eq!(chirality(&blackdye), Chirality::Achiral);
+/// ```
 pub fn chirality(word: &[Letter]) -> Chirality {
     let least_mode_word = least_mode(word);
 

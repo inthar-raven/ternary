@@ -3,6 +3,9 @@ name = "ternary"
 version = "0.1.0"
 authors = ["turbofishcrow <serotoceprafen@gmail.com>"]
 edition = "2024"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+include = ["/src"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]

@@ -394,14 +394,18 @@ impl GuideFrame {
 /// # Examples
 ///
 /// ```
-/// use ternary::guide::guide_frames;
+/// use ternary::words::{Letter, CountVector};
+/// use ternary::guide::{guide_frames, GuideFrame};
 ///
-/// // Pinedye scale: 5L 2m 1s
-/// let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
-/// let frames = guide_frames(&pinedye);
+/// // Diamech (Right-handed): LsLmLsLsLms
+/// let diamech_4sr = vec![0, 2, 0, 1, 0, 2, 0, 2, 0, 1, 2];
+/// let gfs = guide_frames(&diamech_4sr);
 ///
-/// // Returns frames sorted by complexity
-/// assert!(frames.windows(2).all(|w| w[0].complexity() <= w[1].complexity()));
+/// assert!(gfs.contains(&GuideFrame::new_simple(vec![
+///     CountVector::from_slice(&[0, 2]),
+///     CountVector::from_slice(&[0, 1]),
+///     CountVector::from_slice(&[0, 2]),
+/// ])));
 /// ```
 pub fn guide_frames(scale: &[usize]) -> Vec<GuideFrame> {
     (2..=scale.len() / 2) // steps subtended by generator used for the guided generator sequence
@@ -417,61 +421,7 @@ mod tests {
     use crate::words::{CountVector, Letter};
 
     use super::*;
-    /*
-    #[test]
-    fn test_ploidacot() {
-        let pinedye = [0, 0, 1, 0, 1, 0, 0, 2];
-        assert_eq!(
-            // Pinedye is monocot
-            Ploidacot::try_get_ploidacot(&pinedye),
-            Some(Ploidacot {
-                ploid: 1,
-                cot: 1,
-                shear: 0,
-            })
-        );
-        let diasem = [0, 1, 0, 2, 0, 1, 0, 2, 0];
-        assert_eq!(
-            // Diasem is 1-sheared dicot
-            Ploidacot::try_get_ploidacot(&diasem),
-            Some(Ploidacot {
-                ploid: 1,
-                cot: 2,
-                shear: 1,
-            })
-        );
-        let diamech_4sl: [usize; 11] = [1, 0, 2, 0, 2, 0, 1, 0, 2, 0, 2];
-        assert_eq!(
-            // diaslen is tricot
-            Ploidacot::try_get_ploidacot(&diamech_4sl),
-            Some(Ploidacot {
-                ploid: 1,
-                cot: 3,
-                shear: 0,
-            })
-        );
-        let diachrome_5sc = [0, 2, 0, 2, 0, 1, 2, 0, 2, 0, 2, 1];
-        assert_eq!(
-            // Central diachrome is diploid monocot
-            Ploidacot::try_get_ploidacot(&diachrome_5sc),
-            Some(Ploidacot {
-                ploid: 2,
-                cot: 1,
-                shear: 0,
-            })
-        );
-        let blackdye: [usize; 10] = [0, 1, 0, 2, 0, 1, 0, 2, 0, 2];
-        assert_eq!(
-            // Blackdye is haploid monocot (ignore the contorsion caused by the offset)
-            Ploidacot::try_get_ploidacot(&blackdye),
-            Some(Ploidacot {
-                ploid: 1,
-                cot: 1,
-                shear: 0,
-            })
-        );
-    }
-    */
+
     #[test]
     fn test_lllmllms() {
         let bad_scale: [usize; 8] = [0, 0, 0, 1, 0, 0, 1, 2];

@@ -6,7 +6,7 @@
 //! # Key Concepts
 //!
 //! - **Pitch class lattice**: A 2D projection of scale degrees onto a plane. We require that the lattice have no torsion (i.e. the equave not be a multiple of any lattice element).
-//! - **Unimodular basis**: Two generators whose determinant with the equave is ±1
+//! - **Unimodular basis**: A list of vectors whose determinant is ±1
 //! - **Parallelogram**: The fundamental domain tiled by the lattice
 //!
 //! # Algorithm

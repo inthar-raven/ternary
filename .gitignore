@@ -16,3 +16,6 @@ Thumbs.db
 # Lock files (optional, depending on preference)
 # Cargo.lock
 # package-lock.json
+
+# Claude
+.claude
