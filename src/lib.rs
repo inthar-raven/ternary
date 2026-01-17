@@ -95,12 +95,10 @@
 //! - [`ji`]: JI scale analysis and tuning solvers
 //! - [`equal`]: Equal temperament calculations
 //! - [`guide`]: Guided Generator Sequences
-//! - [`billiard`]: Billiard scale generation algorithm
 //! - [`comb`]: Necklace enumeration
 //! - [`lattice`]: Pitch class lattice visualization
 
 // #![deny(warnings)]
-pub mod billiard;
 pub mod comb;
 #[macro_use]
 pub mod equal;
@@ -114,7 +112,6 @@ pub mod matrix;
 #[macro_use]
 pub mod monzo;
 pub mod odd_limit_81;
-pub mod plane_geometry;
 pub mod primes;
 pub mod vector;
 pub mod words;
@@ -172,8 +169,6 @@ use guide::guide_frames;
 use words::maximum_variety_is;
 use words::{CountVector, least_mode, maximum_variety, monotone_lm, monotone_ms, monotone_s0};
 
-#[cfg(feature = "wasm")]
-use crate::billiard::billiard_scales;
 use crate::lattice::get_unimodular_basis;
 use crate::monzo::Monzo;
 
@@ -571,9 +566,6 @@ pub fn sig_result(
     let step_sig = step_sig.iter().map(|x| *x as usize).collect::<Vec<_>>();
     let scales = if scale_type == "mos-subst" {
         words::mos_substitution_scales(&step_sig)
-    } else if scale_type == "billiard" {
-        let (a, b, c) = (step_sig[0], step_sig[1], step_sig[2]);
-        billiard_scales(a, b, c)
     } else {
         crate::comb::necklaces_fixed_content(&step_sig)
     }; // Now filter
