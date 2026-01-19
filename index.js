@@ -942,6 +942,7 @@ stack()`
           statusElement.textContent = ONLY_TERNARY_SCALES;
         } else {
           if (true) {
+            updateUrlForSig(sigQuery);
             statusElement.textContent = "Computing...";
 
             document.getElementById("tables").innerHTML = `
@@ -1108,6 +1109,7 @@ stack()`
       const arity = new Set(Array.from(query)).size;
       const queryIsValid = arity === 3 && /^[Lms]*$/.test(query);
       if (queryIsValid) {
+        updateUrlForWord(query);
         statusElement.textContent = "Computing...";
         const equave = getEquaveRatio();
         const edBound = getEdBound();
@@ -1201,6 +1203,166 @@ stack()`
         statusElement.textContent = NO_SCALE_WORD;
       }
     });
+
+    // URL parameter handling
+    function parseUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        word: params.get("word"),
+        sig: params.get("sig"),
+        equave: params.get("equave"),
+        ed: params.get("ed"),
+        smin: params.get("smin"),
+        smax: params.get("smax"),
+        type: params.get("type"),
+        lm: params.get("lm"),
+        ms: params.get("ms"),
+        s0: params.get("s0"),
+        ggs: params.get("ggs"),
+        ggsmode: params.get("ggsmode"),
+        mv: params.get("mv"),
+        mvmode: params.get("mvmode"),
+      };
+    }
+
+    function updateUrlForWord(word) {
+      const params = new URLSearchParams();
+      params.set("word", word);
+
+      // Only include non-default global config values
+      const equave = document.getElementById("input-equave").value.trim();
+      if (equave && equave !== "2/1") params.set("equave", equave);
+
+      const ed = document.getElementById("input-ed-bound").value;
+      if (ed && ed !== "111") params.set("ed", ed);
+
+      const smin = document.getElementById("input-s-lower").value;
+      if (smin && smin !== "20") params.set("smin", smin);
+
+      const smax = document.getElementById("input-s-upper").value;
+      if (smax && smax !== "250") params.set("smax", smax);
+
+      history.replaceState(null, "", "?" + params.toString());
+    }
+
+    function updateUrlForSig(sig) {
+      const params = new URLSearchParams();
+      // Convert "3 2 2" to "3+2+2"
+      params.set("sig", sig.trim().replace(/\s+/g, "+"));
+
+      // Only include non-default values
+      const equave = document.getElementById("input-equave").value.trim();
+      if (equave && equave !== "2/1") params.set("equave", equave);
+
+      const ed = document.getElementById("input-ed-bound").value;
+      if (ed && ed !== "111") params.set("ed", ed);
+
+      const smin = document.getElementById("input-s-lower").value;
+      if (smin && smin !== "20") params.set("smin", smin);
+
+      const smax = document.getElementById("input-s-upper").value;
+      if (smax && smax !== "250") params.set("smax", smax);
+
+      const scaleType = document.querySelector(
+        'input[name="scale-type"]:checked',
+      ).value;
+      if (scaleType === "all-scales") params.set("type", "all-scales");
+
+      const lm = document.getElementById("monotone-lm").checked;
+      if (lm) params.set("lm", "1");
+
+      const ms = document.getElementById("monotone-ms").checked;
+      if (ms) params.set("ms", "1");
+
+      const s0 = document.getElementById("monotone-s0").checked;
+      if (!s0) params.set("s0", "0"); // default is checked, so only set if unchecked
+
+      const ggsLen = document.getElementById("ggs-len").value;
+      if (ggsLen && ggsLen !== "0") params.set("ggs", ggsLen);
+
+      const ggsMode = document.querySelector(
+        'input[name="ggs-len-constraint"]:checked',
+      ).value;
+      if (ggsMode === "at-most") params.set("ggsmode", "at-most");
+
+      const mv = document.getElementById("mv").value;
+      if (mv && mv !== "0") params.set("mv", mv);
+
+      const mvMode = document.querySelector(
+        'input[name="mv-constraint"]:checked',
+      ).value;
+      if (mvMode === "at-most") params.set("mvmode", "at-most");
+
+      history.replaceState(null, "", "?" + params.toString());
+    }
+
+    function populateFromUrl() {
+      const params = parseUrlParams();
+
+      // Set global config inputs if provided
+      if (params.equave) {
+        document.getElementById("input-equave").value = params.equave;
+      }
+      if (params.ed) {
+        document.getElementById("input-ed-bound").value = params.ed;
+      }
+      if (params.smin) {
+        document.getElementById("input-s-lower").value = params.smin;
+      }
+      if (params.smax) {
+        document.getElementById("input-s-upper").value = params.smax;
+      }
+
+      // Word query takes priority
+      if (params.word) {
+        document.getElementById("input-word").value = params.word;
+        btnWord.click();
+      } else if (params.sig) {
+        // Convert "3+2+2" to "3 2 2"
+        document.getElementById("input-step-sig").value = params.sig.replace(
+          /\+/g,
+          " ",
+        );
+
+        // Set scale type radio
+        if (params.type === "all-scales") {
+          document.getElementById("all-scales").checked = true;
+        } else {
+          document.getElementById("mos-subst").checked = true;
+        }
+
+        // Set monotone checkboxes (default: lm=0, ms=0, s0=1)
+        document.getElementById("monotone-lm").checked = params.lm === "1";
+        document.getElementById("monotone-ms").checked = params.ms === "1";
+        document.getElementById("monotone-s0").checked =
+          params.s0 !== "0"; // default true unless explicitly "0"
+
+        // Set GGS length
+        if (params.ggs) {
+          document.getElementById("ggs-len").value = params.ggs;
+        }
+        if (params.ggsmode === "at-most") {
+          document.getElementById("ggs-at-most").checked = true;
+        } else {
+          document.getElementById("ggs-exactly").checked = true;
+        }
+
+        // Set MV
+        if (params.mv) {
+          document.getElementById("mv").value = params.mv;
+        }
+        if (params.mvmode === "at-most") {
+          document.getElementById("mv-at-most").checked = true;
+        } else {
+          document.getElementById("mv-exactly").checked = true;
+        }
+
+        btnSig.click();
+      }
+    }
+
+    // Auto-populate and submit from URL params on load
+    populateFromUrl();
   })
   .catch((err) => {
     console.error("Failed to load WASM module:", err);

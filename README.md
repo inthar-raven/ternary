@@ -56,7 +56,7 @@ cargo test
 - Non-octave equaves are supported (enter as a JI ratio like "3/1").
 - Configurable tuning bounds:
   - Max ED size (default 111)
-  - Min/max smallest step size in cents (default 20–200)
+  - Min/max smallest step size in cents (default 20–250)
 - Every scale comes with a Scale Profile that shows properties of the scale selected or queried
   - guide frame (guided generator sequence; multiplicity or interleaving offset_chord; complexity)
   - monotone MOS properties satisfied (L=M, M=s, s=0)
@@ -67,6 +67,13 @@ cargo test
   - guide frame complexity
   - monotone MOS properties
   - maximum variety
+- URL parameters. Example URLs you can now use:
+  - ?word=LLmLLms: Query scale word "LLmLLms"
+  - ?word=LLmLLms&equave=3/1: Same with tritave equave
+  - ?sig=3+2+2: Query step signature 3L2m2s
+  - ?sig=5+2+2&type=all-scales: All scales with 5L2m2s
+  - ?sig=3+2+2&s0=0: Disable s=0 filter
+  - ?sig=3+2+2&mv=3&mvmode=at-most: Filter MV ≤ 3
 
 # Nota bene
 
