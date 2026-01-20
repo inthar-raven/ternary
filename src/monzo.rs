@@ -39,7 +39,7 @@
 //! # Prime Limit
 //!
 //! Monzos are bounded by [`SMALL_PRIMES_COUNT`],
-//! currently supporting primes up to 79 (22-prime-limit).
+//! currently supporting primes up to 13 (13-prime-limit).
 
 use std::cmp::Ordering;
 use std::f64::consts::LOG2_E;
@@ -139,17 +139,11 @@ impl Monzo {
     /// 1/1 in monzo form.
     pub const UNISON: Self = Self(Vector::new([0; SMALL_PRIMES_COUNT]));
     /// 2/1 in monzo form.
-    pub const OCTAVE: Self = Self(Vector::new([
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ]));
+    pub const OCTAVE: Self = Self(Vector::new([1, 0, 0, 0, 0, 0]));
     /// 3/2 in monzo form.
-    pub const PYTH_5TH: Self = Self(Vector::new([
-        -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ]));
+    pub const PYTH_5TH: Self = Self(Vector::new([-1, 1, 0, 0, 0, 0]));
     /// 4/3 in monzo form.
-    pub const PYTH_4TH: Self = Self(Vector::new([
-        2, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    ]));
+    pub const PYTH_4TH: Self = Self(Vector::new([2, -1, 0, 0, 0, 0]));
     /// Unwrap the Vector representation.
     pub fn into_inner(&self) -> Vector {
         self.0

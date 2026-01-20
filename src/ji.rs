@@ -7,7 +7,7 @@
 //! # Key Concepts
 //!
 //! - **Odd limit**: The set of JI intervals with odd numerator and denominator
-//!   up to a given limit. The 81-odd-limit is used for step signature solving.
+//!   up to a given limit.
 //! - **Cumulative form**: A scale represented as intervals from the tonic
 //!   (e.g., `[9/8, 5/4, 4/3, 3/2, 5/3, 15/8, 2/1]`).
 //! - **Step form**: A scale represented as consecutive intervals
@@ -56,7 +56,7 @@ use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
 use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::monzo::Monzo;
-use crate::odd_limit_81::EIGHTY_ONE_ODD_LIMIT;
+use crate::simple_steps::SIMPLE_STEPS;
 use crate::words::{CountVector, rotate};
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
@@ -121,16 +121,16 @@ pub fn odd_limit(limit: u32) -> Vec<RawJiRatio> {
 
 /// Solutions to a step signature (with decreasing step sizes).
 /// Steps are required to be between `cents_lower_bound` and `cents_upper_bound`.
-/// All but the smallest step are required to be in the `SMALL_PRIMES`-prime-limited 81-odd-limit.
+/// All but the smallest step are required to be in SIMPLE_STEPS.
 /// If `allow_neg_aber` is `true`, then the smallest step size is allowed to be negative.
-pub fn solve_step_sig_81_odd_limit(
+pub fn solve_step_sig_simple_steps(
     step_sig: &[usize],
     equave: Monzo,
     cents_lower_bound: f64,
     cents_upper_bound: f64,
     allow_neg_aber: bool,
 ) -> Vec<Vec<Monzo>> {
-    let small_steps: Vec<_> = EIGHTY_ONE_ODD_LIMIT
+    let small_steps: Vec<_> = SIMPLE_STEPS
         .into_iter()
         .filter(|monzo| monzo.cents() > cents_lower_bound && monzo.cents() < cents_upper_bound)
         .collect();
@@ -797,10 +797,10 @@ mod tests {
     #[test]
     fn test_solve_81_odd_lim() {
         let diatonic_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_81_odd_limit(&[5, 2], Monzo::OCTAVE, 20.0, 300.0, false);
+            solve_step_sig_simple_steps(&[5, 2], Monzo::OCTAVE, 20.0, 300.0, false);
         assert_eq!(diatonic_solns, vec![vec![monzo![-3, 2], monzo![8, -5]]]);
         let blackdye_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_81_odd_limit(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0, false);
+            solve_step_sig_simple_steps(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0, false);
         assert!(blackdye_solns.contains(&vec![
             monzo![1, -2, 1],
             monzo![4, -1, -1],

@@ -63,7 +63,7 @@
 //!   Example: `[-1, 1]` = 3/2 = 2⁻¹ × 3¹.
 //!
 //! - **Odd limit**: JI intervals with numerator and denominator ≤ n after factoring out
-//!   all factors of 2. The 81-odd-limit is used for step signature solving.
+//!   all factors of 2.
 //!
 //! - **Cumulative form**: Scale as intervals from tonic: `[9/8, 5/4, 4/3, ...]`.
 //!
@@ -111,8 +111,8 @@ pub mod lattice;
 pub mod matrix;
 #[macro_use]
 pub mod monzo;
-pub mod odd_limit_81;
 pub mod primes;
+pub mod simple_steps;
 pub mod vector;
 pub mod words;
 
@@ -463,7 +463,7 @@ pub fn sig_to_ji_tunings(
 ) -> Vec<Vec<String>> {
     let equave_monzo = Monzo::try_from_ratio(equave).ok();
     if let Some(equave_monzo) = equave_monzo {
-        ji::solve_step_sig_81_odd_limit(
+        ji::solve_step_sig_simple_steps(
             step_sig,
             equave_monzo,
             cents_lower_bound,
