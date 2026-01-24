@@ -1,6 +1,6 @@
 use crate::monzo::Monzo;
 
-pub static SIMPLE_STEPS: [Monzo; 686] = [
+pub static INTERPRETATIONS_270ET: [Monzo; 686] = [
     const_monzo![-15, 8, 1, 0, 0, 0],
     const_monzo![6, 0, -5, 2, 0, 0],
     const_monzo![-7, -1, 1, 1, 1, 0],

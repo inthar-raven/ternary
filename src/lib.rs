@@ -111,8 +111,8 @@ pub mod lattice;
 pub mod matrix;
 #[macro_use]
 pub mod monzo;
+pub mod interpretations;
 pub mod primes;
-pub mod simple_steps;
 pub mod vector;
 pub mod words;
 

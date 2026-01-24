@@ -55,6 +55,7 @@ use std::collections::BTreeSet;
 use crate::const_monzo;
 use crate::equal::is_in_tuning_range;
 use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
+use crate::interpretations::INTERPRETATIONS_270ET;
 use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
 use crate::matrix::covector_times_matrix;
@@ -62,30 +63,20 @@ use crate::matrix::{det3, unimodular_inv};
 use crate::monzo;
 use crate::monzo::Monzo;
 use crate::primes::SMALL_PRIMES_COUNT;
-use crate::simple_steps::SIMPLE_STEPS;
 use crate::words::{CountVector, rotate};
 
-pub const TARGETS: [Monzo; 5] = [
-    // const_monzo![1, 0, 0, 0, 0, 0],
+// Odd harmonics 3, ..., 15, 21, 25, 27
+pub const TARGETS: [Monzo; 10] = [
     const_monzo![0, 1, 0, 0, 0, 0],
     const_monzo![0, 0, 1, 0, 0, 0],
     const_monzo![0, 0, 0, 1, 0, 0],
+    const_monzo![0, 2, 0, 0, 0, 0],
     const_monzo![0, 0, 0, 0, 1, 0],
     const_monzo![0, 0, 0, 0, 0, 1],
-];
-
-pub const COMMAS_270ET: [Monzo; 11] = [
-    const_monzo![0, 0, 0, 0, 0, 0],
-    const_monzo![5, -3, 1, -1, -1, 1],
-    const_monzo![-5, 3, -1, 1, 1, -1],
-    const_monzo![-3, 0, -3, 1, 1, 1],
-    const_monzo![3, 0, 3, -1, -1, -1],
-    const_monzo![-4, -3, 2, -1, 2, 0],
-    const_monzo![4, 3, -2, 1, -2, 0],
-    const_monzo![2, 1, -1, -3, 1, 1],
-    const_monzo![-2, -1, 1, 3, -1, -1],
-    const_monzo![12, -2, -1, -1, 0, -1],
-    const_monzo![-12, 2, 1, 1, 0, 1],
+    const_monzo![0, 1, 1, 0, 0, 0],
+    const_monzo![0, 1, 0, 1, 0, 0],
+    const_monzo![0, 0, 2, 0, 0, 0],
+    const_monzo![0, 3, 0, 0, 0, 0],
 ];
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
@@ -157,7 +148,7 @@ pub fn solve_step_sig_fast(
     cents_lower_bound: f64,
     cents_upper_bound: f64,
 ) -> Vec<Vec<Monzo>> {
-    let small_steps: Vec<_> = SIMPLE_STEPS
+    let small_steps: Vec<_> = INTERPRETATIONS_270ET
         .into_iter()
         .filter(|monzo| monzo.cents() > cents_lower_bound && monzo.cents() < cents_upper_bound)
         .collect();
