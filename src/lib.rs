@@ -198,7 +198,7 @@ pub struct ScaleProfile {
     /// brightest word
     word: String,
     /// unimodular basis for lattice is there is one
-    lattice_basis: Option<Vec<Vec<u16>>>,
+    lattice_basis: Option<Vec<Vec<i32>>>,
     /// chirality
     chirality: Chirality,
     /// brightest mode of reversed word
@@ -218,7 +218,7 @@ pub struct ScaleProfile {
     /// whether scale is a subst cs(aLbm)
     subst_s_lm: bool,
     /// Temperament-agnostic ed join
-    ed_join: (u16, u16, u16),
+    ed_join: (i32, i32, i32),
     /// maximum variety of scale
     mv: u16,
 }
@@ -312,8 +312,8 @@ pub fn word_to_profile(query: &[usize]) -> ScaleProfile {
     let mv = maximum_variety(query) as u16;
     let step_sig = word_to_sig(query)
         .iter()
-        .map(|x| *x as u16)
-        .collect::<Vec<u16>>();
+        .map(|x| *x as i32)
+        .collect::<Vec<i32>>();
     let (n_l, n_m, n_s) = (step_sig[0], step_sig[1], step_sig[2]);
     let ed_join = (
         3 * n_l + 2 * n_m + n_s,
@@ -463,25 +463,47 @@ pub fn sig_to_ji_tunings(
 ) -> Vec<Vec<String>> {
     let equave_monzo = Monzo::try_from_ratio(equave).ok();
     if let Some(equave_monzo) = equave_monzo {
-        ji::solve_step_sig_simple_steps(
-            step_sig,
-            equave_monzo,
-            cents_lower_bound,
-            cents_upper_bound,
-            false,
-        )
-        .into_iter()
-        .map(|steps| {
-            steps
-                .into_iter()
-                .map(|m| {
-                    m.try_to_ratio()
-                        .map(|r| r.to_string())
-                        .unwrap_or_else(|| m.to_string())
-                })
-                .collect()
-        })
-        .collect()
+        ji::solve_step_sig_fast(step_sig, equave_monzo, cents_lower_bound, cents_upper_bound)
+            .into_iter()
+            .map(|steps| {
+                steps
+                    .into_iter()
+                    .map(|m| {
+                        m.try_to_ratio()
+                            .map(|r| r.to_string())
+                            .unwrap_or_else(|| m.to_string())
+                    })
+                    .collect()
+            })
+            .collect()
+    } else {
+        vec![]
+    }
+}
+
+/// Get more JI tunings using the slow solver (shifts by 270edo commas).
+/// Returns tunings that are NOT already in the fast solver results.
+pub fn sig_to_ji_tunings_slow(
+    step_sig: &[usize],
+    equave: RawJiRatio,
+    cents_lower_bound: f64,
+    cents_upper_bound: f64,
+) -> Vec<Vec<String>> {
+    let equave_monzo = Monzo::try_from_ratio(equave).ok();
+    if let Some(equave_monzo) = equave_monzo {
+        ji::solve_step_sig_slow(step_sig, equave_monzo, cents_lower_bound, cents_upper_bound)
+            .into_iter()
+            .map(|steps| {
+                steps
+                    .into_iter()
+                    .map(|m| {
+                        m.try_to_ratio()
+                            .map(|r| r.to_string())
+                            .unwrap_or_else(|| m.to_string())
+                    })
+                    .collect()
+            })
+            .collect()
     } else {
         vec![]
     }
@@ -588,4 +610,22 @@ pub fn sig_result(
         ji_tunings: sig_to_ji_tunings(&step_sig, equave, s_lower, s_upper),
         ed_tunings: sig_to_ed_tunings(&step_sig, equave, ed_bound, s_lower, s_upper),
     })?)
+}
+
+/// Get more JI tunings using the slow solver (shifts by 270edo commas).
+/// Used by the "more-sols" button in the UI.
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn more_ji_tunings(
+    step_sig: Vec<u8>,
+    equave_num: u32,
+    equave_den: u32,
+    s_lower: f64,
+    s_upper: f64,
+) -> Result<JsValue, JsValue> {
+    let equave = RawJiRatio::try_new(equave_num, equave_den).unwrap_or(RawJiRatio::OCTAVE);
+    let step_sig = step_sig.iter().map(|x| *x as usize).collect::<Vec<_>>();
+    Ok(to_value(&sig_to_ji_tunings_slow(
+        &step_sig, equave, s_lower, s_upper,
+    ))?)
 }

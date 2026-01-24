@@ -139,11 +139,11 @@ pub fn steps_as_cents(steps: i32, ed: f64, equave: RawJiRatio) -> f64 {
 pub fn is_in_tuning_range(
     test_value: f64,
     step_sig: &[i32],
-    interval: &[i32],
+    steps: &[i32],
     equave: RawJiRatio,
 ) -> bool {
     let (a, b, c) = (step_sig[0], step_sig[1], step_sig[2]);
-    let (x, y, z) = (interval[0], interval[1], interval[2]);
+    let (x, y, z) = (steps[0], steps[1], steps[2]);
     let value_1_0_0 = equave.cents() * x as f64 / a as f64;
     let value_1_1_0 = equave.cents() * (x + y) as f64 / (a + b) as f64;
     let value_1_1_1 = equave.cents() * (x + y + z) as f64 / (a + b + c) as f64;
@@ -282,6 +282,14 @@ mod tests {
             eight_to_seven,
             &[5, 2, 2],
             &[1, 0, 1],
+            RawJiRatio::OCTAVE
+        ));
+
+        let seven_to_four = monzo![-2, 0, 0, 1].cents();
+        assert!(is_in_tuning_range(
+            seven_to_four,
+            &[5, 2, 2],
+            &[4, 2, 1],
             RawJiRatio::OCTAVE
         ));
 

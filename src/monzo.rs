@@ -672,4 +672,11 @@ mod tests {
         let result_ratio = monzo_81_80.try_to_ratio();
         assert_eq!(result_ratio, Some(RawJiRatio::try_new(81, 80).unwrap()));
     }
+
+    #[test]
+    fn test_ord_for_monzo() {
+        let monzo_9_8 = monzo![-3, 2];
+        let monzo_28_27 = monzo![2, -3, 0, 1];
+        assert!(monzo_28_27 < monzo_9_8);
+    }
 }

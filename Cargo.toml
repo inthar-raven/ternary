@@ -33,6 +33,7 @@ wasm-bindgen = { version = "0.2.106", optional = true }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 web-sys = { version = "0.3", features = ['Document', 'Element', 'HtmlElement', 'Node', 'Window'], optional = true }
+wasm-bindgen-test = "0.3.34"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

@@ -11,11 +11,11 @@
 ///
 /// # Panics
 /// May panic if any column has fewer than 3 elements
-pub fn det3(col0: &[u16], col1: &[u16], col2: &[u16]) -> i32 {
+pub fn det3(col0: &[i32], col1: &[i32], col2: &[i32]) -> i32 {
     // Cast once per element to use WASM-native i32 arithmetic
-    let (a0, a1, a2) = (col0[0] as i32, col0[1] as i32, col0[2] as i32);
-    let (b0, b1, b2) = (col1[0] as i32, col1[1] as i32, col1[2] as i32);
-    let (c0, c1, c2) = (col2[0] as i32, col2[1] as i32, col2[2] as i32);
+    let (a0, a1, a2) = (col0[0], col0[1], col0[2]);
+    let (b0, b1, b2) = (col1[0], col1[1], col1[2]);
+    let (c0, c1, c2) = (col2[0], col2[1], col2[2]);
 
     a0 * b1 * c2 + a1 * b2 * c0 + a2 * b0 * c1 - a2 * b1 * c0 - a1 * b0 * c2 - a0 * b2 * c1
 }
@@ -55,6 +55,26 @@ pub fn matrix_times_vector(col0: &[i32], col1: &[i32], col2: &[i32], v: &[i32]) 
     let mv0 = col0[0] * v[0] + col1[0] * v[1] + col2[0] * v[2];
     let mv1 = col0[1] * v[0] + col1[1] * v[1] + col2[1] * v[2];
     let mv2 = col0[2] * v[0] + col1[2] * v[1] + col2[2] * v[2];
+    vec![mv0, mv1, mv2]
+}
+
+/// Calculate the product of a row vector `v` and a 3x3 matrix M.
+///
+/// # Arguments
+/// * `vt` - The row vector postmultiplied by M
+/// * `col0` - First column of M (3 elements)
+/// * `col1` - Second column of M (3 elements)
+/// * `col2` - Third column of M (3 elements)
+///
+/// # Returns
+/// The vector Mv
+///
+/// # Panics
+/// May panic if any vector has fewer than 3 elements
+pub fn covector_times_matrix(vt: &[i32], col0: &[i32], col1: &[i32], col2: &[i32]) -> Vec<i32> {
+    let mv0 = col0[0] * vt[0] + col0[1] * vt[1] + col0[2] * vt[2];
+    let mv1 = col1[0] * vt[0] + col1[1] * vt[1] + col1[2] * vt[2];
+    let mv2 = col2[0] * vt[0] + col2[1] * vt[1] + col2[2] * vt[2];
     vec![mv0, mv1, mv2]
 }
 

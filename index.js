@@ -735,7 +735,7 @@ stack()`
           ) {
             el.innerHTML += `None<br/>`;
           }
-          
+
           // Chirality (always shown)
           if (state.profile["chirality"] === "Achiral") {
             el.innerHTML += `<br/><a href="https://en.xen.wiki/w/Chirality" target="_blank">Chirality</a>: Achiral`;
@@ -995,6 +995,7 @@ stack()`
                         >
                           <table class="data" id="table-ji-tunings"></table>
                         </div>
+                      <button id="more-sols">Get more JI solutions</button>
                       </div>
                     </div>
                   </div>`;
@@ -1097,6 +1098,65 @@ stack()`
                 });
               }
             }
+
+            // More JI solutions button handler
+            let currentJiTunings = jiTunings;
+            const moreSolsBtn = document.getElementById("more-sols");
+            if (moreSolsBtn) {
+              moreSolsBtn.addEventListener("click", () => {
+                moreSolsBtn.textContent = "Computing...";
+                moreSolsBtn.disabled = true;
+                setTimeout(() => {
+                  try {
+                    const moreJiTunings = wasm.more_ji_tunings(
+                      sig,
+                      equave.num,
+                      equave.den,
+                      getSLower(),
+                      getSUpper(),
+                    );
+                    // Merge with existing tunings (union by string comparison)
+                    const existingSet = new Set(
+                      currentJiTunings.map((t) => JSON.stringify(t)),
+                    );
+                    for (const tuning of moreJiTunings) {
+                      const key = JSON.stringify(tuning);
+                      if (!existingSet.has(key)) {
+                        existingSet.add(key);
+                        currentJiTunings.push(tuning);
+                      }
+                    }
+                    // Re-render the JI tuning table
+                    jiTuningTable.innerHTML = "";
+                    makeTable(jiTuningTable, currentJiTunings);
+                    const newJiRows = jiTuningTable.getElementsByTagName("tr");
+                    for (let i = 2; i < newJiRows.length; ++i) {
+                      const thisRow = newJiRows[i];
+                      thisRow.addEventListener("click", () => {
+                        if (arity === 3) {
+                          selectTuningRow(
+                            jiTuningTable,
+                            edTuningTable,
+                            thisRow,
+                          );
+                          appState.tuning = currentJiTunings[i - 2];
+                          updateViews(equave);
+                        } else {
+                          statusElement.textContent = ONLY_TERNARY_SCALES;
+                        }
+                      });
+                    }
+                    moreSolsBtn.textContent = `Get more JI solutions (${currentJiTunings.length} total)`;
+                    moreSolsBtn.disabled = false;
+                  } catch (err) {
+                    moreSolsBtn.textContent = "Error - try again";
+                    moreSolsBtn.disabled = false;
+                    console.error(err);
+                  }
+                }, 10);
+              });
+            }
+
             updateViews(equave);
           }
         }
@@ -1153,7 +1213,9 @@ stack()`
                         "
                       >
                         <table class="data" id="table-ji-tunings"></table>
+
                       </div>
+                      <button id="more-sols">Get more JI solutions (slow)</button>
                     </div>
                   </div>`;
         const jiTuningTable = document.getElementById("table-ji-tunings");
@@ -1190,6 +1252,67 @@ stack()`
               });
             }
           }
+
+          // More JI solutions button handler for word mode
+          let currentJiTunings = jiTunings;
+          const moreSolsBtn = document.getElementById("more-sols");
+          if (moreSolsBtn) {
+            // Compute step signature from word
+            const stepSig = [
+              countChar(query, "L"),
+              countChar(query, "m"),
+              countChar(query, "s"),
+            ];
+            moreSolsBtn.addEventListener("click", () => {
+              moreSolsBtn.textContent = "Computing...";
+              moreSolsBtn.disabled = true;
+              setTimeout(() => {
+                try {
+                  const moreJiTunings = wasm.more_ji_tunings(
+                    stepSig,
+                    equave.num,
+                    equave.den,
+                    getSLower(),
+                    getSUpper(),
+                  );
+                  // Merge with existing tunings (union by string comparison)
+                  const existingSet = new Set(
+                    currentJiTunings.map((t) => JSON.stringify(t)),
+                  );
+                  for (const tuning of moreJiTunings) {
+                    const key = JSON.stringify(tuning);
+                    if (!existingSet.has(key)) {
+                      existingSet.add(key);
+                      currentJiTunings.push(tuning);
+                    }
+                  }
+                  // Re-render the JI tuning table
+                  jiTuningTable.innerHTML = "";
+                  makeTable(jiTuningTable, currentJiTunings);
+                  const newJiRows = jiTuningTable.getElementsByTagName("tr");
+                  for (let i = 2; i < newJiRows.length; ++i) {
+                    const thisRow = newJiRows[i];
+                    thisRow.addEventListener("click", () => {
+                      if (arity === 3) {
+                        selectTuningRow(jiTuningTable, edTuningTable, thisRow);
+                        appState.tuning = currentJiTunings[i - 2];
+                        updateViews(equave);
+                      } else {
+                        statusElement.textContent = ONLY_TERNARY_SCALES;
+                      }
+                    });
+                  }
+                  moreSolsBtn.textContent = `Get more JI solutions (${currentJiTunings.length} total)`;
+                  moreSolsBtn.disabled = false;
+                } catch (err) {
+                  moreSolsBtn.textContent = "Error - try again";
+                  moreSolsBtn.disabled = false;
+                  console.error(err);
+                }
+              }, 10);
+            });
+          }
+
           appState.tuning = edTunings[0];
           appState.profile = profile;
           appState.latticeBasis = appState.profile["lattice_basis"];
@@ -1334,8 +1457,7 @@ stack()`
         // Set monotone checkboxes (default: lm=0, ms=0, s0=1)
         document.getElementById("monotone-lm").checked = params.lm === "1";
         document.getElementById("monotone-ms").checked = params.ms === "1";
-        document.getElementById("monotone-s0").checked =
-          params.s0 !== "0"; // default true unless explicitly "0"
+        document.getElementById("monotone-s0").checked = params.s0 !== "0"; // default true unless explicitly "0"
 
         // Set GGS length
         if (params.ggs) {

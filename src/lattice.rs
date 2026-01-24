@@ -151,12 +151,23 @@ impl ParallelogramSubstring {
 
 pub fn get_unimodular_basis(
     structures: &[GuideFrame],
-    step_sig: &[u16],
-) -> Option<(Vec<Vec<u16>>, GuideResult)> {
+    step_sig: &[i32],
+) -> Option<(Vec<Vec<i32>>, GuideResult)> {
     for structure in structures {
+        let result = guide_frame_to_result(structure);
+        let offset = &result
+            .clone()
+            .offset_chord
+            .into_iter()
+            .map(|x| x.into_iter().map(|x| x as i32).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let gs = &result
+            .clone()
+            .gs
+            .into_iter()
+            .map(|x| x.into_iter().map(|x| x as i32).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
         if structure.multiplicity() == 1 {
-            let result = guide_frame_to_result(structure);
-            let gs = &result.gs;
             for i in 0..gs.len() {
                 for j in (i + 1)..gs.len() {
                     if matrix::det3(step_sig, &gs[i], &gs[j]).abs() == 1 {
@@ -164,7 +175,7 @@ pub fn get_unimodular_basis(
                     }
                 }
             }
-            for v in &result.offset_chord {
+            for v in offset {
                 for w in gs {
                     if matrix::det3(step_sig, v, w).abs() == 1 {
                         return Some((vec![v.clone(), w.clone()], result));
@@ -173,10 +184,8 @@ pub fn get_unimodular_basis(
             }
         } else {
             // this branch handles multiplicity > 1 scales
-            let result = guide_frame_to_result(structure);
-            let gs = &result.gs;
             // Check all pairs from gs and offset_chord
-            for v in &result.offset_chord {
+            for v in offset {
                 for w in gs {
                     if matrix::det3(step_sig, w, v).abs() == 1 {
                         return Some((vec![w.clone(), v.clone()], result));
@@ -261,18 +270,14 @@ pub fn try_pitch_class_lattice(query: &[usize]) -> Option<(Vec<Vec<i32>>, PitchC
     let gfs = guide_frames(query);
     let sig = word_to_sig(query)
         .iter()
-        .map(|x| *x as u16)
-        .collect::<Vec<u16>>();
+        .map(|x| *x as i32)
+        .collect::<Vec<_>>();
     get_unimodular_basis(&gfs, &sig).map(|(basis_, _)| {
         // For every pitch in the scale expressed as a CountVector,
         // do a change of basis from scale steps basis
         // to (equave, generator1, generator2) basis.
         // basis_ doesn't have the equave, so we add it back first.
-        let (equave, gener_1, gener_2) = (
-            sig.iter().map(|x| *x as i32).collect::<Vec<_>>(),
-            basis_[0].iter().map(|x| *x as i32).collect::<Vec<_>>(),
-            basis_[1].iter().map(|x| *x as i32).collect::<Vec<_>>(),
-        );
+        let (equave, gener_1, gener_2) = (sig.clone(), basis_[0].clone(), basis_[1].clone());
         // Invert [equave, gener_1, gener_2] to get basis change matrix
         let basis_change = unimodular_inv(&equave, &gener_1, &gener_2);
         // Now project all vectors to the (generator1, generator2)-plane

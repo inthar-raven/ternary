@@ -48,16 +48,45 @@
 //! ```
 
 use itertools::Itertools;
+use itertools::iproduct;
 use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;
-use std::ops::ControlFlow;
 
+use crate::const_monzo;
+use crate::equal::is_in_tuning_range;
 use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
 use crate::interval::{Dyad, JiRatio};
 use crate::ji_ratio::{BadJiArith, RawJiRatio};
+use crate::matrix::covector_times_matrix;
+use crate::matrix::{det3, unimodular_inv};
+use crate::monzo;
 use crate::monzo::Monzo;
+use crate::primes::SMALL_PRIMES_COUNT;
 use crate::simple_steps::SIMPLE_STEPS;
 use crate::words::{CountVector, rotate};
+
+pub const TARGETS: [Monzo; 5] = [
+    // const_monzo![1, 0, 0, 0, 0, 0],
+    const_monzo![0, 1, 0, 0, 0, 0],
+    const_monzo![0, 0, 1, 0, 0, 0],
+    const_monzo![0, 0, 0, 1, 0, 0],
+    const_monzo![0, 0, 0, 0, 1, 0],
+    const_monzo![0, 0, 0, 0, 0, 1],
+];
+
+pub const COMMAS_270ET: [Monzo; 11] = [
+    const_monzo![0, 0, 0, 0, 0, 0],
+    const_monzo![5, -3, 1, -1, -1, 1],
+    const_monzo![-5, 3, -1, 1, 1, -1],
+    const_monzo![-3, 0, -3, 1, 1, 1],
+    const_monzo![3, 0, 3, -1, -1, -1],
+    const_monzo![-4, -3, 2, -1, 2, 0],
+    const_monzo![4, 3, -2, 1, -2, 0],
+    const_monzo![2, 1, -1, -3, 1, 1],
+    const_monzo![-2, -1, 1, 3, -1, -1],
+    const_monzo![12, -2, -1, -1, 0, -1],
+    const_monzo![-12, 2, 1, 1, 0, 1],
+];
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
 /// not including the unison.
@@ -119,16 +148,14 @@ pub fn odd_limit(limit: u32) -> Vec<RawJiRatio> {
         .collect()
 }
 
-/// Solutions to a step signature (with decreasing step sizes).
+/// Faster solver for JI solutions to a step signature (with decreasing step sizes).
 /// Steps are required to be between `cents_lower_bound` and `cents_upper_bound`.
 /// All but the smallest step are required to be in SIMPLE_STEPS.
-/// If `allow_neg_aber` is `true`, then the smallest step size is allowed to be negative.
-pub fn solve_step_sig_simple_steps(
+pub fn solve_step_sig_fast(
     step_sig: &[usize],
     equave: Monzo,
     cents_lower_bound: f64,
     cents_upper_bound: f64,
-    allow_neg_aber: bool,
 ) -> Vec<Vec<Monzo>> {
     let small_steps: Vec<_> = SIMPLE_STEPS
         .into_iter()
@@ -148,8 +175,7 @@ pub fn solve_step_sig_simple_steps(
                 .map(|(i, v)| v * (step_sig[i] as i32));
             let sum = multiplied_steps.into_iter().sum();
             let residue = equave - sum;
-            if residue.is_divisible_by(step_sig[step_sig.len() - 1] as i32)
-                && (allow_neg_aber || residue.is_positive())
+            if residue.is_divisible_by(step_sig[step_sig.len() - 1] as i32) && residue.is_positive()
             {
                 let smallest_step = residue / (step_sig[step_sig.len() - 1] as i32);
                 let mut soln = steps;
@@ -158,6 +184,104 @@ pub fn solve_step_sig_simple_steps(
                     // Check if the last step is actually the smallest to validate the solution.
                     soln.push(smallest_step);
                     result.push(soln);
+                }
+            }
+        }
+    }
+    result
+}
+
+pub fn solve_step_sig_slow(
+    step_sig: &[usize],
+    equave: Monzo,
+    cents_lower_bound: f64,
+    cents_upper_bound: f64,
+) -> Vec<Vec<Monzo>> {
+    let mut result = vec![];
+    let sig_i32: Vec<_> = step_sig.iter().map(|x| *x as i32).collect();
+    let equave_ratio = equave.try_to_ratio().unwrap_or(RawJiRatio::OCTAVE);
+
+    // Generate valid first step counts
+    let step_counts_1 =
+        iproduct!(0..=sig_i32[0], 0..=sig_i32[1], 0..=sig_i32[2]).filter(|&(l, m, s)| {
+            (l < sig_i32[0] || m < sig_i32[1] || s < sig_i32[2]) && gcd(l, gcd(m, s)) == 1
+        });
+    for (l_count_1, m_count_1, s_count_1) in step_counts_1 {
+        let col1 = [l_count_1, m_count_1, s_count_1];
+        for target1 in TARGETS {
+            let target1_rd = target1.rd(equave);
+            if !is_in_tuning_range(target1_rd.cents(), &sig_i32, &col1, equave_ratio) {
+                continue;
+            }
+
+            // Generate valid second step counts
+            let step_counts_2 =
+                iproduct!(0..=sig_i32[0], 0..=sig_i32[1], 0..=sig_i32[2]).filter(|&(l, m, s)| {
+                    (l < sig_i32[0] || m < sig_i32[1] || s < sig_i32[2])
+                        && (l != l_count_1 || m != m_count_1 || s != s_count_1)
+                        && gcd(l, gcd(m, s)) == 1
+                });
+
+            for (l_count_2, m_count_2, s_count_2) in step_counts_2 {
+                let col2 = [l_count_2, m_count_2, s_count_2];
+                if det3(&sig_i32, &col1, &col2).abs() == 1 {
+                    // [L_i m_i s_i] [sig col1 col2] = [equave_i target1_i target2_i]
+                    // e.g. for 5-limit blackdye
+                    //      [ 1  4 -4] [5 3 2] = [1 -1 -2]
+                    //      [-2 -1  4] [2 1 0]   [0  1  0]
+                    //      [ 1 -1 -1] [3 2 1]   [0  0  1]
+                    // The RHS columns are the *reduced* targets!
+                    // => [L_i m_i s_i] = [equave_i target1_i target2_i] * inv for monzo index i
+                    let inv = unimodular_inv(&sig_i32, &col1, &col2);
+                    for target2 in TARGETS {
+                        let target2_rd = target2.rd(equave);
+                        if target2 != target1
+                            && is_in_tuning_range(target2_rd.cents(), &sig_i32, &col2, equave_ratio)
+                        {
+                            let coeffs: Vec<_> = (0..SMALL_PRIMES_COUNT)
+                                .map(|i| {
+                                    covector_times_matrix(
+                                        &[equave[i], target1_rd[i], target2_rd[i]],
+                                        &inv[0],
+                                        &inv[1],
+                                        &inv[2],
+                                    )
+                                })
+                                .collect();
+                            let l = monzo![
+                                coeffs[0][0],
+                                coeffs[1][0],
+                                coeffs[2][0],
+                                coeffs[3][0],
+                                coeffs[4][0],
+                                coeffs[5][0]
+                            ];
+                            let m = monzo![
+                                coeffs[0][1],
+                                coeffs[1][1],
+                                coeffs[2][1],
+                                coeffs[3][1],
+                                coeffs[4][1],
+                                coeffs[5][1]
+                            ];
+                            let s = monzo![
+                                coeffs[0][2],
+                                coeffs[1][2],
+                                coeffs[2][2],
+                                coeffs[3][2],
+                                coeffs[4][2],
+                                coeffs[5][2]
+                            ];
+                            if s.is_positive()
+                                    && l > m // Compare size using the Dyad trait implemented by Monzo
+                                    && m > s
+                                    && cents_lower_bound < s.cents()
+                                    && s.cents() < cents_upper_bound
+                            {
+                                result.push(vec![l, m, s]);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -310,107 +434,6 @@ pub fn harmonic_mode_no_oct(mode_num: u32) -> Result<Vec<RawJiRatio>, ScaleError
         Ok((mode_num + 1..=(2 * mode_num - 1))
             .map(|x| RawJiRatio::try_new(x, mode_num).expect("`numer` should be > `denom`"))
             .collect())
-    }
-}
-
-/// Compute if `offset` is valid for an interleaved scale with strand `strand`.
-/// Validates that all strand rotations differ from the offset by intervals in the strand.
-pub fn is_valid_offset(strand: &[RawJiRatio], offset: RawJiRatio) -> bool {
-    let _ = (1..=(strand.len() - 1)).try_for_each(|i| {
-        let i_steps = spectrum(strand, i);
-        let min_i_step = *i_steps
-            .into_inner()
-            .first_key_value()
-            .expect("`i_steps` should not be empty")
-            .0;
-        let max_i_step = *i_steps
-            .into_inner()
-            .last_key_value()
-            .expect("`i_steps` should not be empty")
-            .0;
-        if offset >= min_i_step && offset <= max_i_step {
-            // If `offset` falls in [`min_i_step`, `max_i_step`], it's not valid for an interleaved scale with `strand`.
-            ControlFlow::Break(false)
-        } else {
-            ControlFlow::Continue(())
-        }
-    });
-    true
-}
-
-/// Compute if `offset_chord` is valid for an interleaved scale with strand `strand`.
-/// The offset chord is given as a Vec of offsets from the unison.
-/// Validates that all pairwise differences of offset notes are intervals in the strand.
-pub fn is_valid_offset_chord(strand: &[RawJiRatio], offset_chord: &[RawJiRatio]) -> bool {
-    let mut offsets_with_unison: Vec<RawJiRatio> = offset_chord.to_vec();
-    offsets_with_unison.push(RawJiRatio::UNISON);
-    // Check validity of every interval in the offset_chord.
-    offsets_with_unison.sort_by(|a, b| (*a).cmp(b));
-    for (i, ratio1) in offsets_with_unison.iter().copied().enumerate() {
-        for (j, ratio2) in offsets_with_unison.iter().copied().enumerate() {
-            if i != j && !is_valid_offset(strand, ratio2 / ratio1) {
-                return false;
-            }
-        }
-    }
-    true
-}
-
-/// Compute the set of valid offset chords for an interleaved scale on harmonic series mode `m`.
-pub fn valid_offset_chords(
-    strand: &[RawJiRatio],
-    m: u32,
-) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
-    let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
-    Ok(crate::helpers::powerset(&mode)
-        .into_iter()
-        .filter(|x| is_valid_offset_chord(strand, x))
-        .collect())
-}
-
-/// Compute the set of *maximal* valid offset chords for an interleaved scale on harmonic series mode `m`.
-pub fn maximal_valid_offset_chords(
-    strand: &[RawJiRatio],
-    m: u32,
-) -> Result<Vec<Vec<RawJiRatio>>, ScaleError> {
-    let mode = harmonic_mode_no_oct(m)?; // harmonic mode m
-    let power_set = crate::helpers::powerset(&mode);
-    let valid_offset_chords: Vec<_> = power_set
-        .into_iter()
-        .filter(|x| is_valid_offset_chord(strand, x))
-        .collect();
-    Ok(valid_offset_chords
-        .iter()
-        .filter(|x| crate::helpers::is_maximal_in(x, &valid_offset_chords))
-        .cloned()
-        .collect())
-}
-
-/// Compute an interleaved scale with the given strand and offset chord, if it is valid.
-/// A *strand* is a smaller scale that is duplicated and copies of it offset by the notes of the offset chord.
-/// The resulting scale made of interleaved strands is *interleaved* if all the strands are actually interleaved.
-/// Returns error if the combination is not valid.
-pub fn interleaved_scale_ji(
-    strand: &[RawJiRatio],
-    offset_chord: &[RawJiRatio],
-) -> Result<Vec<RawJiRatio>, ScaleError> {
-    if is_valid_offset_chord(strand, offset_chord) {
-        let mut vec: Vec<RawJiRatio> = vec![];
-        for offset in offset_chord {
-            for note in strand {
-                vec.push((*offset * *note).rd(RawJiRatio::OCTAVE));
-            }
-            vec.push((*offset).rd(RawJiRatio::OCTAVE));
-        }
-        for note in strand {
-            vec.push((*note).rd(RawJiRatio::OCTAVE));
-        }
-        vec.sort();
-        vec.dedup();
-        vec.push(RawJiRatio::OCTAVE);
-        Ok(vec.drain(1..).collect()) // Remove 1/1
-    } else {
-        Err(ScaleError::NotInterleavable)
     }
 }
 
@@ -795,16 +818,33 @@ mod tests {
     }
 
     #[test]
-    fn test_solve_81_odd_lim() {
+    fn test_fast_solver() {
         let diatonic_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_simple_steps(&[5, 2], Monzo::OCTAVE, 20.0, 300.0, false);
+            solve_step_sig_fast(&[5, 2], Monzo::OCTAVE, 20.0, 300.0);
         assert_eq!(diatonic_solns, vec![vec![monzo![-3, 2], monzo![8, -5]]]);
         let blackdye_solns: Vec<Vec<Monzo>> =
-            solve_step_sig_simple_steps(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0, false);
+            solve_step_sig_fast(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0);
         assert!(blackdye_solns.contains(&vec![
-            monzo![1, -2, 1],
-            monzo![4, -1, -1],
-            monzo![-4, 4, -1]
+            monzo![1, -2, 1],  // 10/9
+            monzo![4, -1, -1], // 16/15
+            monzo![-4, 4, -1], // 81/80
+        ]));
+    }
+    #[test]
+    fn test_slow_solver() {
+        let diasem_solns: Vec<Vec<Monzo>> =
+            solve_step_sig_slow(&[5, 2, 2], Monzo::OCTAVE, 20.0, 300.0);
+        assert!(diasem_solns.contains(&vec![
+            monzo![-3, 2],        // 9/8
+            monzo![2, -3, 0, 1],  // 28/27
+            monzo![6, -2, 0, -1], // 64/63
+        ]));
+        let blackdye_solns: Vec<Vec<Monzo>> =
+            solve_step_sig_slow(&[5, 2, 3], Monzo::OCTAVE, 20.0, 300.0);
+        assert!(blackdye_solns.contains(&vec![
+            monzo![1, -2, 1],  // 10/9
+            monzo![4, -1, -1], // 16/15
+            monzo![-4, 4, -1], // 81/80
         ]));
     }
 }
