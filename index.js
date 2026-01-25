@@ -1215,7 +1215,7 @@ stack()`
                         <table class="data" id="table-ji-tunings"></table>
 
                       </div>
-                      <button id="more-sols">Get more JI solutions (slow)</button>
+                      <button id="more-sols">Get more JI tunings (slow)</button>
                     </div>
                   </div>`;
         const jiTuningTable = document.getElementById("table-ji-tunings");
@@ -1302,7 +1302,7 @@ stack()`
                       }
                     });
                   }
-                  moreSolsBtn.textContent = `Get more JI solutions (${currentJiTunings.length} total)`;
+                  moreSolsBtn.textContent = `Get more JI tunings (${currentJiTunings.length} total)`;
                   moreSolsBtn.disabled = false;
                 } catch (err) {
                   moreSolsBtn.textContent = "Error - try again";
