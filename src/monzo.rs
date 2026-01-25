@@ -139,11 +139,11 @@ impl Monzo {
     /// 1/1 in monzo form.
     pub const UNISON: Self = Self(Vector::new([0; SMALL_PRIMES_COUNT]));
     /// 2/1 in monzo form.
-    pub const OCTAVE: Self = Self(Vector::new([1, 0, 0, 0, 0, 0]));
+    pub const OCTAVE: Self = Self(Vector::new([1, 0, 0, 0, 0, 0, 0, 0, 0]));
     /// 3/2 in monzo form.
-    pub const PYTH_5TH: Self = Self(Vector::new([-1, 1, 0, 0, 0, 0]));
+    pub const PYTH_5TH: Self = Self(Vector::new([-1, 1, 0, 0, 0, 0, 0, 0, 0]));
     /// 4/3 in monzo form.
-    pub const PYTH_4TH: Self = Self(Vector::new([2, -1, 0, 0, 0, 0]));
+    pub const PYTH_4TH: Self = Self(Vector::new([2, -1, 0, 0, 0, 0, 0, 0, 0]));
     /// Unwrap the Vector representation.
     pub fn into_inner(&self) -> Vector {
         self.0

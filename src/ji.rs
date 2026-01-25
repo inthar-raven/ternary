@@ -52,7 +52,6 @@ use itertools::iproduct;
 use num_integer::{gcd, lcm};
 use std::collections::BTreeSet;
 
-use crate::const_monzo;
 use crate::equal::is_in_tuning_range;
 use crate::helpers::{ScaleError, is_sorted_strictly_desc, pairs};
 use crate::interpretations::INTERPRETATIONS_270ET;
@@ -64,20 +63,6 @@ use crate::monzo;
 use crate::monzo::Monzo;
 use crate::primes::SMALL_PRIMES_COUNT;
 use crate::words::{CountVector, rotate};
-
-// Odd harmonics 3, ..., 15, 21, 25, 27
-pub const TARGETS: [Monzo; 10] = [
-    const_monzo![0, 1, 0, 0, 0, 0],
-    const_monzo![0, 0, 1, 0, 0, 0],
-    const_monzo![0, 0, 0, 1, 0, 0],
-    const_monzo![0, 2, 0, 0, 0, 0],
-    const_monzo![0, 0, 0, 0, 1, 0],
-    const_monzo![0, 0, 0, 0, 0, 1],
-    const_monzo![0, 1, 1, 0, 0, 0],
-    const_monzo![0, 1, 0, 1, 0, 0],
-    const_monzo![0, 0, 2, 0, 0, 0],
-    const_monzo![0, 3, 0, 0, 0, 0],
-];
 
 /// Given a list of odd numbers, return the octave-reduced intervals in the corresponding odd-limit,
 /// not including the unison.
@@ -191,6 +176,10 @@ pub fn solve_step_sig_slow(
     let mut result = vec![];
     let sig_i32: Vec<_> = step_sig.iter().map(|x| *x as i32).collect();
     let equave_ratio = equave.try_to_ratio().unwrap_or(RawJiRatio::OCTAVE);
+    let targets: Vec<_> = odd_limit(27)
+        .into_iter()
+        .map(|x| Monzo::try_from_ratio(x).unwrap())
+        .collect();
 
     // Generate valid first step counts
     let step_counts_1 =
@@ -199,7 +188,7 @@ pub fn solve_step_sig_slow(
         });
     for (l_count_1, m_count_1, s_count_1) in step_counts_1 {
         let col1 = [l_count_1, m_count_1, s_count_1];
-        for target1 in TARGETS {
+        for target1 in &targets {
             let target1_rd = target1.rd(equave);
             if !is_in_tuning_range(target1_rd.cents(), &sig_i32, &col1, equave_ratio) {
                 continue;
@@ -224,9 +213,9 @@ pub fn solve_step_sig_slow(
                     // The RHS columns are the *reduced* targets!
                     // => [L_i m_i s_i] = [equave_i target1_i target2_i] * inv for monzo index i
                     let inv = unimodular_inv(&sig_i32, &col1, &col2);
-                    for target2 in TARGETS {
+                    for target2 in &targets {
                         let target2_rd = target2.rd(equave);
-                        if target2 != target1
+                        if *target2 != *target1
                             && is_in_tuning_range(target2_rd.cents(), &sig_i32, &col2, equave_ratio)
                         {
                             let coeffs: Vec<_> = (0..SMALL_PRIMES_COUNT)
