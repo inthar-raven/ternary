@@ -49,6 +49,29 @@ function mod(n, m) {
   return ((n % m) + m) % m;
 }
 
+// Primes used in monzo representation
+const MONZO_PRIMES = [2, 3, 5, 7, 11, 13];
+
+/**
+ * Parse a monzo string like "[-3, 2, 0, 0, 0, 0>" and return its value in cents
+ * Returns null if parsing fails
+ */
+function monzoToCents(monzoStr) {
+  // Match the monzo format: [exp, exp, ...>
+  const match = monzoStr.trim().match(/^\[([^\]>]*)[>\]]?$/);
+  if (!match) return null;
+
+  const exponents = match[1].split(",").map((s) => Number(s.trim()));
+  if (exponents.some(isNaN)) return null;
+
+  // cents = 1200 * log2(product of prime^exponent)
+  let cents = 0;
+  for (let i = 0; i < exponents.length && i < MONZO_PRIMES.length; i++) {
+    cents += exponents[i] * 1200 * Math.log2(MONZO_PRIMES[i]);
+  }
+  return cents;
+}
+
 /**
  * Parse an equave ratio string (e.g., "2/1") and convert to cents
  * Returns 1200 (octave) if parsing fails
@@ -341,7 +364,10 @@ import("./pkg")
                   equave,
                 );
                 const centsRounded = Math.round(cents);
-                const tooltipText = `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
+                // If pitch already shows cents, don't duplicate
+                const tooltipText = pitch.endsWith("¢")
+                  ? `Degree ${deg}: ${pitch}`
+                  : `Degree ${deg}: ${pitch} (${centsRounded}¢)`;
 
                 svgTag.innerHTML += `<g class="note-point" style="cursor: pointer;">
             <circle
@@ -790,7 +816,11 @@ stack()`
           const numS = Number(numSstr);
           return `${displayStepVector(v)} (${numL * (v["0"] ?? 0) + numM * (v["1"] ?? 0) + numS * (v["2"] ?? 0)}\\${ed})`;
         }
-      } else if (tuning["0"].includes("/")) {
+      } else if (
+        tuning["0"].includes("/") &&
+        tuning["1"].includes("/") &&
+        tuning["2"].includes("/")
+      ) {
         const [numLstr, denLstr] = tuning["0"].split("/");
         const [numMstr, denMstr] = tuning["1"].split("/");
         const [numSstr, denSstr] = tuning["2"].split("/");
@@ -863,7 +893,11 @@ stack()`
           pitch = `${totalSteps}\\${ed}`;
         }
         return { pitch, cents };
-      } else if (tuning["0"].includes("/")) {
+      } else if (
+        tuning["0"].includes("/") &&
+        tuning["1"].includes("/") &&
+        tuning["2"].includes("/")
+      ) {
         // JI tuning format like "9/8"
         const [numLstr, denLstr] = tuning["0"].split("/");
         const [numMstr, denMstr] = tuning["1"].split("/");
@@ -884,7 +918,28 @@ stack()`
         const cents = 1200 * Math.log2(ratio);
         return { pitch: `${num / d}/${den / d}`, cents };
       } else {
-        return { pitch: `${nL}L + ${nM}m + ${nS}s`, cents: 0 };
+        // Fallback: try to compute cents from monzos or ratios
+        let cents = 0;
+        const tuningValues = [
+          { str: tuning["0"], count: nL },
+          { str: tuning["1"], count: nM },
+          { str: tuning["2"], count: nS },
+        ];
+        for (const { str, count } of tuningValues) {
+          if (str.includes("/")) {
+            // It's a ratio
+            const [numStr, denStr] = str.split("/");
+            const ratio = Number(numStr) / Number(denStr);
+            cents += count * 1200 * Math.log2(ratio);
+          } else {
+            // Try parsing as monzo
+            const monzoCents = monzoToCents(str);
+            if (monzoCents !== null) {
+              cents += count * monzoCents;
+            }
+          }
+        }
+        return { pitch: `${Math.round(cents)}¢`, cents };
       }
     }
 
@@ -995,7 +1050,7 @@ stack()`
                         >
                           <table class="data" id="table-ji-tunings"></table>
                         </div>
-                      <button id="more-sols">Get more JI solutions</button>
+                      <button id="more-sols">Get more JI tunings</button>
                       </div>
                     </div>
                   </div>`;
@@ -1146,7 +1201,7 @@ stack()`
                         }
                       });
                     }
-                    moreSolsBtn.textContent = `Get more JI solutions (${currentJiTunings.length} total)`;
+                    moreSolsBtn.textContent = `Get more JI tunings (${currentJiTunings.length} total)`;
                     moreSolsBtn.disabled = false;
                   } catch (err) {
                     moreSolsBtn.textContent = "Error - try again";
