@@ -88,14 +88,6 @@ pub fn slicify_each<T>(vecs: &[Vec<T>]) -> Vec<&[T]> {
     vecs.iter().map(|x| x.as_slice()).collect()
 }
 
-/// Given a `&[&[T]]`, convert to owned vectors `Vec<Vec<T>>`.
-pub fn vectorize_each<T>(vecs: &[&[T]]) -> Vec<Vec<T>>
-where
-    T: Clone,
-{
-    (vecs.iter().map(|x| (*x).to_vec())).collect::<Vec<_>>()
-}
-
 /// Given a descending sorted vector, get the first index `i` where `v[i] == t`.
 /// Returns None if not found or if earlier elements are smaller (due to sorting).
 pub fn first_index_desc<T>(v: &[T], t: T) -> Option<usize>

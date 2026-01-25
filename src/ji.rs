@@ -234,7 +234,10 @@ pub fn solve_step_sig_slow(
                                 coeffs[2][0],
                                 coeffs[3][0],
                                 coeffs[4][0],
-                                coeffs[5][0]
+                                coeffs[5][0],
+                                coeffs[6][0],
+                                coeffs[7][0],
+                                coeffs[8][0],
                             ];
                             let m = monzo![
                                 coeffs[0][1],
@@ -242,7 +245,10 @@ pub fn solve_step_sig_slow(
                                 coeffs[2][1],
                                 coeffs[3][1],
                                 coeffs[4][1],
-                                coeffs[5][1]
+                                coeffs[5][1],
+                                coeffs[6][1],
+                                coeffs[7][1],
+                                coeffs[8][1],
                             ];
                             let s = monzo![
                                 coeffs[0][2],
@@ -250,7 +256,10 @@ pub fn solve_step_sig_slow(
                                 coeffs[2][2],
                                 coeffs[3][2],
                                 coeffs[4][2],
-                                coeffs[5][2]
+                                coeffs[5][2],
+                                coeffs[6][2],
+                                coeffs[7][2],
+                                coeffs[8][2],
                             ];
                             if s.is_positive()
                                     && l > m // Compare size using the Dyad trait implemented by Monzo
