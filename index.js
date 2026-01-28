@@ -43,6 +43,18 @@ function gcd(a, b) {
 }
 
 /**
+ * Greatest Common Divisor for BigInt values
+ */
+function gcdBigInt(a, b) {
+  a = a < 0n ? -a : a;
+  b = b < 0n ? -b : b;
+  while (b !== 0n) {
+    [a, b] = [b, a % b];
+  }
+  return a;
+}
+
+/**
  * Python-style modulo (always positive result)
  */
 function mod(n, m) {
@@ -824,21 +836,21 @@ stack()`
         const [numLstr, denLstr] = tuning["0"].split("/");
         const [numMstr, denMstr] = tuning["1"].split("/");
         const [numSstr, denSstr] = tuning["2"].split("/");
-        const numL = Number(numLstr);
-        const numM = Number(numMstr);
-        const numS = Number(numSstr);
-        const denL = Number(denLstr);
-        const denM = Number(denMstr);
-        const denS = Number(denSstr);
+        const numL = BigInt(numLstr);
+        const numM = BigInt(numMstr);
+        const numS = BigInt(numSstr);
+        const denL = BigInt(denLstr);
+        const denM = BigInt(denMstr);
+        const denS = BigInt(denSstr);
         const num =
-          Math.pow(numL, v["0"] ?? 0) *
-          Math.pow(numM, v["1"] ?? 0) *
-          Math.pow(numS, v["2"] ?? 0);
+          numL ** BigInt(v["0"] ?? 0) *
+          numM ** BigInt(v["1"] ?? 0) *
+          numS ** BigInt(v["2"] ?? 0);
         const den =
-          Math.pow(denL, v["0"] ?? 0) *
-          Math.pow(denM, v["1"] ?? 0) *
-          Math.pow(denS, v["2"] ?? 0);
-        const d = gcd(num, den);
+          denL ** BigInt(v["0"] ?? 0) *
+          denM ** BigInt(v["1"] ?? 0) *
+          denS ** BigInt(v["2"] ?? 0);
+        const d = gcdBigInt(num, den);
         return `${displayStepVector(v)} (${num / d}/${den / d})`;
       } else {
         return displayStepVector(v);
@@ -902,21 +914,23 @@ stack()`
         const [numLstr, denLstr] = tuning["0"].split("/");
         const [numMstr, denMstr] = tuning["1"].split("/");
         const [numSstr, denSstr] = tuning["2"].split("/");
-        const numL = Number(numLstr);
-        const numM = Number(numMstr);
-        const numS = Number(numSstr);
-        const denL = Number(denLstr);
-        const denM = Number(denMstr);
-        const denS = Number(denSstr);
+        const numL = BigInt(numLstr);
+        const numM = BigInt(numMstr);
+        const numS = BigInt(numSstr);
+        const denL = BigInt(denLstr);
+        const denM = BigInt(denMstr);
+        const denS = BigInt(denSstr);
 
         const num =
-          Math.pow(numL, nL) * Math.pow(numM, nM) * Math.pow(numS, nS);
+          numL ** BigInt(nL) * numM ** BigInt(nM) * numS ** BigInt(nS);
         const den =
-          Math.pow(denL, nL) * Math.pow(denM, nM) * Math.pow(denS, nS);
-        const d = gcd(num, den);
-        const ratio = num / d / (den / d);
+          denL ** BigInt(nL) * denM ** BigInt(nM) * denS ** BigInt(nS);
+        const d = gcdBigInt(num, den);
+        const reducedNum = num / d;
+        const reducedDen = den / d;
+        const ratio = Number(reducedNum) / Number(reducedDen);
         const cents = 1200 * Math.log2(ratio);
-        return { pitch: `${num / d}/${den / d}`, cents };
+        return { pitch: `${reducedNum}/${reducedDen}`, cents };
       } else {
         // Fallback: try to compute cents from monzos or ratios
         let cents = 0;
